@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import { View, StyleSheet, FlatList, Text } from 'react-native';
+import { View, StyleSheet, FlatList, Text, Alert } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import { useTheme } from '../../theme/ThemeContext';
@@ -52,6 +52,31 @@ export const HomeScreen: React.FC = () => {
         navigation.navigate('MapView', { mapId });
     };
 
+    const handleDeleteMap = useCallback((map: MapData) => {
+        Alert.alert(
+            'Delete Map',
+            `Are you sure you want to delete "${map.name}"? This cannot be undone.`,
+            [
+                { text: 'Cancel', style: 'cancel' },
+                {
+                    text: 'Delete',
+                    style: 'destructive',
+                    onPress: async () => {
+                        try {
+                            await databaseService.deleteMap(map.id);
+                            // Optimistic update or refresh
+                            const updatedMaps = maps.filter(m => m.id !== map.id);
+                            setMaps(updatedMaps);
+                        } catch (error) {
+                            console.error('Failed to delete map:', error);
+                            Alert.alert('Error', 'Failed to delete map.');
+                        }
+                    }
+                }
+            ]
+        );
+    }, [maps]);
+
     return (
         <View style={[styles.container, { backgroundColor: theme.colors.background[colorScheme] }]}>
             <ScreenHeader
@@ -69,6 +94,7 @@ export const HomeScreen: React.FC = () => {
                     <MapCard
                         map={item}
                         onPress={() => handleMapPress(item.id)}
+                        onLongPress={() => handleDeleteMap(item)}
                         style={{ flex: 1, margin: theme.spacing.sm }}
                     />
                 )}

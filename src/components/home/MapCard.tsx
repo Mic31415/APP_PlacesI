@@ -9,18 +9,25 @@ interface MapCardProps {
         id: string;
         name: string;
         emoji: string;
-        pinCount: number;
+        emoji: string;
+        pinCount?: number;
         type?: string;
     };
     onPress: () => void;
+    onLongPress?: () => void;
     style?: any;
 }
 
-export const MapCard: React.FC<MapCardProps> = ({ map, onPress, style }) => {
+export const MapCard: React.FC<MapCardProps> = ({ map, onPress, onLongPress, style }) => {
     const { theme, colorScheme } = useTheme();
 
     return (
-        <TouchableOpacity onPress={onPress} activeOpacity={0.7} style={style}>
+        <TouchableOpacity
+            onPress={onPress}
+            onLongPress={onLongPress}
+            activeOpacity={0.7}
+            style={style}
+        >
             <Card style={styles.card}>
                 <View style={styles.emojiContainer}>
                     <Text style={styles.emoji}>{map.emoji}</Text>
