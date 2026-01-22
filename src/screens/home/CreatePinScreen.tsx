@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, KeyboardAvoidingView, Platform, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useTheme } from '../../theme/ThemeContext';
 import { RatingPicker } from '../../components/common/RatingPicker';
 import { ScreenHeader } from '../../components/common/ScreenHeader';
+import { databaseService } from '../../services/DatabaseService';
 
 export const CreatePinScreen: React.FC = () => {
     const { theme, colorScheme } = useTheme();
@@ -15,11 +16,33 @@ export const CreatePinScreen: React.FC = () => {
     const [description, setDescription] = useState('');
     const [location, setLocation] = useState('');
     const [rating, setRating] = useState(0);
+    const [selectedEmoji, setSelectedEmoji] = useState('📍');
     const [imageUri, setImageUri] = useState<string | null>(null);
 
-    const handleSave = () => {
-        console.log({ title, description, location, rating, imageUri });
-        navigation.goBack();
+    const route = useRoute();
+    const { mapId } = route.params as { mapId: string };
+
+    const handleSave = async () => {
+        if (!title.trim()) {
+            // Alert or toast
+            return;
+        }
+
+        try {
+            await databaseService.addPin({
+                mapId: mapId,
+                title: title.trim(),
+                description: description.trim(),
+                latitude: 35.6895, // Mock location
+                longitude: 139.6917 + (Math.random() * 0.01),
+                rating: rating,
+                emoji: selectedEmoji,
+                imageUri: imageUri || undefined,
+            });
+            navigation.goBack();
+        } catch (error) {
+            console.error('Failed to add pin:', error);
+        }
     };
 
     const handleBack = () => {
@@ -128,6 +151,25 @@ export const CreatePinScreen: React.FC = () => {
                     <View style={styles.inputGroup}>
                         <Text style={[styles.label, { color: theme.colors.text.secondary[colorScheme] }]}>Rating</Text>
                         <RatingPicker value={rating} onValueChange={setRating} />
+                    </View>
+
+                    {/* Emoji Selector */}
+                    <View style={styles.inputGroup}>
+                        <Text style={[styles.label, { color: theme.colors.text.secondary[colorScheme] }]}>Icon</Text>
+                        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 12 }}>
+                            {['📍', '🗼', '🍱', '⛩️', '📸', '🏨', '☕', '🍺', '🛍️', '🌳'].map((emoji) => (
+                                <TouchableOpacity
+                                    key={emoji}
+                                    onPress={() => setSelectedEmoji(emoji)}
+                                    style={[
+                                        styles.emojiItem,
+                                        selectedEmoji === emoji && { backgroundColor: theme.colors.primary + '20', borderColor: theme.colors.primary }
+                                    ]}
+                                >
+                                    <Text style={{ fontSize: 24 }}>{emoji}</Text>
+                                </TouchableOpacity>
+                            ))}
+                        </ScrollView>
                     </View>
 
                     {/* Photo */}
@@ -244,5 +286,15 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
         marginTop: 8,
+    },
+    emojiItem: {
+        width: 48,
+        height: 48,
+        borderRadius: 24,
+        alignItems: 'center',
+        justifyContent: 'center',
+        borderWidth: 1,
+        borderColor: 'rgba(0,0,0,0.1)',
+        backgroundColor: 'transparent',
     }
 });

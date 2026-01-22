@@ -1,25 +1,22 @@
 import React, { useState, useRef, useMemo, useCallback } from 'react';
 import { View, StyleSheet, TouchableOpacity, Text, FlatList, Alert } from 'react-native';
 import MapView, { PROVIDER_DEFAULT } from 'react-native-maps';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute, RouteProp, useFocusEffect } from '@react-navigation/native';
 import { useTheme } from '../../theme/ThemeContext';
 import { ScreenHeader } from '../../components/common/ScreenHeader';
 import { CustomMarker } from '../../components/map/CustomMarker';
 import { MapSearchBar } from '../../components/map/MapSearchBar';
 import { FloatingButton } from '../../components/common/FloatingButton';
-import { RootStackParamList } from '../../types/navigation';
+import { RootStackParamList, HomeStackParamList } from '../../types/navigation';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Menu } from 'react-native-paper';
 import { PinDetailModal } from '../../components/map/PinDetailModal';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 
-// Mock Data
-const MOCK_PINS = [
-    { id: '1', emoji: '🗼', lat: 35.6586, lng: 139.7454, title: 'Tokyo Tower' },
-    { id: '2', emoji: '🍱', lat: 35.6895, lng: 139.6917, title: 'Sushi Spot' },
-    { id: '3', emoji: '⛩️', lat: 35.7148, lng: 139.7967, title: 'Senso-ji' },
-];
+// ... imports
+import { databaseService, PinData } from '../../services/DatabaseService';
 
+// Default Region (Tokyo)
 const INITIAL_REGION = {
     latitude: 35.6895,
     longitude: 139.6917,
@@ -27,15 +24,34 @@ const INITIAL_REGION = {
     longitudeDelta: 0.1,
 };
 
-type MapViewScreenNavigationProp = NativeStackNavigationProp<RootStackParamList>;
+type MapViewScreenNavigationProp = NativeStackNavigationProp<HomeStackParamList, 'MapView'>;
+type MapViewScreenRouteProp = RouteProp<HomeStackParamList, 'MapView'>;
 
 export const MapViewScreen: React.FC = () => {
     const { theme, colorScheme } = useTheme();
     const navigation = useNavigation<MapViewScreenNavigationProp>();
+    const route = useRoute<MapViewScreenRouteProp>();
+    const { mapId } = route.params || {};
 
     const mapRef = useRef<MapView>(null);
     const [searchQuery, setSearchQuery] = useState('');
-    const [pins, setPins] = useState(MOCK_PINS);
+    const [pins, setPins] = useState<PinData[]>([]);
+
+    useFocusEffect(
+        React.useCallback(() => {
+            if (!mapId) return;
+
+            const loadPins = async () => {
+                try {
+                    const fetchedPins = await databaseService.getPins(mapId);
+                    setPins(fetchedPins);
+                } catch (error) {
+                    console.error('Failed to load pins:', error);
+                }
+            };
+            loadPins();
+        }, [mapId])
+    );
 
     // Menu State
     const [menuVisible, setMenuVisible] = useState(false);
@@ -44,11 +60,11 @@ export const MapViewScreen: React.FC = () => {
 
     // Modal State
     const [modalVisible, setModalVisible] = useState(false);
-    const [selectedPin, setSelectedPin] = useState<any>(null);
+    const [selectedPin, setSelectedPin] = useState<PinData | null>(null);
 
     const handleAddPin = () => {
         // @ts-ignore
-        navigation.navigate('CreatePin');
+        navigation.navigate('CreatePin', { mapId });
     };
 
     const handleMarkerPress = useCallback((pin: any) => {
@@ -106,8 +122,8 @@ export const MapViewScreen: React.FC = () => {
                     {pins.map((pin) => (
                         <CustomMarker
                             key={pin.id}
-                            coordinate={{ latitude: pin.lat, longitude: pin.lng }}
-                            emoji={pin.emoji}
+                            coordinate={{ latitude: pin.latitude, longitude: pin.longitude }}
+                            emoji={pin.emoji || '📍'}
                             onPress={() => handleMarkerPress(pin)}
                         />
                     ))}
@@ -142,13 +158,13 @@ export const MapViewScreen: React.FC = () => {
                                 onPress={() => handleMarkerPress(item)}
                                 activeOpacity={0.9}
                             >
-                                <Text style={styles.cardEmoji}>{item.emoji}</Text>
+                                <Text style={styles.cardEmoji}>📍</Text>
                                 <View style={styles.cardContent}>
                                     <Text style={[theme.typography.bodyBold, { color: theme.colors.text.primary[colorScheme] }]} numberOfLines={1}>
                                         {item.title}
                                     </Text>
                                     <Text style={[theme.typography.caption, { color: theme.colors.text.secondary[colorScheme] }]}>
-                                        {item.lat.toFixed(4)}, {item.lng.toFixed(4)}
+                                        {item.latitude.toFixed(4)}, {item.longitude.toFixed(4)}
                                     </Text>
                                 </View>
                             </TouchableOpacity>

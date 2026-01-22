@@ -9,7 +9,6 @@ interface MapCardProps {
         id: string;
         name: string;
         emoji: string;
-        emoji: string;
         pinCount?: number;
         type?: string;
     };

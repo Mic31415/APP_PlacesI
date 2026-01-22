@@ -22,6 +22,7 @@ export interface PinData {
     longitude: number;
     imageUri?: string;
     rating: number;
+    emoji?: string;
     createdAt: number;
 }
 
@@ -203,6 +204,7 @@ export class DatabaseService {
                     longitude: item.longitude,
                     imageUri: item.image_uri,
                     rating: item.rating,
+                    emoji: item.emoji || '📍',
                     createdAt: item.created_at,
                 });
             }
