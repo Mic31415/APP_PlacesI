@@ -6,6 +6,9 @@ import { Provider as PaperProvider } from 'react-native-paper';
 import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import { ThemeProvider } from './src/theme/ThemeContext';
 import { AppNavigator } from './src/navigation/AppNavigator';
+import { LogBox } from 'react-native';
+
+LogBox.ignoreAllLogs(true); // Ignore all log notifications
 
 function App() {
   const colorScheme = useColorScheme();

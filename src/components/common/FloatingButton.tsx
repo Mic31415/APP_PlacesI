@@ -2,6 +2,7 @@ import React from 'react';
 import { TouchableOpacity, StyleSheet, Text, ViewStyle } from 'react-native';
 import { useTheme } from '../../theme/ThemeContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 
 interface FloatingButtonProps {
     onPress: () => void;
@@ -9,7 +10,7 @@ interface FloatingButtonProps {
     style?: ViewStyle;
 }
 
-export const FloatingButton: React.FC<FloatingButtonProps> = ({ onPress, icon = '➕', style }) => {
+export const FloatingButton: React.FC<FloatingButtonProps> = ({ onPress, icon = 'plus', style }) => {
     const { theme, colorScheme } = useTheme();
     const insets = useSafeAreaInsets();
 
@@ -28,7 +29,7 @@ export const FloatingButton: React.FC<FloatingButtonProps> = ({ onPress, icon = 
                 style,
             ]}
         >
-            <Text style={[styles.icon, { color: '#FFFFFF' }]}>{icon}</Text>
+            <Icon name={icon} size={28} color="#FFFFFF" />
         </TouchableOpacity>
     );
 };

@@ -2,11 +2,12 @@ import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { useTheme } from '../../theme/ThemeContext';
 import { Button } from './Button';
+import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 
 interface EmptyStateProps {
     title: string;
     description: string;
-    emoji?: string;
+    icon?: string;
     actionLabel?: string;
     onAction?: () => void;
 }
@@ -14,7 +15,7 @@ interface EmptyStateProps {
 export const EmptyState: React.FC<EmptyStateProps> = ({
     title,
     description,
-    emoji = '📭',
+    icon = 'map-marker-off',
     actionLabel,
     onAction,
 }) => {
@@ -22,7 +23,12 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
 
     return (
         <View style={styles.container}>
-            <Text style={styles.emoji}>{emoji}</Text>
+            <Icon
+                name={icon}
+                size={64}
+                color={theme.colors.text.tertiary[colorScheme]}
+                style={{ marginBottom: 16 }}
+            />
             <Text
                 style={[
                     theme.typography.h2,

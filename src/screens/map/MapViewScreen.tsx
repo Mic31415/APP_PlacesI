@@ -11,6 +11,7 @@ import { RootStackParamList } from '../../types/navigation';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Menu } from 'react-native-paper';
 import { PinDetailModal } from '../../components/map/PinDetailModal';
+import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 // import { BottomSheetModal } from '@gorhom/bottom-sheet'; // Unused
 
 // Mock Data
@@ -67,7 +68,7 @@ export const MapViewScreen: React.FC = () => {
             onDismiss={closeMenu}
             anchor={
                 <TouchableOpacity onPress={openMenu} style={{ padding: 8 }}>
-                    <Text style={{ fontSize: 22, color: theme.colors.text.primary[colorScheme] }}>⋮</Text>
+                    <Icon name="dots-vertical" size={24} color={theme.colors.text.primary[colorScheme]} />
                 </TouchableOpacity>
             }
             contentStyle={{ backgroundColor: theme.colors.card[colorScheme] }}
@@ -85,6 +86,7 @@ export const MapViewScreen: React.FC = () => {
             <ScreenHeader
                 title="Tokyo Trip"
                 rightAction={renderHeaderRight()}
+                onBack={() => navigation.goBack()}
             />
 
             <View style={styles.mapContainer}>
@@ -113,8 +115,8 @@ export const MapViewScreen: React.FC = () => {
 
                 <FloatingButton
                     onPress={handleAddPin}
-                    style={{ bottom: 180, right: 16 }}
-                    icon="📍"
+                    style={{ bottom: 100, right: 0 }}
+                    icon="map-marker-plus-outline"
                 />
 
                 {/* Horizontal Pin List */}

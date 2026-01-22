@@ -17,10 +17,9 @@ const Tab = createBottomTabNavigator<MainTabParamList>();
 const Stack = createNativeStackNavigator<RootStackParamList>();
 const HomeStack = createNativeStackNavigator<HomeStackParamList>();
 
-// Simple emoji icon component
-const TabIcon: React.FC<{ icon: string; color: string }> = ({ icon }) => {
-    return <Text style={{ fontSize: 24 }}>{icon}</Text>;
-};
+import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+
+// ...
 
 import { CreatePinScreen } from '../screens/home/CreatePinScreen';
 
@@ -65,8 +64,8 @@ const TabNavigator = () => {
                 component={HomeStackNavigator}
                 options={{
                     tabBarLabel: 'Maps',
-                    tabBarIcon: ({ color }) => (
-                        <TabIcon icon="🗺️" color={color} />
+                    tabBarIcon: ({ color, size }) => (
+                        <Icon name="map-marker-multiple" color={color} size={size} />
                     ),
                 }}
             />
@@ -75,8 +74,8 @@ const TabNavigator = () => {
                 component={CreateScreen}
                 options={{
                     tabBarLabel: 'Create',
-                    tabBarIcon: ({ color }) => (
-                        <TabIcon icon="➕" color={color} />
+                    tabBarIcon: ({ color, size }) => (
+                        <Icon name="plus-box" color={color} size={size} />
                     ),
                 }}
             />
@@ -85,8 +84,8 @@ const TabNavigator = () => {
                 component={SettingsScreen}
                 options={{
                     tabBarLabel: 'Settings',
-                    tabBarIcon: ({ color }) => (
-                        <TabIcon icon="⚙️" color={color} />
+                    tabBarIcon: ({ color, size }) => (
+                        <Icon name="cog" color={color} size={size} />
                     ),
                 }}
             />

@@ -2,6 +2,7 @@ import React from 'react';
 import { View, TextInput, StyleSheet, TouchableOpacity, ViewStyle, Text } from 'react-native';
 import { useTheme } from '../../theme/ThemeContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 
 interface MapSearchBarProps {
     value: string;
@@ -39,7 +40,7 @@ export const MapSearchBar: React.FC<MapSearchBarProps> = ({
                     },
                 ]}
             >
-                <Text style={styles.searchIcon}>🔍</Text>
+                <Icon name="magnify" size={20} color={theme.colors.text.tertiary[colorScheme]} style={styles.searchIcon} />
                 <TextInput
                     style={[
                         styles.input,
@@ -53,7 +54,7 @@ export const MapSearchBar: React.FC<MapSearchBarProps> = ({
                 />
                 {onFilterPress && (
                     <TouchableOpacity onPress={onFilterPress} style={styles.filterButton}>
-                        <Text style={{ fontSize: 20 }}>🌪️</Text>
+                        <Icon name="filter-variant" size={24} color={theme.colors.text.primary[colorScheme]} />
                     </TouchableOpacity>
                 )}
             </View>
