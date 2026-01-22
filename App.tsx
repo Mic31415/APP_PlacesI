@@ -8,11 +8,24 @@ import { ThemeProvider } from './src/theme/ThemeContext';
 import { AppNavigator } from './src/navigation/AppNavigator';
 import { LogBox } from 'react-native';
 
+import { databaseService } from './src/services/DatabaseService';
+
 LogBox.ignoreAllLogs(true); // Ignore all log notifications
 
 function App() {
   const colorScheme = useColorScheme();
   const isDarkMode = colorScheme === 'dark';
+
+  React.useEffect(() => {
+    const init = async () => {
+      try {
+        await databaseService.initDatabase();
+      } catch (e) {
+        console.error('Failed to init DB', e);
+      }
+    };
+    init();
+  }, []);
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>

@@ -10,7 +10,7 @@ interface MapCardProps {
         name: string;
         emoji: string;
         pinCount: number;
-        type: string;
+        type?: string;
     };
     onPress: () => void;
     style?: any;
@@ -28,7 +28,7 @@ export const MapCard: React.FC<MapCardProps> = ({ map, onPress, style }) => {
                 <View style={styles.content}>
                     <Text
                         style={[
-                            theme.typography.h3,
+                            theme.typography.bodyBold,
                             { color: theme.colors.text.primary[colorScheme], marginBottom: 4 },
                         ]}
                         numberOfLines={1}
@@ -41,7 +41,7 @@ export const MapCard: React.FC<MapCardProps> = ({ map, onPress, style }) => {
                             { color: theme.colors.text.secondary[colorScheme] },
                         ]}
                     >
-                        {map.type} • {map.pinCount} pins
+                        {map.type || 'Custom Map'} • {map.pinCount || 0} pins
                     </Text>
                 </View>
                 <Icon name="chevron-right" size={24} color={theme.colors.text.tertiary[colorScheme]} />
@@ -55,7 +55,6 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         padding: 16,
-        height: 100,
     },
     emojiContainer: {
         width: 60,

@@ -19,12 +19,12 @@ export const typography: Record<string, TypographyStyle> = {
     },
     h3: {
         fontSize: 22,
-        fontWeight: '600',
+        fontWeight: '700',
         lineHeight: 28,
     },
     h4: {
         fontSize: 20,
-        fontWeight: '600',
+        fontWeight: '700',
         lineHeight: 25,
     },
     body: {

@@ -1,28 +1,43 @@
-import React, { useState } from 'react';
-import { View, StyleSheet, FlatList } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import React, { useState, useCallback } from 'react';
+import { View, StyleSheet, FlatList, Text } from 'react-native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import { useTheme } from '../../theme/ThemeContext';
 import { ScreenHeader } from '../../components/common/ScreenHeader';
+import { databaseService, MapData } from '../../services/DatabaseService';
 import { MapCard } from '../../components/home/MapCard';
 import { EmptyState } from '../../components/common/EmptyState';
 import { FloatingButton } from '../../components/common/FloatingButton';
 import { getResponsiveValue } from '../../utils/responsive';
 import { MainTabParamList } from '../../types/navigation';
 
-// Mock Data
-const MOCK_MAPS = [
-    { id: '1', name: 'Travel Bucket List', emoji: '🌎', pinCount: 12, type: 'Travel' },
-    { id: '2', name: 'Favorite Ramen Spots', emoji: '🍜', pinCount: 5, type: 'Food' },
-    { id: '3', name: 'Hiking Trails', emoji: '🥾', pinCount: 8, type: 'Activity' },
-];
+// Mock Data removed
+// import { useFocusEffect } from '@react-navigation/native';
+// import { databaseService, MapData } from '../../services/DatabaseService';
+
+// ... imports
 
 type HomeScreenNavigationProp = BottomTabNavigationProp<MainTabParamList, 'Home'>;
 
 export const HomeScreen: React.FC = () => {
     const { theme, colorScheme } = useTheme();
     const navigation = useNavigation<HomeScreenNavigationProp>();
-    const [maps, setMaps] = useState(MOCK_MAPS);
+    // Initialize with empty array
+    const [maps, setMaps] = useState<MapData[]>([]);
+
+    useFocusEffect(
+        React.useCallback(() => {
+            const loadMaps = async () => {
+                try {
+                    const fetchedMaps = await databaseService.getMaps();
+                    setMaps(fetchedMaps);
+                } catch (error) {
+                    console.error('Failed to load maps:', error);
+                }
+            };
+            loadMaps();
+        }, [])
+    );
 
     // Responsive Layout: 1 column on mobile, 2 on tablet
     const numColumns = getResponsiveValue(1, 1, 2, 2);
@@ -39,7 +54,13 @@ export const HomeScreen: React.FC = () => {
 
     return (
         <View style={[styles.container, { backgroundColor: theme.colors.background[colorScheme] }]}>
-            <ScreenHeader title="My Maps" />
+            <ScreenHeader
+                leftComponent={
+                    <Text style={[theme.typography.h3, { color: theme.colors.text.primary[colorScheme] }]}>
+                        My Maps
+                    </Text>
+                }
+            />
 
             <FlatList
                 data={maps}
