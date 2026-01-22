@@ -1,0 +1,43 @@
+import React from 'react';
+import { View, TouchableOpacity, StyleSheet } from 'react-native';
+import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+import { useTheme } from '../../theme/ThemeContext';
+
+interface RatingPickerProps {
+    value: number;
+    onValueChange: (rating: number) => void;
+    size?: number;
+}
+
+export const RatingPicker: React.FC<RatingPickerProps> = ({ value, onValueChange, size = 32 }) => {
+    const { theme } = useTheme();
+
+    return (
+        <View style={styles.container}>
+            {[1, 2, 3, 4, 5].map((star) => (
+                <TouchableOpacity
+                    key={star}
+                    onPress={() => onValueChange(star)}
+                    activeOpacity={0.7}
+                    style={styles.star}
+                >
+                    <Icon
+                        name={star <= value ? 'star' : 'star-outline'}
+                        size={size}
+                        color={star <= value ? '#FFD700' : theme.colors.text.tertiary['light']} // Gold for active
+                    />
+                </TouchableOpacity>
+            ))}
+        </View>
+    );
+};
+
+const styles = StyleSheet.create({
+    container: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    star: {
+        marginRight: 8,
+    },
+});
