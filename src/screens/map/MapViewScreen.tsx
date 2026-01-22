@@ -12,7 +12,6 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Menu } from 'react-native-paper';
 import { PinDetailModal } from '../../components/map/PinDetailModal';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
-// import { BottomSheetModal } from '@gorhom/bottom-sheet'; // Unused
 
 // Mock Data
 const MOCK_PINS = [
@@ -84,9 +83,17 @@ export const MapViewScreen: React.FC = () => {
     return (
         <View style={styles.container}>
             <ScreenHeader
-                title="Tokyo Trip"
-                rightAction={renderHeaderRight()}
-                onBack={() => navigation.goBack()}
+                leftComponent={
+                    <TouchableOpacity onPress={() => navigation.goBack()}>
+                        <Icon name="chevron-left" size={32} color={theme.colors.text.primary[colorScheme]} />
+                    </TouchableOpacity>
+                }
+                centerComponent={
+                    <Text style={[theme.typography.h3, { color: theme.colors.text.primary[colorScheme] }]}>
+                        Tokyo Trip
+                    </Text>
+                }
+                rightComponent={renderHeaderRight()}
             />
 
             <View style={styles.mapContainer}>

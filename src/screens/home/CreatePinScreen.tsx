@@ -5,6 +5,7 @@ import { useNavigation } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useTheme } from '../../theme/ThemeContext';
 import { RatingPicker } from '../../components/common/RatingPicker';
+import { ScreenHeader } from '../../components/common/ScreenHeader';
 
 export const CreatePinScreen: React.FC = () => {
     const { theme, colorScheme } = useTheme();
@@ -68,17 +69,26 @@ export const CreatePinScreen: React.FC = () => {
     );
 
     return (
-        <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background[colorScheme] }]}>
+        <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background[colorScheme] }]} edges={['left', 'right', 'bottom']}>
             {/* Header */}
-            <View style={[styles.header, { borderBottomColor: theme.colors.border[colorScheme] }]}>
-                <TouchableOpacity onPress={handleBack} style={styles.headerBtn}>
-                    <Icon name="chevron-left" size={32} color={theme.colors.primary} />
-                </TouchableOpacity>
-                <Text style={[theme.typography.h3, { color: theme.colors.text.primary[colorScheme] }]}>Add Pin</Text>
-                <TouchableOpacity onPress={handleSave} style={styles.headerBtn}>
-                    <Text style={[theme.typography.bodyBold, { color: theme.colors.primary }]}>Save</Text>
-                </TouchableOpacity>
-            </View>
+            {/* Header */}
+            <ScreenHeader
+                leftComponent={
+                    <TouchableOpacity onPress={handleBack} style={styles.headerBtn}>
+                        <Icon name="chevron-left" size={32} color={theme.colors.primary} />
+                    </TouchableOpacity>
+                }
+                centerComponent={
+                    <Text style={[theme.typography.h3, { color: theme.colors.text.primary[colorScheme] }]}>
+                        Add Pin
+                    </Text>
+                }
+                rightComponent={
+                    <TouchableOpacity onPress={handleSave} style={styles.headerBtn}>
+                        <Text style={[theme.typography.bodyBold, { color: theme.colors.primary }]}>Save</Text>
+                    </TouchableOpacity>
+                }
+            />
 
             <KeyboardAvoidingView
                 behavior={Platform.OS === 'ios' ? 'padding' : 'height'}

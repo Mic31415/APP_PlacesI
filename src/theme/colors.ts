@@ -1,22 +1,23 @@
 export const colors = {
-  primary: '#007AFF',
-  secondary: '#5856D6',
-  
+  primary: '#2A9D8F', // Wanderlust Teal
+  secondary: '#E9C46A', // Warm Sand
+  accent: '#264653', // Dark Charcoal Blue
+
   background: {
     light: '#FFFFFF',
     dark: '#000000',
   },
-  
+
   surface: {
     light: '#F2F2F7',
     dark: '#1C1C1E',
   },
-  
+
   card: {
     light: '#FFFFFF',
     dark: '#2C2C2E',
   },
-  
+
   text: {
     primary: {
       light: '#000000',
@@ -31,17 +32,17 @@ export const colors = {
       dark: '#8E8E93',
     },
   },
-  
+
   border: {
     light: '#C6C6C8',
     dark: '#38383A',
   },
-  
+
   success: '#34C759',
   warning: '#FF9500',
   error: '#FF3B30',
   info: '#007AFF',
-  
+
   // Transparent overlays
   overlay: {
     light: 'rgba(0, 0, 0, 0.3)',

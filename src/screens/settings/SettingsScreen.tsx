@@ -89,11 +89,11 @@ export const SettingsScreen: React.FC = () => {
 
     return (
         <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background[colorScheme] }]}>
-            <View style={styles.header}>
+            {/* <View style={styles.header}>
                 <Text style={[theme.typography.h2, { color: theme.colors.text.primary[colorScheme] }]}>
                     Settings
                 </Text>
-            </View>
+            </View> */}
 
             <ScrollView contentContainerStyle={styles.scrollContent}>
 

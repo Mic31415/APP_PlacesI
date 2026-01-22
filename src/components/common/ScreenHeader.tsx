@@ -4,38 +4,50 @@ import { useTheme } from '../../theme/ThemeContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 interface ScreenHeaderProps {
-    title: string;
-    rightAction?: React.ReactNode;
+    leftComponent?: React.ReactNode;
+    centerComponent?: React.ReactNode;
+    rightComponent?: React.ReactNode;
+    safeAreaTop?: boolean;
+    paddingX?: number;
+    paddingY?: number;
+    backgroundColor?: string;
 }
 
-export const ScreenHeader: React.FC<ScreenHeaderProps> = ({ title, rightAction }) => {
+export const ScreenHeader: React.FC<ScreenHeaderProps> = ({
+    leftComponent,
+    centerComponent,
+    rightComponent,
+    safeAreaTop = true,
+    paddingX,
+    paddingY,
+    backgroundColor,
+}) => {
     const { theme, colorScheme } = useTheme();
     const insets = useSafeAreaInsets();
 
+    const containerStyle = {
+        backgroundColor: backgroundColor || theme.colors.background[colorScheme],
+        paddingTop: safeAreaTop ? insets.top : 0,
+        paddingHorizontal: paddingX !== undefined ? paddingX : theme.spacing.lg,
+        paddingBottom: paddingY !== undefined ? paddingY : theme.spacing.md,
+        borderBottomWidth: 1,
+        borderBottomColor: theme.colors.border[colorScheme],
+    };
+
     return (
-        <View
-            style={[
-                styles.container,
-                {
-                    backgroundColor: theme.colors.background[colorScheme],
-                    paddingTop: insets.top + theme.spacing.md,
-                    paddingBottom: theme.spacing.md,
-                    paddingHorizontal: theme.spacing.lg,
-                    borderBottomWidth: 1,
-                    borderBottomColor: theme.colors.border[colorScheme],
-                },
-            ]}
-        >
+        <View style={[styles.container, containerStyle]}>
             <View style={styles.content}>
-                <Text
-                    style={[
-                        theme.typography.h1,
-                        { color: theme.colors.text.primary[colorScheme] },
-                    ]}
-                >
-                    {title}
-                </Text>
-                {rightAction && <View style={styles.rightAction}>{rightAction}</View>}
+                <View style={[styles.leftComponent, { minWidth: 40 }]}>
+                    {leftComponent}
+                </View>
+
+                <View style={[styles.centerComponent, { flex: 1, alignItems: 'center' }]}>
+                    {centerComponent}
+                </View>
+
+                <View style={[styles.rightComponent, { minWidth: 40, alignItems: 'flex-end' }]}>
+                    {rightComponent}
+                </View>
             </View>
         </View>
     );
@@ -47,10 +59,20 @@ const styles = StyleSheet.create({
     },
     content: {
         flexDirection: 'row',
-        justifyContent: 'space-between',
         alignItems: 'center',
+        justifyContent: 'space-between',
     },
-    rightAction: {
+    leftComponent: {
         justifyContent: 'center',
+        alignItems: 'flex-start',
+        zIndex: 1,
+    },
+    centerComponent: {
+        justifyContent: 'center',
+        zIndex: 0,
+    },
+    rightComponent: {
+        justifyContent: 'center',
+        zIndex: 1,
     },
 });
