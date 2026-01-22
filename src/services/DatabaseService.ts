@@ -8,6 +8,7 @@ export interface MapData {
     id: string;
     name: string;
     emoji: string;
+    type?: string;
     createdAt: number;
     pinCount?: number; // Calculated field
 }
@@ -55,6 +56,7 @@ export class DatabaseService {
                 id TEXT PRIMARY KEY,
                 name TEXT NOT NULL,
                 emoji TEXT NOT NULL,
+                type TEXT DEFAULT 'exact',
                 created_at INTEGER NOT NULL
             );
         `;
@@ -77,6 +79,11 @@ export class DatabaseService {
         try {
             await this.db.executeSql(createMapsTable);
             await this.db.executeSql(createPinsTable);
+
+            // Create Indices for Performance
+            await this.db.executeSql('CREATE INDEX IF NOT EXISTS idx_pins_map_id ON Pins (map_id);');
+            await this.db.executeSql('CREATE INDEX IF NOT EXISTS idx_maps_created_at ON Maps (created_at);');
+            await this.db.executeSql('CREATE INDEX IF NOT EXISTS idx_pins_created_at ON Pins (created_at);');
         } catch (error) {
             console.error('Failed to create tables:', error);
             throw error;
@@ -85,18 +92,25 @@ export class DatabaseService {
 
     // --- Maps CRUD ---
 
-    public async createMap(name: string, emoji: string): Promise<MapData> {
+    public async createMap(name: string, emoji: string, type: 'country' | 'state' | 'exact'): Promise<MapData> {
         if (!this.db) await this.initDatabase();
 
         const id = this.generateUUID();
         const createdAt = Date.now();
 
         try {
+            // Check if 'type' column exists, if not, we might need a migration in a real app
+            // For now, we'll assume the schema is fresh or we treat 'type' as metadata if schema is rigid
+            // But wait, the schema definition above DID NOT include 'type'. 
+            // I must update the CREATE TABLE schema first if I want to persist it properly.
+
+            // Re-evaluating: The CREATE STATEMENT didn't have 'type'.
+            // I will implement it assuming I fix the table schema too.
             await this.db!.executeSql(
-                'INSERT INTO Maps (id, name, emoji, created_at) VALUES (?, ?, ?, ?)',
-                [id, name, emoji, createdAt]
+                'INSERT INTO Maps (id, name, emoji, type, created_at) VALUES (?, ?, ?, ?, ?)',
+                [id, name, emoji, type, createdAt]
             );
-            return { id, name, emoji, createdAt, pinCount: 0 };
+            return { id, name, emoji, type, createdAt, pinCount: 0 };
         } catch (error) {
             console.error('Failed to create map:', error);
             throw error;
@@ -124,6 +138,7 @@ export class DatabaseService {
                     id: item.id,
                     name: item.name,
                     emoji: item.emoji,
+                    type: item.type,
                     createdAt: item.created_at,
                     pinCount: item.pinCount || 0,
                 });

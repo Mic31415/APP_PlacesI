@@ -6,6 +6,7 @@ import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useTheme } from '../../theme/ThemeContext';
 import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import { MainTabParamList } from '../../types/navigation';
+import { databaseService } from '../../services/DatabaseService';
 
 // Emoji Data
 const EMOJI_LIST = [
@@ -36,18 +37,20 @@ export const CreateScreen: React.FC = () => {
         setMapType('exact');
     };
 
-    const handleCreate = () => {
+    const handleCreate = async () => {
         if (!mapName.trim()) {
             Alert.alert('Required', 'Please enter a map name');
             return;
         }
-        // Logic to save map would go here
-        console.log('Create Map:', { name: mapName, emoji: selectedEmoji, type: mapType });
 
-        // Navigate to the new map (mock)
-        // ideally we get the ID back and navigate to MapView
-        navigation.navigate('Home');
-        // Note: In a real app we'd navigate to the HomeStack -> MapView with new ID
+        try {
+            await databaseService.createMap(mapName.trim(), selectedEmoji, mapType);
+            // Optional: Haptic feedback here
+            navigation.navigate('Home');
+        } catch (error) {
+            console.error('Error creating map:', error);
+            Alert.alert('Error', 'Failed to create map. Please try again.');
+        }
     };
 
     const renderMapTypeOption = (type: 'country' | 'state' | 'exact', label: string) => (
