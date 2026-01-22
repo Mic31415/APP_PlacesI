@@ -139,7 +139,7 @@ export class DatabaseService {
                     id: item.id,
                     name: item.name,
                     emoji: item.emoji,
-                    type: item.type,
+                    type: (item.type === 'country' || item.type === 'state' || item.type === 'exact') ? item.type : undefined,
                     createdAt: item.created_at,
                     pinCount: item.pinCount || 0,
                 });
@@ -222,6 +222,33 @@ export class DatabaseService {
             await this.db!.executeSql('DELETE FROM Pins WHERE id = ?', [id]);
         } catch (error) {
             console.error('Failed to delete pin:', error);
+            throw error;
+        }
+    }
+
+    public async updatePin(id: string, updates: Partial<Omit<PinData, 'id' | 'createdAt' | 'mapId'>>): Promise<void> {
+        if (!this.db) await this.initDatabase();
+
+        const fields: string[] = [];
+        const values: any[] = [];
+
+        if (updates.title !== undefined) { fields.push('title = ?'); values.push(updates.title); }
+        if (updates.description !== undefined) { fields.push('description = ?'); values.push(updates.description); }
+        if (updates.latitude !== undefined) { fields.push('latitude = ?'); values.push(updates.latitude); }
+        if (updates.longitude !== undefined) { fields.push('longitude = ?'); values.push(updates.longitude); }
+        if (updates.rating !== undefined) { fields.push('rating = ?'); values.push(updates.rating); }
+        if (updates.emoji !== undefined) { fields.push('emoji = ?'); values.push(updates.emoji); }
+        if (updates.imageUri !== undefined) { fields.push('image_uri = ?'); values.push(updates.imageUri); }
+
+        if (fields.length === 0) return;
+
+        try {
+            await this.db!.executeSql(
+                `UPDATE Pins SET ${fields.join(', ')} WHERE id = ?`,
+                [...values, id]
+            );
+        } catch (error) {
+            console.error('Failed to update pin:', error);
             throw error;
         }
     }

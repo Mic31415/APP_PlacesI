@@ -47,9 +47,9 @@ export const HomeScreen: React.FC = () => {
         navigation.navigate('Create');
     };
 
-    const handleMapPress = (mapId: string) => {
-        // @ts-ignore - navigation types are tricky with nested stacks, forcing consistent nav for now
-        navigation.navigate('MapView', { mapId });
+    const handleMapPress = (map: MapData) => {
+        // @ts-ignore
+        navigation.navigate('MapView', { mapId: map.id, mapName: map.name, emoji: map.emoji });
     };
 
     const handleDeleteMap = useCallback((map: MapData) => {
@@ -93,7 +93,7 @@ export const HomeScreen: React.FC = () => {
                 renderItem={({ item }) => (
                     <MapCard
                         map={item}
-                        onPress={() => handleMapPress(item.id)}
+                        onPress={() => handleMapPress(item)}
                         onLongPress={() => handleDeleteMap(item)}
                         style={{ flex: 1, margin: theme.spacing.sm }}
                     />

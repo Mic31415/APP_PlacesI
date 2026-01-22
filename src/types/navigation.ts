@@ -11,7 +11,7 @@ export type MainTabParamList = {
 
 export type HomeStackParamList = {
     MapList: undefined;
-    MapView: { mapId: string };
+    MapView: { mapId: string; mapName: string; emoji: string };
     PinDetail: { pinId: string };
     CreatePin: undefined;
 };

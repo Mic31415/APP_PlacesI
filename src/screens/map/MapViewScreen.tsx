@@ -31,7 +31,7 @@ export const MapViewScreen: React.FC = () => {
     const { theme, colorScheme } = useTheme();
     const navigation = useNavigation<MapViewScreenNavigationProp>();
     const route = useRoute<MapViewScreenRouteProp>();
-    const { mapId } = route.params || {};
+    const { mapId, mapName, emoji } = route.params || {};
 
     const mapRef = useRef<MapView>(null);
     const [searchQuery, setSearchQuery] = useState('');
@@ -77,6 +77,17 @@ export const MapViewScreen: React.FC = () => {
         setSelectedPin(null);
     }, []);
 
+    const handleDeletePin = useCallback(async (pinId: string) => {
+        try {
+            await databaseService.deletePin(pinId);
+            const updatedPins = pins.filter(p => p.id !== pinId);
+            setPins(updatedPins);
+        } catch (error) {
+            console.error('Failed to delete pin:', error);
+            Alert.alert('Error', 'Failed to delete pin');
+        }
+    }, [pins]);
+
     const renderHeaderRight = () => (
         <Menu
             visible={menuVisible}
@@ -106,7 +117,7 @@ export const MapViewScreen: React.FC = () => {
                 }
                 centerComponent={
                     <Text style={[theme.typography.h3, { color: theme.colors.text.primary[colorScheme] }]}>
-                        Tokyo Trip
+                        {emoji || '🗺️'} {mapName || 'Map'}
                     </Text>
                 }
                 rightComponent={renderHeaderRight()}
@@ -177,6 +188,7 @@ export const MapViewScreen: React.FC = () => {
                 visible={modalVisible}
                 pin={selectedPin}
                 onClose={handleClosePinDetail}
+                onDelete={handleDeletePin}
             />
         </View>
     );
