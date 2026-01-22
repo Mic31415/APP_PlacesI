@@ -1,0 +1,61 @@
+“Places I...” Mobile Application Development Specification
+1. App Overview
+App Name: Places I...
+Tagline: Track Your World, One (emoji icons/dynamically changing?) at a Time
+The "Places I..." app is a simple, offline-first mobile application that allows users to create customizable maps and log personal experiences at specific locations. Users can track things like places they have traveled to, restaurants they have visited, or any other location-based activities.
+Key features include:
+	•	Multiple custom map types (e.g., "Places I've Traveled To", "Places I've Eaten At")
+	•	Pins with custom emojis, titles, notes/descriptions, ratings, and images
+	•	Map views at country, state, or exact location levels
+	•	Fully local storage – no cloud services, no AI, no Firebase
+The app will be ad-supported with an optional premium subscription for an ad-free experience.
+Development Approach: Use the same tech stack as our current apps for maximum code reuse and efficiency.
+2. Monetization
+	•	Primary Model: Banner and interstitial ads (non-intrusive)
+	•	Ad Network: Google AdMob (cross-platform integration) or do you recommend something else???
+	•	Premium Subscription (Ad-Free):
+	•	$1 per month
+	•	$10 per year
+	•	Implemented via Apple In-App Purchases (iOS) and Google Play Billing (Android)
+	•	No additional premium features beyond ad removal
+3. Core Features
+3.1 Onboarding & Permissions
+	•	No user accounts required – all data stored locally
+	•	Unless subscription based correct?
+	•	Simple onboarding tutorial (3–4 screens)
+	•	Request permissions: Location, Camera/Gallery, Storage
+3.2 Map Creation & Management
+	•	Users can create multiple map types
+	•	Each map type includes:
+	•	Custom name (e.g., "Places I...")
+	•	Custom emoji for pins (from a predefined emoji picker)
+	•	Map view type: Country-level (highlight whole countries), State-level (highlight states/provinces), or Exact location (standard pin type map)
+	•	Home screen: List of all user maps as cards (name, emoji, pin count)
+	•	Buttons: Create New Map, Edit/Delete Map
+3.3 Adding & Managing Pins
+	•	From a selected map, tap "+" to add a pin
+	•	Pin addition steps:
+	•	Select location (search, current location, or manual pick)
+	•	For country/state maps: Highlight the selected area
+	•	Enter title (short text)
+	•	Enter note/description (long text, basic formatting)
+	•	Optional: Upload image from camera or gallery
+	•	View pin details in a modal (title, description, image, edit/delete)
+3.4 Map Visualization
+	•	Interactive, zoomable/pannable map view per map type
+	•	Pins displayed with selected emoji
+	•	Country/state maps show filled/highlighted regions
+	•	Optional clustering for dense pin sets
+	•	Light/dark mode support (device-based)
+3.5 Additional Features
+	•	Search within a map by title or description
+	•	Simple stats per map (e.g., "25 countries visited")
+	•	Manual data export/import as JSON file (for backup/restore)
+	•	Settings screen: Ad toggle (premium), clear data, app info
+4. Technical Requirements
+Tech Stack: Same as current apps (e.g., React Native)
+5. UI/UX Guidelines
+	•	Clean, minimal design with vibrant emoji accents
+	•	Bottom tab navigation: Home/Maps, Create, Settings
+	•	Full-screen map views with overlays
+	•	Support for accessibility (screen reader, dynamic text)
