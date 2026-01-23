@@ -169,11 +169,34 @@ export const MapViewScreen: React.FC = () => {
         }
     };
 
+    const handleDeleteMap = () => {
+        Alert.alert(
+            "Delete Map",
+            `Are you sure you want to delete "${currentMapName}"?\nAll ${pins.length} pins will serve no purpose and be removed.`,
+            [
+                { text: "Cancel", style: "cancel" },
+                {
+                    text: "Delete",
+                    style: "destructive",
+                    onPress: async () => {
+                        try {
+                            await databaseService.deleteMap(mapId);
+                            navigation.goBack();
+                        } catch (error) {
+                            console.error('Failed to delete map:', error);
+                            Alert.alert('Error', 'Failed to delete map');
+                        }
+                    }
+                }
+            ]
+        );
+    };
+
     const renderHeaderRight = useCallback(() => (
         <MapHeaderMenu
             onEdit={() => handleEditMap()}
             onShare={handleShareMap}
-            onDelete={() => console.log('Delete')}
+            onDelete={handleDeleteMap}
         />
     ), [handleEditMap, currentMapName, currentMapEmoji, pins]);
 
