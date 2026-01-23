@@ -72,8 +72,7 @@ export const MapViewScreen: React.FC = () => {
     const [selectedPin, setSelectedPin] = useState<PinData | null>(null);
 
     const handleAddPin = () => {
-        // @ts-ignore
-        navigation.navigate('CreatePin', { mapId });
+        navigation.navigate('CreatePin', { mapId, mapEmoji: emoji });
     };
 
     const handleMarkerPress = useCallback((pin: any) => {

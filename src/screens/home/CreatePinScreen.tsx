@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, KeyboardAvoidingView, Platform, Image, Alert, PermissionsAndroid, ActivityIndicator } from 'react-native';
+import React, { useState, useMemo } from 'react';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, KeyboardAvoidingView, Platform, Image, Alert, PermissionsAndroid, ActivityIndicator, Modal, FlatList, Dimensions } from 'react-native';
 import Geolocation from '@react-native-community/geolocation';
 import Geocoder from 'react-native-geocoding';
+import { launchCamera, launchImageLibrary } from 'react-native-image-picker';
 import { Config } from '../../constants/Config';
 
 // Initialize Geocoder with your Google Maps API Key
@@ -15,22 +16,42 @@ import { ScreenHeader } from '../../components/common/ScreenHeader';
 import { databaseService } from '../../services/DatabaseService';
 import { MAP_EMOJIS } from '../../constants/emojis';
 
+const SCREEN_WIDTH = Dimensions.get('window').width;
+const COLS = 7;
+const ROWS = 3;
+const PAGE_SIZE = COLS * ROWS;
+const EMOJI_ITEM_SIZE = SCREEN_WIDTH / COLS;
+
+const chunkArray = <T,>(array: T[], size: number): T[][] => {
+    const result = [];
+    for (let i = 0; i < array.length; i += size) {
+        result.push(array.slice(i, i + size));
+    }
+    return result;
+};
+
 export const CreatePinScreen: React.FC = () => {
     const { theme, colorScheme } = useTheme();
     const navigation = useNavigation();
+
+    const route = useRoute();
+    const { mapId, mapEmoji } = route.params as { mapId: string; mapEmoji?: string };
 
     const [title, setTitle] = useState('');
     const [description, setDescription] = useState('');
     const [location, setLocation] = useState('');
     const [rating, setRating] = useState(0);
-    const [selectedEmoji, setSelectedEmoji] = useState('📍');
+    const [selectedEmoji, setSelectedEmoji] = useState(mapEmoji || '🗺️');
+    const [emojiModalVisible, setEmojiModalVisible] = useState(false);
+
+    const emojiPages = useMemo(() => chunkArray(MAP_EMOJIS, PAGE_SIZE), []);
+
 
     const [imageUri, setImageUri] = useState<string | null>(null);
     const [coordinates, setCoordinates] = useState<{ latitude: number; longitude: number } | null>(null);
     const [isLoadingLocation, setIsLoadingLocation] = useState(false);
 
-    const route = useRoute();
-    const { mapId } = route.params as { mapId: string };
+
 
     const handleSave = async () => {
         if (!title.trim()) {
@@ -59,16 +80,44 @@ export const CreatePinScreen: React.FC = () => {
         navigation.goBack();
     };
 
-    const handleTakePhoto = () => {
-        // Placeholder for camera logic
-        console.log('Take Photo');
-        // Simulate image selection
-        setImageUri('mock_image_uri');
+    const handleTakePhoto = async () => {
+        try {
+            const hasPermission = await PermissionsAndroid.request(PermissionsAndroid.PERMISSIONS.CAMERA);
+            if (hasPermission !== PermissionsAndroid.RESULTS.GRANTED) {
+                Alert.alert("Permission Denied", "Camera permission is required to take photos.");
+                return;
+            }
+
+            const result = await launchCamera({
+                mediaType: 'photo',
+                quality: 0.7,
+                saveToPhotos: false, // Attempting false to avoid external storage permission issues for now
+            });
+
+            if (result.didCancel) {
+                console.log('User cancelled image picker');
+            } else if (result.errorCode) {
+                console.log('ImagePicker Error: ', result.errorMessage);
+                Alert.alert('Error', result.errorMessage || 'Failed to open camera');
+            } else if (result.assets && result.assets.length > 0) {
+                setImageUri(result.assets[0].uri || null);
+            }
+        } catch (error) {
+            console.error('Camera Launch Error:', error);
+            Alert.alert('Error', 'An unexpected error occurred opening current camera.');
+        }
     };
 
-    const handlePickPhoto = () => {
-        // Placeholder for gallery logic
-        console.log('Pick Photo');
+    const handlePickPhoto = async () => {
+        const result = await launchImageLibrary({
+            mediaType: 'photo',
+            quality: 0.7,
+            selectionLimit: 1,
+        });
+
+        if (result.assets && result.assets.length > 0) {
+            setImageUri(result.assets[0].uri || null);
+        }
     };
 
     const requestLocationPermission = async () => {
@@ -249,20 +298,15 @@ export const CreatePinScreen: React.FC = () => {
                     {/* Emoji Selector */}
                     <View style={styles.inputGroup}>
                         <Text style={[styles.label, { color: theme.colors.text.secondary[colorScheme] }]}>Icon</Text>
-                        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 12 }}>
-                            {MAP_EMOJIS.slice(0, 50).map((emoji) => (
-                                <TouchableOpacity
-                                    key={emoji}
-                                    onPress={() => setSelectedEmoji(emoji)}
-                                    style={[
-                                        styles.emojiItem,
-                                        selectedEmoji === emoji && { backgroundColor: theme.colors.primary + '20', borderColor: theme.colors.primary }
-                                    ]}
-                                >
-                                    <Text style={{ fontSize: 24 }}>{emoji}</Text>
-                                </TouchableOpacity>
-                            ))}
-                        </ScrollView>
+                        <TouchableOpacity
+                            style={[styles.emojiSelector, { backgroundColor: theme.colors.surface[colorScheme] }]}
+                            onPress={() => setEmojiModalVisible(true)}
+                        >
+                            <Text style={styles.emojiPreview}>{selectedEmoji}</Text>
+                            <Text style={[theme.typography.caption, { color: theme.colors.text.tertiary[colorScheme], marginTop: 8 }]}>
+                                Tap to change
+                            </Text>
+                        </TouchableOpacity>
                     </View>
 
                     {/* Photo */}
@@ -287,8 +331,13 @@ export const CreatePinScreen: React.FC = () => {
                         </View>
                         {imageUri && (
                             <View style={styles.imagePreview}>
-                                <Icon name="image-area" size={48} color={theme.colors.text.tertiary[colorScheme]} />
-                                <Text style={{ color: theme.colors.text.tertiary[colorScheme] }}>Mock Image Preview</Text>
+                                <Image source={{ uri: imageUri }} style={{ width: '100%', height: '100%', borderRadius: 12 }} resizeMode="cover" />
+                                <TouchableOpacity
+                                    style={{ position: 'absolute', top: 8, right: 8, backgroundColor: 'rgba(0,0,0,0.5)', borderRadius: 12, padding: 4 }}
+                                    onPress={() => setImageUri(null)}
+                                >
+                                    <Icon name="close" size={20} color="#fff" />
+                                </TouchableOpacity>
                             </View>
                         )}
                     </View>
@@ -296,6 +345,56 @@ export const CreatePinScreen: React.FC = () => {
                     <View style={{ height: 40 }} />
                 </ScrollView>
             </KeyboardAvoidingView>
+
+            {/* Emoji Modal */}
+            <Modal
+                visible={emojiModalVisible}
+                animationType="slide"
+                transparent={true}
+                onRequestClose={() => setEmojiModalVisible(false)}
+            >
+                <View style={[styles.modalOverlay, { backgroundColor: 'rgba(0,0,0,0.5)' }]}>
+                    <View style={[styles.modalContent, { backgroundColor: theme.colors.card[colorScheme] }]}>
+                        <View style={styles.modalHeader}>
+                            <Text style={[theme.typography.h3, { color: theme.colors.text.primary[colorScheme] }]}>Select Emoji</Text>
+                            <TouchableOpacity onPress={() => setEmojiModalVisible(false)}>
+                                <Icon name="close" size={24} color={theme.colors.text.secondary[colorScheme]} />
+                            </TouchableOpacity>
+                        </View>
+
+                        <View style={{ height: EMOJI_ITEM_SIZE * ROWS + 20 }}>
+                            <FlatList
+                                data={emojiPages}
+                                horizontal
+                                pagingEnabled
+                                showsHorizontalScrollIndicator={false}
+                                keyExtractor={(_, index) => `page-${index}`}
+                                renderItem={({ item: pageEmojis }) => (
+                                    <View style={{ width: SCREEN_WIDTH, flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'flex-start', paddingHorizontal: 0 }}>
+                                        {pageEmojis.map((emoji) => (
+                                            <TouchableOpacity
+                                                key={emoji}
+                                                style={{
+                                                    width: EMOJI_ITEM_SIZE,
+                                                    height: EMOJI_ITEM_SIZE,
+                                                    justifyContent: 'center',
+                                                    alignItems: 'center'
+                                                }}
+                                                onPress={() => {
+                                                    setSelectedEmoji(emoji);
+                                                    setEmojiModalVisible(false);
+                                                }}
+                                            >
+                                                <Text style={{ fontSize: 32 }}>{emoji}</Text>
+                                            </TouchableOpacity>
+                                        ))}
+                                    </View>
+                                )}
+                            />
+                        </View>
+                    </View>
+                </View>
+            </Modal>
         </SafeAreaView>
     );
 };
@@ -380,14 +479,32 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         marginTop: 8,
     },
-    emojiItem: {
-        width: 48,
-        height: 48,
-        borderRadius: 24,
+    emojiSelector: {
         alignItems: 'center',
-        justifyContent: 'center',
-        borderWidth: 1,
-        borderColor: 'rgba(0,0,0,0.1)',
-        backgroundColor: 'transparent',
-    }
+        padding: 24,
+        borderRadius: 12,
+        marginBottom: 8,
+    },
+    emojiPreview: {
+        fontSize: 64,
+    },
+    modalOverlay: {
+        flex: 1,
+        justifyContent: 'flex-end',
+    },
+    modalContent: {
+        borderTopLeftRadius: 20,
+        borderTopRightRadius: 20,
+        paddingBottom: 20,
+        width: '100%',
+        backgroundColor: '#F5F5F5',
+    },
+    modalHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        padding: 16,
+        borderBottomWidth: 0.5,
+        borderBottomColor: 'rgba(0,0,0,0.1)',
+    },
 });

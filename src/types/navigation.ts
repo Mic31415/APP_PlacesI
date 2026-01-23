@@ -13,12 +13,12 @@ export type HomeStackParamList = {
     MapList: undefined;
     MapView: { mapId: string; mapName: string; emoji: string };
     PinDetail: { pinId: string };
-    CreatePin: undefined;
+    CreatePin: { mapId: string; mapEmoji?: string };
 };
 
 export type CreateStackParamList = {
     CreateMap: undefined;
-    CreatePin: { mapId: string };
+    CreatePin: { mapId: string; mapEmoji?: string };
 };
 
 export type SettingsStackParamList = {

@@ -10,7 +10,7 @@ interface RatingPickerProps {
 }
 
 export const RatingPicker: React.FC<RatingPickerProps> = ({ value, onValueChange, size = 32 }) => {
-    const { theme } = useTheme();
+    const { theme, colorScheme } = useTheme();
 
     return (
         <View style={styles.container}>
@@ -24,7 +24,7 @@ export const RatingPicker: React.FC<RatingPickerProps> = ({ value, onValueChange
                     <Icon
                         name={star <= value ? 'star' : 'star-outline'}
                         size={size}
-                        color={star <= value ? '#FFD700' : theme.colors.text.tertiary['light']} // Gold for active
+                        color={star <= value ? '#FFD700' : theme.colors.text.tertiary[colorScheme]} // Gold for active
                     />
                 </TouchableOpacity>
             ))}
