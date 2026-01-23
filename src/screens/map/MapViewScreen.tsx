@@ -108,6 +108,11 @@ export const MapViewScreen: React.FC = () => {
         navigation.navigate('CreatePin', { mapId, mapEmoji: emoji });
     };
 
+    const handleEditPin = (pin: any) => {
+        setModalVisible(false); // Close modal first
+        navigation.navigate('CreatePin', { mapId, mapEmoji: emoji, pin });
+    };
+
     const handleMarkerPress = useCallback((pin: any) => {
         setSelectedPin(pin);
         setModalVisible(true);
@@ -283,6 +288,7 @@ export const MapViewScreen: React.FC = () => {
                 pin={selectedPin}
                 onClose={handleClosePinDetail}
                 onDelete={handleDeletePin}
+                onEdit={() => handleEditPin(selectedPin)}
             />
 
             {/* Edit Map Modal */}

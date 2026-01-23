@@ -72,6 +72,7 @@ export class DatabaseService {
                 longitude REAL NOT NULL,
                 image_uri TEXT,
                 rating INTEGER DEFAULT 0,
+                emoji TEXT,
                 created_at INTEGER NOT NULL,
                 FOREIGN KEY (map_id) REFERENCES Maps(id) ON DELETE CASCADE
             );
@@ -85,6 +86,13 @@ export class DatabaseService {
             await this.db.executeSql('CREATE INDEX IF NOT EXISTS idx_pins_map_id ON Pins (map_id);');
             await this.db.executeSql('CREATE INDEX IF NOT EXISTS idx_maps_created_at ON Maps (created_at);');
             await this.db.executeSql('CREATE INDEX IF NOT EXISTS idx_pins_created_at ON Pins (created_at);');
+
+            // Migrations
+            try {
+                await this.db.executeSql('ALTER TABLE Pins ADD COLUMN emoji TEXT;');
+            } catch (e) {
+                // Ignore error if column already exists
+            }
         } catch (error) {
             console.error('Failed to create tables:', error);
             throw error;

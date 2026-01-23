@@ -8,9 +8,10 @@ interface PinDetailModalProps {
     pin: any; // Type this properly later
     onClose: () => void;
     onDelete?: (id: string) => void;
+    onEdit?: () => void;
 }
 
-export const PinDetailModal: React.FC<PinDetailModalProps> = ({ visible, pin, onClose, onDelete }) => {
+export const PinDetailModal: React.FC<PinDetailModalProps> = ({ visible, pin, onClose, onDelete, onEdit }) => {
     const { theme, colorScheme } = useTheme();
 
     if (!pin) return null;
@@ -105,7 +106,12 @@ export const PinDetailModal: React.FC<PinDetailModalProps> = ({ visible, pin, on
 
                             {/* Action Buttons */}
                             <View style={[styles.actions, { borderTopColor: theme.colors.border[colorScheme] }]}>
-                                <TouchableOpacity style={styles.actionBtn}>
+                                <TouchableOpacity
+                                    style={styles.actionBtn}
+                                    onPress={() => {
+                                        if (onEdit) onEdit();
+                                    }}
+                                >
                                     <Icon name="pencil" size={24} color={theme.colors.primary} />
                                     <Text style={[styles.actionLabel, { color: theme.colors.primary }]}>Edit</Text>
                                 </TouchableOpacity>

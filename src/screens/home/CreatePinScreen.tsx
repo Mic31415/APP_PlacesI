@@ -22,19 +22,33 @@ export const CreatePinScreen: React.FC = () => {
     const navigation = useNavigation();
 
     const route = useRoute();
-    const { mapId, mapEmoji } = route.params as { mapId: string; mapEmoji?: string };
+    const { mapId, mapEmoji, pin } = route.params as { mapId: string; mapEmoji?: string; pin?: any };
 
-    const [title, setTitle] = useState('');
-    const [description, setDescription] = useState('');
-    const [location, setLocation] = useState('');
-    const [rating, setRating] = useState(0);
-    const [selectedEmoji, setSelectedEmoji] = useState(mapEmoji || '🗺️');
+    const [title, setTitle] = useState(pin?.title || '');
+    const [description, setDescription] = useState(pin?.description || '');
+    const [location, setLocation] = useState(''); // Would need reverse geocoding if editing, but skipping for now
+    const [rating, setRating] = useState(pin?.rating || 0);
+    const [selectedEmoji, setSelectedEmoji] = useState(pin?.emoji || mapEmoji || '🗺️');
     const [emojiModalVisible, setEmojiModalVisible] = useState(false);
 
 
-    const [imageUri, setImageUri] = useState<string | null>(null);
-    const [coordinates, setCoordinates] = useState<{ latitude: number; longitude: number } | null>(null);
+    const [imageUri, setImageUri] = useState<string | null>(pin?.imageUri || null);
+    const [coordinates, setCoordinates] = useState<{ latitude: number; longitude: number } | null>(
+        pin ? { latitude: pin.latitude, longitude: pin.longitude } : null
+    );
     const [isLoadingLocation, setIsLoadingLocation] = useState(false);
+
+    // Sync state with pin param if it changes (defensive)
+    React.useEffect(() => {
+        if (pin) {
+            setTitle(pin.title);
+            setDescription(pin.description);
+            setRating(pin.rating);
+            setSelectedEmoji(pin.emoji || mapEmoji || '🗺️');
+            setImageUri(pin.imageUri || null);
+            setCoordinates({ latitude: pin.latitude, longitude: pin.longitude });
+        }
+    }, [pin, mapEmoji]);
 
 
 
@@ -45,19 +59,33 @@ export const CreatePinScreen: React.FC = () => {
         }
 
         try {
-            await databaseService.addPin({
-                mapId: mapId,
-                title: title.trim(),
-                description: description.trim(),
-                latitude: coordinates ? coordinates.latitude : 35.6895, // Use real coords or mock fallback
-                longitude: coordinates ? coordinates.longitude : 139.6917 + (Math.random() * 0.01),
-                rating: rating,
-                emoji: selectedEmoji,
-                imageUri: imageUri || undefined,
-            });
+            if (pin) {
+                // Update existing pin
+                await databaseService.updatePin(pin.id, {
+                    title: title.trim(),
+                    description: description.trim(),
+                    latitude: coordinates?.latitude,
+                    longitude: coordinates?.longitude,
+                    rating: rating,
+                    emoji: selectedEmoji,
+                    imageUri: imageUri || undefined,
+                });
+            } else {
+                // Create new pin
+                await databaseService.addPin({
+                    mapId: mapId,
+                    title: title.trim(),
+                    description: description.trim(),
+                    latitude: coordinates ? coordinates.latitude : 35.6895, // Use real coords or mock fallback
+                    longitude: coordinates ? coordinates.longitude : 139.6917 + (Math.random() * 0.01),
+                    rating: rating,
+                    emoji: selectedEmoji,
+                    imageUri: imageUri || undefined,
+                });
+            }
             navigation.goBack();
         } catch (error) {
-            console.error('Failed to add pin:', error);
+            console.error('Failed to save pin:', error);
         }
     };
 
@@ -216,7 +244,7 @@ export const CreatePinScreen: React.FC = () => {
                 }
                 centerComponent={
                     <Text style={[theme.typography.h3, { color: theme.colors.text.primary[colorScheme] }]}>
-                        Add Pin
+                        {pin ? 'Edit Pin' : 'Add Pin'}
                     </Text>
                 }
                 rightComponent={
