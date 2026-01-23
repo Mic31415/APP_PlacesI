@@ -1,5 +1,5 @@
 import React, { useState, useRef, useMemo, useCallback, useEffect } from 'react';
-import { View, StyleSheet, TouchableOpacity, Text, FlatList, Alert, Modal, TextInput } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, Text, FlatList, Alert, Modal, TextInput, Share } from 'react-native';
 import MapView, { PROVIDER_DEFAULT } from 'react-native-maps';
 import { useNavigation, useRoute, RouteProp, useFocusEffect } from '@react-navigation/native';
 import { useTheme } from '../../theme/ThemeContext';
@@ -129,13 +129,53 @@ export const MapViewScreen: React.FC = () => {
         }
     }, [pins]);
 
+    const handleShareMap = async () => {
+        try {
+            const hasPins = pins.length > 0;
+
+            // Build a human-readable message
+            let message = `🗺️ *${currentMapName}* ${currentMapEmoji}\n`;
+            message += `📍 ${pins.length} Places Pinned\n\n`;
+
+            if (hasPins) {
+                // Header for the list
+                message += `Here are the places I've saved:\n\n`;
+
+                // Loop through pins and format them
+                pins.forEach((pin, index) => {
+                    const ratingStar = pin.rating ? '⭐ ' + pin.rating + '/5' : '';
+                    message += `${index + 1}. ${pin.emoji || '📍'} *${pin.title}*\n`;
+                    if (ratingStar) message += `   ${ratingStar}\n`;
+                    if (pin.description) message += `   "${pin.description}"\n`;
+                    // Add Google Maps link if coords exist
+                    if (pin.latitude && pin.longitude) {
+                        message += `   🗺️ https://maps.google.com/?q=${pin.latitude},${pin.longitude}\n`;
+                    }
+                    message += '\n'; // Add spacing between pins
+                });
+            } else {
+                message += "No pins added yet! Start exploring.\n";
+            }
+
+            message += `\nShared from *Places I...* App`;
+
+            await Share.share({
+                message: message,
+                title: `My Map: ${currentMapName}`,
+            });
+        } catch (error) {
+            console.error('Error sharing map:', error);
+            Alert.alert('Share Failed', 'Could not share map.');
+        }
+    };
+
     const renderHeaderRight = useCallback(() => (
         <MapHeaderMenu
             onEdit={() => handleEditMap()}
-            onShare={() => console.log('Share')}
+            onShare={handleShareMap}
             onDelete={() => console.log('Delete')}
         />
-    ), [handleEditMap]);
+    ), [handleEditMap, currentMapName, currentMapEmoji, pins]);
 
     return (
         <View style={styles.container}>

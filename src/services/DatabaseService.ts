@@ -267,8 +267,35 @@ export class DatabaseService {
         }
     }
 
-    // --- Helpers ---
+    // --- Export/Import ---
+    public async exportMapData(mapId: string): Promise<{ map: MapData, pins: PinData[] }> {
+        if (!this.db) await this.initDatabase();
 
+        try {
+            // Get Map Details
+            const [mapResult] = await this.db!.executeSql('SELECT * FROM Maps WHERE id = ?', [mapId]);
+            if (mapResult.rows.length === 0) throw new Error('Map not found');
+            const mapItem = mapResult.rows.item(0);
+            const map: MapData = {
+                id: mapItem.id,
+                name: mapItem.name,
+                emoji: mapItem.emoji,
+                type: mapItem.type,
+                createdAt: mapItem.created_at,
+                pinCount: 0 // Will be ignored on import or recalculated
+            };
+
+            // Get Pins
+            const pins = await this.getPins(mapId);
+
+            return { map, pins };
+        } catch (error) {
+            console.error('Failed to export map:', error);
+            throw error;
+        }
+    }
+
+    // --- Helpers ---
     private generateUUID(): string {
         return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
             var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
