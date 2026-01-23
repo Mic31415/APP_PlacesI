@@ -37,6 +37,15 @@ export const MapViewScreen: React.FC = () => {
     const [searchQuery, setSearchQuery] = useState('');
     const [pins, setPins] = useState<PinData[]>([]);
 
+    const filteredPins = useMemo(() => {
+        if (!searchQuery.trim()) return pins;
+        const query = searchQuery.toLowerCase();
+        return pins.filter(pin =>
+            pin.title.toLowerCase().includes(query) ||
+            (pin.description && pin.description.toLowerCase().includes(query))
+        );
+    }, [pins, searchQuery]);
+
     useFocusEffect(
         React.useCallback(() => {
             if (!mapId) return;
@@ -105,8 +114,6 @@ export const MapViewScreen: React.FC = () => {
         </Menu>
     );
 
-    console.log(selectedPin, "selectedPin");
-
     return (
         <View style={styles.container}>
             <ScreenHeader
@@ -130,7 +137,7 @@ export const MapViewScreen: React.FC = () => {
                     style={styles.map}
                     initialRegion={INITIAL_REGION}
                 >
-                    {pins.map((pin) => (
+                    {filteredPins.map((pin) => (
                         <CustomMarker
                             key={pin.id}
                             coordinate={{ latitude: pin.latitude, longitude: pin.longitude }}
@@ -157,9 +164,10 @@ export const MapViewScreen: React.FC = () => {
                 <View style={styles.horizontalListContainer}>
                     <FlatList
                         horizontal
-                        data={pins}
+                        data={filteredPins}
                         keyExtractor={(item) => item.id}
                         showsHorizontalScrollIndicator={false}
+
                         snapToInterval={280 + 16} // card width + margin
                         decelerationRate="fast"
                         contentContainerStyle={{ paddingHorizontal: 16 }}
