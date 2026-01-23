@@ -7,6 +7,7 @@ import { useTheme } from '../../theme/ThemeContext';
 import { RatingPicker } from '../../components/common/RatingPicker';
 import { ScreenHeader } from '../../components/common/ScreenHeader';
 import { databaseService } from '../../services/DatabaseService';
+import { MAP_EMOJIS } from '../../constants/emojis';
 
 export const CreatePinScreen: React.FC = () => {
     const { theme, colorScheme } = useTheme();
@@ -157,7 +158,7 @@ export const CreatePinScreen: React.FC = () => {
                     <View style={styles.inputGroup}>
                         <Text style={[styles.label, { color: theme.colors.text.secondary[colorScheme] }]}>Icon</Text>
                         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 12 }}>
-                            {['📍', '🗼', '🍱', '⛩️', '📸', '🏨', '☕', '🍺', '🛍️', '🌳'].map((emoji) => (
+                            {MAP_EMOJIS.slice(0, 50).map((emoji) => (
                                 <TouchableOpacity
                                     key={emoji}
                                     onPress={() => setSelectedEmoji(emoji)}
