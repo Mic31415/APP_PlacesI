@@ -162,6 +162,20 @@ export class DatabaseService {
         }
     }
 
+    public async updateMap(id: string, name: string, emoji: string): Promise<void> {
+        if (!this.db) await this.initDatabase();
+
+        try {
+            await this.db!.executeSql(
+                'UPDATE Maps SET name = ?, emoji = ? WHERE id = ?',
+                [name, emoji, id]
+            );
+        } catch (error) {
+            console.error('Failed to update map:', error);
+            throw error;
+        }
+    }
+
     // --- Pins CRUD ---
 
     public async addPin(pin: Omit<PinData, 'id' | 'createdAt'>): Promise<PinData> {

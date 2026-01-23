@@ -1,5 +1,5 @@
-import React, { useState, useRef, useMemo, useCallback } from 'react';
-import { View, StyleSheet, TouchableOpacity, Text, FlatList, Alert } from 'react-native';
+import React, { useState, useRef, useMemo, useCallback, useEffect } from 'react';
+import { View, StyleSheet, TouchableOpacity, Text, FlatList, Alert, Modal, TextInput } from 'react-native';
 import MapView, { PROVIDER_DEFAULT } from 'react-native-maps';
 import { useNavigation, useRoute, RouteProp, useFocusEffect } from '@react-navigation/native';
 import { useTheme } from '../../theme/ThemeContext';
@@ -9,8 +9,9 @@ import { MapSearchBar } from '../../components/map/MapSearchBar';
 import { FloatingButton } from '../../components/common/FloatingButton';
 import { RootStackParamList, HomeStackParamList } from '../../types/navigation';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { Menu } from 'react-native-paper';
 import { PinDetailModal } from '../../components/map/PinDetailModal';
+import { EmojiPickerModal } from '../../components/common/EmojiPickerModal';
+import { MapHeaderMenu } from '../../components/map/MapHeaderMenu';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 
 // ... imports
@@ -27,6 +28,8 @@ const INITIAL_REGION = {
 type MapViewScreenNavigationProp = NativeStackNavigationProp<HomeStackParamList, 'MapView'>;
 type MapViewScreenRouteProp = RouteProp<HomeStackParamList, 'MapView'>;
 
+
+
 export const MapViewScreen: React.FC = () => {
     const { theme, colorScheme } = useTheme();
     const navigation = useNavigation<MapViewScreenNavigationProp>();
@@ -36,6 +39,16 @@ export const MapViewScreen: React.FC = () => {
     const mapRef = useRef<MapView>(null);
     const [searchQuery, setSearchQuery] = useState('');
     const [pins, setPins] = useState<PinData[]>([]);
+
+    // Local state for Map Details (to allow updates)
+    const [currentMapName, setCurrentMapName] = useState(mapName);
+    const [currentMapEmoji, setCurrentMapEmoji] = useState(emoji);
+
+    // Edit Modal State
+    const [editModalVisible, setEditModalVisible] = useState(false);
+    const [editName, setEditName] = useState(mapName);
+    const [editEmoji, setEditEmoji] = useState(emoji);
+    const [emojiPickerVisible, setEmojiPickerVisible] = useState(false);
 
     const filteredPins = useMemo(() => {
         if (!searchQuery.trim()) return pins;
@@ -62,14 +75,34 @@ export const MapViewScreen: React.FC = () => {
         }, [mapId])
     );
 
-    // Menu State
-    const [menuVisible, setMenuVisible] = useState(false);
-    const openMenu = () => setMenuVisible(true);
-    const closeMenu = () => setMenuVisible(false);
+
 
     // Modal State
     const [modalVisible, setModalVisible] = useState(false);
     const [selectedPin, setSelectedPin] = useState<PinData | null>(null);
+
+    const handleEditMap = () => {
+        setEditName(currentMapName);
+        setEditEmoji(currentMapEmoji);
+        setEditModalVisible(true);
+    };
+
+    const handleSaveMap = async () => {
+        if (!editName.trim()) {
+            Alert.alert("Error", "Map name cannot be empty");
+            return;
+        }
+
+        try {
+            await databaseService.updateMap(mapId, editName.trim(), editEmoji);
+            setCurrentMapName(editName.trim());
+            setCurrentMapEmoji(editEmoji);
+            setEditModalVisible(false);
+        } catch (error) {
+            console.error(error);
+            Alert.alert("Error", "Failed to update map");
+        }
+    };
 
     const handleAddPin = () => {
         navigation.navigate('CreatePin', { mapId, mapEmoji: emoji });
@@ -96,22 +129,13 @@ export const MapViewScreen: React.FC = () => {
         }
     }, [pins]);
 
-    const renderHeaderRight = () => (
-        <Menu
-            visible={menuVisible}
-            onDismiss={closeMenu}
-            anchor={
-                <TouchableOpacity onPress={openMenu} style={{ padding: 8 }}>
-                    <Icon name="dots-vertical" size={24} color={theme.colors.text.primary[colorScheme]} />
-                </TouchableOpacity>
-            }
-            contentStyle={{ backgroundColor: theme.colors.card[colorScheme] }}
-        >
-            <Menu.Item onPress={() => { closeMenu(); console.log('Edit'); }} title="Edit Map" />
-            <Menu.Item onPress={() => { closeMenu(); console.log('Share'); }} title="Share" />
-            <Menu.Item onPress={() => { closeMenu(); console.log('Delete'); }} title="Delete Map" titleStyle={{ color: theme.colors.error }} />
-        </Menu>
-    );
+    const renderHeaderRight = useCallback(() => (
+        <MapHeaderMenu
+            onEdit={() => handleEditMap()}
+            onShare={() => console.log('Share')}
+            onDelete={() => console.log('Delete')}
+        />
+    ), [handleEditMap]);
 
     return (
         <View style={styles.container}>
@@ -123,7 +147,7 @@ export const MapViewScreen: React.FC = () => {
                 }
                 centerComponent={
                     <Text style={[theme.typography.h3, { color: theme.colors.text.primary[colorScheme] }]}>
-                        {emoji || '🗺️'} {mapName || 'Map'}
+                        {currentMapEmoji || '🗺️'} {currentMapName || 'Map'}
                     </Text>
                 }
                 rightComponent={renderHeaderRight()}
@@ -196,6 +220,70 @@ export const MapViewScreen: React.FC = () => {
                 pin={selectedPin}
                 onClose={handleClosePinDetail}
                 onDelete={handleDeletePin}
+            />
+
+            {/* Edit Map Modal */}
+            <Modal
+                visible={editModalVisible}
+                animationType="fade"
+                transparent={true}
+                onRequestClose={() => setEditModalVisible(false)}
+            >
+                <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', padding: 24 }}>
+                    <View style={{ backgroundColor: theme.colors.card[colorScheme], borderRadius: 16, padding: 20 }}>
+                        <Text style={[theme.typography.h3, { color: theme.colors.text.primary[colorScheme], marginBottom: 16 }]}>Edit Map</Text>
+
+                        <Text style={[theme.typography.caption, { color: theme.colors.text.secondary[colorScheme], marginBottom: 8 }]}>Name</Text>
+                        <TextInput
+                            style={{
+                                backgroundColor: theme.colors.surface[colorScheme],
+                                borderRadius: 8,
+                                padding: 12,
+                                color: theme.colors.text.primary[colorScheme],
+                                fontSize: 16,
+                                marginBottom: 16
+                            }}
+                            value={editName}
+                            onChangeText={setEditName}
+                            placeholder="Map Name"
+                            placeholderTextColor={theme.colors.text.tertiary[colorScheme]}
+                        />
+
+                        <Text style={[theme.typography.caption, { color: theme.colors.text.secondary[colorScheme], marginBottom: 8 }]}>Icon</Text>
+                        <TouchableOpacity
+                            style={{
+                                flexDirection: 'row',
+                                alignItems: 'center',
+                                backgroundColor: theme.colors.surface[colorScheme],
+                                padding: 12,
+                                borderRadius: 8,
+                                marginBottom: 24
+                            }}
+                            onPress={() => setEmojiPickerVisible(true)}
+                        >
+                            <Text style={{ fontSize: 24, marginRight: 12 }}>{editEmoji}</Text>
+                            <Text style={{ color: theme.colors.text.secondary[colorScheme] }}>Change Icon</Text>
+                        </TouchableOpacity>
+
+                        <View style={{ flexDirection: 'row', justifyContent: 'flex-end', gap: 12 }}>
+                            <TouchableOpacity onPress={() => setEditModalVisible(false)} style={{ padding: 12 }}>
+                                <Text style={{ color: theme.colors.text.secondary[colorScheme], fontWeight: '600' }}>Cancel</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                                onPress={handleSaveMap}
+                                style={{ backgroundColor: theme.colors.primary, paddingHorizontal: 20, paddingVertical: 12, borderRadius: 8 }}
+                            >
+                                <Text style={{ color: '#fff', fontWeight: 'bold' }}>Save</Text>
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                </View>
+            </Modal>
+
+            <EmojiPickerModal
+                visible={emojiPickerVisible}
+                onClose={() => setEmojiPickerVisible(false)}
+                onSelectEmoji={setEditEmoji}
             />
         </View>
     );

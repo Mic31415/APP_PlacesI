@@ -1,5 +1,5 @@
-import React, { useState, useMemo } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, KeyboardAvoidingView, Platform, Image, Alert, PermissionsAndroid, ActivityIndicator, Modal, FlatList, Dimensions } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, KeyboardAvoidingView, Platform, Image, Alert, PermissionsAndroid, ActivityIndicator } from 'react-native';
 import Geolocation from '@react-native-community/geolocation';
 import Geocoder from 'react-native-geocoding';
 import { launchCamera, launchImageLibrary } from 'react-native-image-picker';
@@ -15,20 +15,7 @@ import { RatingPicker } from '../../components/common/RatingPicker';
 import { ScreenHeader } from '../../components/common/ScreenHeader';
 import { databaseService } from '../../services/DatabaseService';
 import { MAP_EMOJIS } from '../../constants/emojis';
-
-const SCREEN_WIDTH = Dimensions.get('window').width;
-const COLS = 7;
-const ROWS = 3;
-const PAGE_SIZE = COLS * ROWS;
-const EMOJI_ITEM_SIZE = SCREEN_WIDTH / COLS;
-
-const chunkArray = <T,>(array: T[], size: number): T[][] => {
-    const result = [];
-    for (let i = 0; i < array.length; i += size) {
-        result.push(array.slice(i, i + size));
-    }
-    return result;
-};
+import { EmojiPickerModal } from '../../components/common/EmojiPickerModal';
 
 export const CreatePinScreen: React.FC = () => {
     const { theme, colorScheme } = useTheme();
@@ -43,8 +30,6 @@ export const CreatePinScreen: React.FC = () => {
     const [rating, setRating] = useState(0);
     const [selectedEmoji, setSelectedEmoji] = useState(mapEmoji || '🗺️');
     const [emojiModalVisible, setEmojiModalVisible] = useState(false);
-
-    const emojiPages = useMemo(() => chunkArray(MAP_EMOJIS, PAGE_SIZE), []);
 
 
     const [imageUri, setImageUri] = useState<string | null>(null);
@@ -347,54 +332,11 @@ export const CreatePinScreen: React.FC = () => {
             </KeyboardAvoidingView>
 
             {/* Emoji Modal */}
-            <Modal
+            <EmojiPickerModal
                 visible={emojiModalVisible}
-                animationType="slide"
-                transparent={true}
-                onRequestClose={() => setEmojiModalVisible(false)}
-            >
-                <View style={[styles.modalOverlay, { backgroundColor: 'rgba(0,0,0,0.5)' }]}>
-                    <View style={[styles.modalContent, { backgroundColor: theme.colors.card[colorScheme] }]}>
-                        <View style={styles.modalHeader}>
-                            <Text style={[theme.typography.h3, { color: theme.colors.text.primary[colorScheme] }]}>Select Emoji</Text>
-                            <TouchableOpacity onPress={() => setEmojiModalVisible(false)}>
-                                <Icon name="close" size={24} color={theme.colors.text.secondary[colorScheme]} />
-                            </TouchableOpacity>
-                        </View>
-
-                        <View style={{ height: EMOJI_ITEM_SIZE * ROWS + 20 }}>
-                            <FlatList
-                                data={emojiPages}
-                                horizontal
-                                pagingEnabled
-                                showsHorizontalScrollIndicator={false}
-                                keyExtractor={(_, index) => `page-${index}`}
-                                renderItem={({ item: pageEmojis }) => (
-                                    <View style={{ width: SCREEN_WIDTH, flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'flex-start', paddingHorizontal: 0 }}>
-                                        {pageEmojis.map((emoji) => (
-                                            <TouchableOpacity
-                                                key={emoji}
-                                                style={{
-                                                    width: EMOJI_ITEM_SIZE,
-                                                    height: EMOJI_ITEM_SIZE,
-                                                    justifyContent: 'center',
-                                                    alignItems: 'center'
-                                                }}
-                                                onPress={() => {
-                                                    setSelectedEmoji(emoji);
-                                                    setEmojiModalVisible(false);
-                                                }}
-                                            >
-                                                <Text style={{ fontSize: 32 }}>{emoji}</Text>
-                                            </TouchableOpacity>
-                                        ))}
-                                    </View>
-                                )}
-                            />
-                        </View>
-                    </View>
-                </View>
-            </Modal>
+                onClose={() => setEmojiModalVisible(false)}
+                onSelectEmoji={setSelectedEmoji}
+            />
         </SafeAreaView>
     );
 };
@@ -487,24 +429,5 @@ const styles = StyleSheet.create({
     },
     emojiPreview: {
         fontSize: 64,
-    },
-    modalOverlay: {
-        flex: 1,
-        justifyContent: 'flex-end',
-    },
-    modalContent: {
-        borderTopLeftRadius: 20,
-        borderTopRightRadius: 20,
-        paddingBottom: 20,
-        width: '100%',
-        backgroundColor: '#F5F5F5',
-    },
-    modalHeader: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        padding: 16,
-        borderBottomWidth: 0.5,
-        borderBottomColor: 'rgba(0,0,0,0.1)',
     },
 });
