@@ -100,13 +100,16 @@ export const HomeScreen: React.FC = () => {
                 )}
                 numColumns={numColumns}
                 key={numColumns} // Force re-render on column change
-                contentContainerStyle={{ padding: theme.spacing.sm, paddingBottom: 80 }} // Add padding for FAB
+                contentContainerStyle={{
+                    padding: theme.spacing.sm,
+                    paddingBottom: 80,
+                    flexGrow: 1, // Allow container to fill space
+                    justifyContent: maps.length === 0 ? 'center' : 'flex-start' // Center only when empty
+                }}
                 ListEmptyComponent={
                     <EmptyState
                         title="No Maps Yet"
                         description="Create your first map to start pinning your favorite places!"
-                        actionLabel="Create Map"
-                        onAction={handleCreateMap}
                     />
                 }
             />
