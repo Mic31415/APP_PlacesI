@@ -1,5 +1,11 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, KeyboardAvoidingView, Platform, Image } from 'react-native';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, KeyboardAvoidingView, Platform, Image, Alert, PermissionsAndroid, ActivityIndicator } from 'react-native';
+import Geolocation from '@react-native-community/geolocation';
+import Geocoder from 'react-native-geocoding';
+import { Config } from '../../constants/Config';
+
+// Initialize Geocoder with your Google Maps API Key
+Geocoder.init(Config.GOOGLE_MAPS_API_KEY);
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
@@ -18,7 +24,10 @@ export const CreatePinScreen: React.FC = () => {
     const [location, setLocation] = useState('');
     const [rating, setRating] = useState(0);
     const [selectedEmoji, setSelectedEmoji] = useState('📍');
+
     const [imageUri, setImageUri] = useState<string | null>(null);
+    const [coordinates, setCoordinates] = useState<{ latitude: number; longitude: number } | null>(null);
+    const [isLoadingLocation, setIsLoadingLocation] = useState(false);
 
     const route = useRoute();
     const { mapId } = route.params as { mapId: string };
@@ -34,8 +43,8 @@ export const CreatePinScreen: React.FC = () => {
                 mapId: mapId,
                 title: title.trim(),
                 description: description.trim(),
-                latitude: 35.6895, // Mock location
-                longitude: 139.6917 + (Math.random() * 0.01),
+                latitude: coordinates ? coordinates.latitude : 35.6895, // Use real coords or mock fallback
+                longitude: coordinates ? coordinates.longitude : 139.6917 + (Math.random() * 0.01),
                 rating: rating,
                 emoji: selectedEmoji,
                 imageUri: imageUri || undefined,
@@ -60,6 +69,75 @@ export const CreatePinScreen: React.FC = () => {
     const handlePickPhoto = () => {
         // Placeholder for gallery logic
         console.log('Pick Photo');
+    };
+
+    const requestLocationPermission = async () => {
+        if (Platform.OS === 'ios') {
+            return true;
+        }
+        try {
+            const granted = await PermissionsAndroid.request(
+                PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
+                {
+                    title: "Location Permission",
+                    message: "This app needs access to your location to set pin coordinates.",
+                    buttonNeutral: "Ask Me Later",
+                    buttonNegative: "Cancel",
+                    buttonPositive: "OK"
+                }
+            );
+            return granted === PermissionsAndroid.RESULTS.GRANTED;
+        } catch (err) {
+            console.warn(err);
+            return false;
+        }
+    };
+
+    const handleUseCurrentLocation = async () => {
+        const hasPermission = await requestLocationPermission();
+        try {
+            if (!hasPermission) {
+                // On Android, if we didn't get permission, accessing Geolocation might throw or silently fail. 
+                // However, for better UX we alert. 
+                // But wait, user might have denied!
+                // Alert.alert("Permission Denied", "Location permission is required.");
+                // Let's just return.
+                // Actually the previous code had an alert, reusing that logic but carefully.
+            }
+        } catch (e) { }
+
+        if (!hasPermission) {
+            Alert.alert("Permission Denied", "Location permission is required to use this feature.");
+            return;
+        }
+
+        setIsLoadingLocation(true);
+
+        Geolocation.getCurrentPosition(
+            async (position) => {
+                const { latitude, longitude } = position.coords;
+                setCoordinates({ latitude, longitude });
+
+                try {
+                    const json = await Geocoder.from(latitude, longitude);
+                    if (json.results && json.results.length > 0) {
+                        const addressComponent = json.results[0].formatted_address;
+                        setLocation(addressComponent);
+                    }
+                } catch (error) {
+                    console.warn("Geocoding failed", error);
+                    // Fallback handled by initial setLocation
+                } finally {
+                    setIsLoadingLocation(false);
+                }
+            },
+            (error) => {
+                console.error(error);
+                Alert.alert("Error", "Failed to get current location. Make sure GPS is on.");
+                setIsLoadingLocation(false);
+            },
+            { enableHighAccuracy: false, timeout: 20000, maximumAge: 1000 }
+        );
     };
 
     const renderInput = (
@@ -134,9 +212,23 @@ export const CreatePinScreen: React.FC = () => {
                             />
                         </View>
                         <View style={styles.locationActions}>
-                            <TouchableOpacity style={[styles.locationBtn, { borderColor: theme.colors.border[colorScheme] }]}>
-                                <Icon name="crosshairs-gps" size={18} color={theme.colors.primary} />
-                                <Text style={[styles.locationBtnText, { color: theme.colors.primary }]}>Use Current</Text>
+                            <TouchableOpacity
+                                style={[
+                                    styles.locationBtn,
+                                    { borderColor: theme.colors.border[colorScheme] },
+                                    coordinates && { backgroundColor: theme.colors.primary + '10', borderColor: theme.colors.primary }
+                                ]}
+                                onPress={handleUseCurrentLocation}
+                                disabled={isLoadingLocation}
+                            >
+                                {isLoadingLocation ? (
+                                    <ActivityIndicator size="small" color={theme.colors.primary} style={{ marginRight: 6 }} />
+                                ) : (
+                                    <Icon name="crosshairs-gps" size={18} color={theme.colors.primary} />
+                                )}
+                                <Text style={[styles.locationBtnText, { color: theme.colors.primary }]}>
+                                    {isLoadingLocation ? 'Fetching...' : 'Use Current'}
+                                </Text>
                             </TouchableOpacity>
                             <TouchableOpacity style={[styles.locationBtn, { borderColor: theme.colors.border[colorScheme] }]}>
                                 <Icon name="map-marker-outline" size={18} color={theme.colors.primary} />
