@@ -113,6 +113,25 @@ export const MapViewScreen: React.FC = () => {
         navigation.navigate('CreatePin', { mapId, mapEmoji: emoji, pin });
     };
 
+    const handleSharePin = async (pin: any) => {
+        try {
+            let message = `${pin.emoji || '📍'} *${pin.title}*\n`;
+            if (pin.rating) message += `⭐ ${pin.rating}/5\n`;
+            if (pin.description) message += `"${pin.description}"\n`;
+            if (pin.latitude && pin.longitude) {
+                message += `🗺️ https://maps.google.com/?q=${pin.latitude},${pin.longitude}\n`;
+            }
+            message += `\nShared from *Places I...* App`;
+
+            await Share.share({
+                message: message,
+                title: `Check out ${pin.title}`,
+            });
+        } catch (error) {
+            console.error('Error sharing pin:', error);
+        }
+    };
+
     const handleMarkerPress = useCallback((pin: any) => {
         setSelectedPin(pin);
         setModalVisible(true);
@@ -289,6 +308,7 @@ export const MapViewScreen: React.FC = () => {
                 onClose={handleClosePinDetail}
                 onDelete={handleDeletePin}
                 onEdit={() => handleEditPin(selectedPin)}
+                onShare={() => handleSharePin(selectedPin)}
             />
 
             {/* Edit Map Modal */}

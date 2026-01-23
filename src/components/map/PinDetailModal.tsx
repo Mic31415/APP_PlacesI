@@ -1,5 +1,7 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Modal, TouchableWithoutFeedback, Alert, Image } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Modal, TouchableWithoutFeedback, Alert, Image, Platform } from 'react-native';
+import ViewShot, { captureRef } from 'react-native-view-shot';
+import Share from 'react-native-share';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useTheme } from '../../theme/ThemeContext';
 
@@ -9,9 +11,10 @@ interface PinDetailModalProps {
     onClose: () => void;
     onDelete?: (id: string) => void;
     onEdit?: () => void;
+    onShare?: () => void;
 }
 
-export const PinDetailModal: React.FC<PinDetailModalProps> = ({ visible, pin, onClose, onDelete, onEdit }) => {
+export const PinDetailModal: React.FC<PinDetailModalProps> = ({ visible, pin, onClose, onDelete, onEdit, onShare }) => {
     const { theme, colorScheme } = useTheme();
 
     if (!pin) return null;
@@ -36,6 +39,30 @@ export const PinDetailModal: React.FC<PinDetailModalProps> = ({ visible, pin, on
         );
     };
 
+    const viewShotRef = React.useRef(null);
+
+    const handleShare = async () => {
+        try {
+            const uri = await captureRef(viewShotRef, {
+                format: 'png',
+                quality: 0.9,
+            });
+
+            const shareOptions = {
+                title: `Share ${pin.title}`,
+                message: `Check out ${pin.title} from my trip!`,
+                url: uri,
+                subject: `Check out ${pin.title}`, // for email
+            };
+
+            await Share.open(shareOptions);
+        } catch (error) {
+            console.error('Snapshot failed', error);
+            // Fallback to text share if available
+            if (onShare) onShare();
+        }
+    };
+
     return (
         <Modal
             visible={visible}
@@ -46,66 +73,70 @@ export const PinDetailModal: React.FC<PinDetailModalProps> = ({ visible, pin, on
             <TouchableWithoutFeedback onPress={onClose}>
                 <View style={styles.overlay}>
                     <TouchableWithoutFeedback>
-                        <View style={[styles.content, { backgroundColor: theme.colors.card[colorScheme] }]}>
-                            {/* Drag Handle (Visual only for Modal) */}
-                            <View style={[styles.dragHandle, { backgroundColor: theme.colors.text.tertiary[colorScheme] }]} />
+                        <View style={{ width: '100%', borderTopLeftRadius: 24, borderTopRightRadius: 24, overflow: 'hidden' }}>
+                            <ViewShot ref={viewShotRef} style={{ backgroundColor: theme.colors.card[colorScheme] }} options={{ format: "png", quality: 0.9 }}>
+                                <View style={[styles.content, { backgroundColor: theme.colors.card[colorScheme] }]}>
+                                    {/* Drag Handle (Visual only for Modal) */}
+                                    <View style={[styles.dragHandle, { backgroundColor: theme.colors.text.tertiary[colorScheme] }]} />
 
-                            {/* Image Placeholder or Actual Image */}
-                            <View style={[styles.imageContainer, { backgroundColor: theme.colors.surface[colorScheme] }]}>
-                                {pin.imageUri ? (
-                                    <Image
-                                        source={{ uri: pin.imageUri }}
-                                        style={{ width: '100%', height: '100%', borderRadius: 12 }}
-                                        resizeMode="cover"
-                                    />
-                                ) : (
-                                    <>
-                                        <Icon name="image" size={48} color={theme.colors.text.tertiary[colorScheme]} />
-                                        <Text style={{ color: theme.colors.text.tertiary[colorScheme] }}>No Image</Text>
-                                    </>
-                                )}
-                            </View>
+                                    {/* Image Placeholder or Actual Image */}
+                                    <View style={[styles.imageContainer, { backgroundColor: theme.colors.surface[colorScheme] }]}>
+                                        {pin.imageUri ? (
+                                            <Image
+                                                source={{ uri: pin.imageUri }}
+                                                style={{ width: '100%', height: '100%', borderRadius: 12 }}
+                                                resizeMode="cover"
+                                            />
+                                        ) : (
+                                            <>
+                                                <Icon name="image" size={48} color={theme.colors.text.tertiary[colorScheme]} />
+                                                <Text style={{ color: theme.colors.text.tertiary[colorScheme] }}>No Image</Text>
+                                            </>
+                                        )}
+                                    </View>
 
-                            {/* Title & Rating */}
-                            <View style={styles.headerRow}>
-                                <Text style={[theme.typography.h2, { flex: 1, color: theme.colors.text.primary[colorScheme] }]}>
-                                    {pin.emoji || '📍'} {pin.title}
-                                </Text>
-                                <View style={styles.ratingContainer}>
-                                    {[1, 2, 3, 4, 5].map((star) => (
-                                        <Icon
-                                            key={star}
-                                            name={star <= (pin.rating || 0) ? "star" : "star-outline"}
-                                            size={18}
-                                            color={star <= (pin.rating || 0) ? "#FFD700" : theme.colors.text.tertiary[colorScheme]}
-                                        />
-                                    ))}
+                                    {/* Title & Rating */}
+                                    <View style={styles.headerRow}>
+                                        <Text style={[theme.typography.h2, { flex: 1, color: theme.colors.text.primary[colorScheme] }]}>
+                                            {pin.emoji || '📍'} {pin.title}
+                                        </Text>
+                                        <View style={styles.ratingContainer}>
+                                            {[1, 2, 3, 4, 5].map((star) => (
+                                                <Icon
+                                                    key={star}
+                                                    name={star <= (pin.rating || 0) ? "star" : "star-outline"}
+                                                    size={18}
+                                                    color={star <= (pin.rating || 0) ? "#FFD700" : theme.colors.text.tertiary[colorScheme]}
+                                                />
+                                            ))}
+                                        </View>
+                                    </View>
+
+                                    {/* Description */}
+                                    {pin.description ? (
+                                        <Text style={[styles.description, { color: theme.colors.text.secondary[colorScheme] }]}>
+                                            {pin.description}
+                                        </Text>
+                                    ) : null}
+
+                                    {/* Info Rows */}
+                                    <View style={styles.infoRow}>
+                                        <Icon name="map-marker" size={20} color={theme.colors.primary} />
+                                        <Text style={[styles.infoText, { color: theme.colors.text.primary[colorScheme] }]}>
+                                            Lat: {pin.latitude?.toFixed(4)}, Lng: {pin.longitude?.toFixed(4)}
+                                        </Text>
+                                    </View>
+                                    <View style={styles.infoRow}>
+                                        <Icon name="calendar" size={20} color={theme.colors.text.tertiary[colorScheme]} />
+                                        <Text style={[styles.infoText, { color: theme.colors.text.secondary[colorScheme] }]}>
+                                            Added: {new Date(pin.createdAt).toLocaleDateString()}
+                                        </Text>
+                                    </View>
                                 </View>
-                            </View>
+                            </ViewShot>
 
-                            {/* Description */}
-                            {pin.description ? (
-                                <Text style={[styles.description, { color: theme.colors.text.secondary[colorScheme] }]}>
-                                    {pin.description}
-                                </Text>
-                            ) : null}
-
-                            {/* Info Rows */}
-                            <View style={styles.infoRow}>
-                                <Icon name="map-marker" size={20} color={theme.colors.primary} />
-                                <Text style={[styles.infoText, { color: theme.colors.text.primary[colorScheme] }]}>
-                                    Lat: {pin.latitude?.toFixed(4)}, Lng: {pin.longitude?.toFixed(4)}
-                                </Text>
-                            </View>
-                            <View style={styles.infoRow}>
-                                <Icon name="calendar" size={20} color={theme.colors.text.tertiary[colorScheme]} />
-                                <Text style={[styles.infoText, { color: theme.colors.text.secondary[colorScheme] }]}>
-                                    Added: {new Date(pin.createdAt).toLocaleDateString()}
-                                </Text>
-                            </View>
-
-                            {/* Action Buttons */}
-                            <View style={[styles.actions, { borderTopColor: theme.colors.border[colorScheme] }]}>
+                            {/* Action Buttons (Outside ViewShot to avoid capturing buttons) */}
+                            <View style={[styles.actions, { borderTopColor: theme.colors.border[colorScheme], backgroundColor: theme.colors.card[colorScheme], paddingBottom: 24, paddingHorizontal: 24 }]}>
                                 <TouchableOpacity
                                     style={styles.actionBtn}
                                     onPress={() => {
@@ -115,9 +146,12 @@ export const PinDetailModal: React.FC<PinDetailModalProps> = ({ visible, pin, on
                                     <Icon name="pencil" size={24} color={theme.colors.primary} />
                                     <Text style={[styles.actionLabel, { color: theme.colors.primary }]}>Edit</Text>
                                 </TouchableOpacity>
-                                <TouchableOpacity style={styles.actionBtn}>
+                                <TouchableOpacity
+                                    style={styles.actionBtn}
+                                    onPress={handleShare}
+                                >
                                     <Icon name="share-variant" size={24} color={theme.colors.primary} />
-                                    <Text style={[styles.actionLabel, { color: theme.colors.primary }]}>Share</Text>
+                                    <Text style={[styles.actionLabel, { color: theme.colors.primary }]}>Share Image</Text>
                                 </TouchableOpacity>
                                 <TouchableOpacity style={styles.actionBtn} onPress={handleDelete}>
                                     <Icon name="delete" size={24} color={theme.colors.error} />
