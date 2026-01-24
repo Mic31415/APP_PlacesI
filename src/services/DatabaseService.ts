@@ -388,6 +388,20 @@ export class DatabaseService {
         }
     }
 
+    public async clearAllData(): Promise<void> {
+        if (!this.db) await this.initDatabase();
+
+        try {
+            // Delete all data. Foreign key constraints might handle pins if Maps are deleted,
+            // but explicit deletion is safer and clearer.
+            await this.db!.executeSql('DELETE FROM Pins');
+            await this.db!.executeSql('DELETE FROM Maps');
+        } catch (error) {
+            console.error('Failed to clear all data:', error);
+            throw error;
+        }
+    }
+
     public async exportMapData(mapId: string): Promise<{ map: MapData, pins: PinData[] }> {
         if (!this.db) await this.initDatabase();
 

@@ -5,6 +5,7 @@ import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import Share from 'react-native-share';
 import RNFS from 'react-native-fs';
 import DocumentPicker from 'react-native-document-picker';
+import Toast from 'react-native-toast-message';
 import { useTheme } from '../../theme/ThemeContext';
 import { Card } from '../../components/common/Card';
 import { databaseService } from '../../services/DatabaseService';
@@ -160,7 +161,23 @@ export const SettingsScreen: React.FC = () => {
             "Are you sure? This cannot be undone.",
             [
                 { text: "Cancel", style: "cancel" },
-                { text: "Delete", style: "destructive", onPress: () => console.log("Deleted") }
+                {
+                    text: "Delete",
+                    style: "destructive",
+                    onPress: async () => {
+                        try {
+                            await databaseService.clearAllData();
+                            Toast.show({
+                                type: 'success',
+                                text1: 'All maps and pins have been deleted.',
+                                position: 'bottom',
+                                visibilityTime: 3000,
+                            });
+                        } catch (error) {
+                            Alert.alert("Error", "Failed to clear data.");
+                        }
+                    }
+                }
             ]
         );
     };
@@ -233,7 +250,9 @@ export const SettingsScreen: React.FC = () => {
                     </View>
                 </View>
             </Modal>
-        </SafeAreaView>
+
+
+        </SafeAreaView >
     );
 };
 

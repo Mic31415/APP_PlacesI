@@ -7,6 +7,7 @@ import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import { ThemeProvider } from './src/theme/ThemeContext';
 import { AppNavigator } from './src/navigation/AppNavigator';
 import { LogBox } from 'react-native';
+import Toast from 'react-native-toast-message';
 
 import { databaseService } from './src/services/DatabaseService';
 
@@ -43,6 +44,7 @@ function App() {
           </PaperProvider>
         </ThemeProvider>
       </SafeAreaProvider>
+      <Toast />
     </GestureHandlerRootView>
   );
 }
