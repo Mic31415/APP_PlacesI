@@ -95,10 +95,12 @@ export const CreatePinScreen: React.FC = () => {
 
     const handleTakePhoto = async () => {
         try {
-            const hasPermission = await PermissionsAndroid.request(PermissionsAndroid.PERMISSIONS.CAMERA);
-            if (hasPermission !== PermissionsAndroid.RESULTS.GRANTED) {
-                Alert.alert("Permission Denied", "Camera permission is required to take photos.");
-                return;
+            if (Platform.OS === 'android') {
+                const hasPermission = await PermissionsAndroid.request(PermissionsAndroid.PERMISSIONS.CAMERA);
+                if (hasPermission !== PermissionsAndroid.RESULTS.GRANTED) {
+                    Alert.alert("Permission Denied", "Camera permission is required to take photos.");
+                    return;
+                }
             }
 
             const result = await launchCamera({

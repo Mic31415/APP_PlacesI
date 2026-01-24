@@ -348,7 +348,10 @@ export const MapViewScreen: React.FC = () => {
                                 borderRadius: 8,
                                 marginBottom: 24
                             }}
-                            onPress={() => setEmojiPickerVisible(true)}
+                            onPress={() => {
+                                setEditModalVisible(false);
+                                setTimeout(() => setEmojiPickerVisible(true), 300);
+                            }}
                         >
                             <Text style={{ fontSize: 24, marginRight: 12 }}>{editEmoji}</Text>
                             <Text style={{ color: theme.colors.text.secondary[colorScheme] }}>Change Icon</Text>
@@ -371,7 +374,10 @@ export const MapViewScreen: React.FC = () => {
 
             <EmojiPickerModal
                 visible={emojiPickerVisible}
-                onClose={() => setEmojiPickerVisible(false)}
+                onClose={() => {
+                    setEmojiPickerVisible(false);
+                    setTimeout(() => setEditModalVisible(true), 300);
+                }}
                 onSelectEmoji={setEditEmoji}
             />
         </View>

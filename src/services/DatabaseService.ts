@@ -1,5 +1,6 @@
 
 import SQLite from 'react-native-sqlite-storage';
+import RNFS from 'react-native-fs';
 
 // Enable Promise-based API
 SQLite.enablePromise(true);
@@ -276,6 +277,117 @@ export class DatabaseService {
     }
 
     // --- Export/Import ---
+    public async getAllData(): Promise<{ version: number, timestamp: number, maps: any[], pins: any[] }> {
+        if (!this.db) await this.initDatabase();
+
+        try {
+            const [mapResults] = await this.db!.executeSql('SELECT * FROM Maps');
+            const [pinResults] = await this.db!.executeSql('SELECT * FROM Pins');
+
+            const maps = [];
+            for (let i = 0; i < mapResults.rows.length; i++) {
+                maps.push(mapResults.rows.item(i));
+            }
+
+            const pins = [];
+            for (let i = 0; i < pinResults.rows.length; i++) {
+                const pin = { ...pinResults.rows.item(i) }; // Clone object to modify
+
+                if (pin.image_uri) {
+                    try {
+                        const exists = await RNFS.exists(pin.image_uri);
+                        if (exists) {
+                            const base64 = await RNFS.readFile(pin.image_uri, 'base64');
+                            pin.image_base64 = base64;
+                        } else {
+                            console.warn(`Export: Image file not found at ${pin.image_uri}`);
+                        }
+                    } catch (e) {
+                        console.warn('Export: Failed to read image', e);
+                    }
+                }
+
+                pins.push(pin);
+            }
+
+            return {
+                version: 1,
+                timestamp: Date.now(),
+                maps,
+                pins
+            };
+        } catch (error) {
+            console.error('Failed to get all data:', error);
+            throw error;
+        }
+    }
+
+    public async importData(data: { maps: any[], pins: any[], version?: number }): Promise<void> {
+        if (!this.db) await this.initDatabase();
+
+        if (!data) {
+            throw new Error("File is empty or not a valid JSON object.");
+        }
+        if (data.version === undefined && (!data.maps && !data.pins)) {
+            // Basic heuristic: if no version AND no data fields, it's likely wrong
+            throw new Error("This file does not appear to be a Places I... backup.");
+        }
+        if (!Array.isArray(data.maps) || !Array.isArray(data.pins)) {
+            throw new Error("Backup file structure is invalid (missing maps or pins).");
+        }
+
+        try {
+            const destDir = RNFS.DocumentDirectoryPath;
+
+            // 1. Import Maps
+            for (const map of data.maps) {
+                await this.db!.executeSql(
+                    `INSERT OR REPLACE INTO Maps (id, name, emoji, type, created_at) VALUES (?, ?, ?, ?, ?)`,
+                    [map.id, map.name, map.emoji, map.type || 'exact', map.created_at]
+                );
+            }
+
+            // 2. Import Pins (Foreign Key depends on Maps existing)
+            for (const pin of data.pins) {
+                let imageUri = pin.image_uri; // Keep old value if no base64, though it might be broken on new device
+
+                if (pin.image_base64) {
+                    try {
+                        // Create a unique filename for the imported image
+                        const fileName = `imported_${pin.id}_${Date.now()}.jpg`;
+                        const newPath = `${destDir}/${fileName}`;
+
+                        await RNFS.writeFile(newPath, pin.image_base64, 'base64');
+                        imageUri = 'file://' + newPath;
+                    } catch (e) {
+                        console.warn('Import: Failed to save image', e);
+                    }
+                }
+
+                await this.db!.executeSql(
+                    `INSERT OR REPLACE INTO Pins 
+                    (id, map_id, title, description, latitude, longitude, image_uri, rating, emoji, created_at) 
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                    [
+                        pin.id,
+                        pin.map_id,
+                        pin.title,
+                        pin.description,
+                        pin.latitude,
+                        pin.longitude,
+                        imageUri,
+                        pin.rating,
+                        pin.emoji,
+                        pin.created_at
+                    ]
+                );
+            }
+        } catch (error) {
+            console.error('Failed to import data:', error);
+            throw error;
+        }
+    }
+
     public async exportMapData(mapId: string): Promise<{ map: MapData, pins: PinData[] }> {
         if (!this.db) await this.initDatabase();
 

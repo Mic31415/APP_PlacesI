@@ -1,9 +1,13 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Switch, Alert, Linking } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Switch, Alert, Linking, Platform, Modal, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+import Share from 'react-native-share';
+import RNFS from 'react-native-fs';
+import DocumentPicker from 'react-native-document-picker';
 import { useTheme } from '../../theme/ThemeContext';
 import { Card } from '../../components/common/Card';
+import { databaseService } from '../../services/DatabaseService';
 
 interface SettingsRowProps {
     icon: string;
@@ -72,10 +76,84 @@ const SettingsSection: React.FC<{ title: string; children: React.ReactNode }> = 
 export const SettingsScreen: React.FC = () => {
     const { theme, colorScheme } = useTheme();
     const [notificationsEnabled, setNotificationsEnabled] = useState(true);
+    const [isLoading, setIsLoading] = useState(false);
 
     const handlePremium = () => Alert.alert("Go Premium", "Premium flow coming soon!");
-    const handleExport = () => Alert.alert("Export Data", "Export functionality coming soon.");
-    const handleImport = () => Alert.alert("Import Data", "Import functionality coming soon.");
+
+    const handleExport = async () => {
+        if (isLoading) return;
+        setIsLoading(true);
+        try {
+            const data = await databaseService.getAllData();
+            const filePath = RNFS.DocumentDirectoryPath + '/places_backup.json';
+
+            await RNFS.writeFile(filePath, JSON.stringify(data, null, 2), 'utf8');
+
+            await Share.open({
+                url: 'file://' + filePath,
+                type: 'application/json',
+                message: 'Here is my Places I... backup!',
+                title: 'Export Data'
+            });
+        } catch (error) {
+            console.error(error);
+            Alert.alert("Export Failed", "Could not export data.");
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const handleImport = async () => {
+        if (isLoading) return;
+        try {
+            const res = await DocumentPicker.pickSingle({
+                type: [DocumentPicker.types.allFiles], // Allow all files since JSON mime types can vary
+            });
+
+            if (res.uri) {
+                // Check file size to prevent OOM crashes
+                try {
+                    const stats = await RNFS.stat(res.uri);
+                    const sizeInMB = stats.size / (1024 * 1024);
+                    if (sizeInMB > 150) {
+                        Alert.alert("File Too Large", "This backup file is too large to import directly on this device.");
+                        return; // Stop here
+                    }
+                } catch (statError) {
+                    console.warn("Could not check file stats", statError);
+                }
+
+                setIsLoading(true);
+                // Tiny delay to ensure UI updates before heavy work starts
+                await new Promise(resolve => setTimeout(resolve, 100));
+
+                const fileContent = await RNFS.readFile(res.uri, 'utf8');
+                const jsonData = JSON.parse(fileContent);
+
+                await databaseService.importData(jsonData);
+
+                Alert.alert(
+                    "Import Successful",
+                    `Restored ${jsonData.maps?.length || 0} maps and ${jsonData.pins?.length || 0} pins.`
+                );
+            }
+        } catch (err: any) {
+            if (DocumentPicker.isCancel(err)) {
+                // User cancelled
+            } else if (err instanceof SyntaxError) {
+                Alert.alert("Import Failed", "The selected file is not a valid JSON file.");
+            } else {
+                console.error(err);
+                if (err.message && (err.message.includes("Failed to allocate") || err.message.includes("OOM") || err.message.includes("OutOfMemory"))) {
+                    Alert.alert("Import Failed", "The backup file is too large for this device's memory.");
+                } else {
+                    Alert.alert("Import Failed", err.message || "An unknown error occurred.");
+                }
+            }
+        } finally {
+            setIsLoading(false);
+        }
+    };
     const handleClearData = () => {
         Alert.alert(
             "Clear All Data",
@@ -144,6 +222,17 @@ export const SettingsScreen: React.FC = () => {
 
                 <View style={{ height: 40 }} />
             </ScrollView>
+            {/* Loading Modal */}
+            <Modal transparent visible={isLoading} animationType="fade">
+                <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center' }}>
+                    <View style={{ backgroundColor: theme.colors.card[colorScheme], padding: 24, borderRadius: 16, alignItems: 'center' }}>
+                        <ActivityIndicator size="large" color={theme.colors.primary} />
+                        <Text style={[theme.typography.bodyBold, { color: theme.colors.text.primary[colorScheme], marginTop: 16 }]}>
+                            Processing Data...
+                        </Text>
+                    </View>
+                </View>
+            </Modal>
         </SafeAreaView>
     );
 };
