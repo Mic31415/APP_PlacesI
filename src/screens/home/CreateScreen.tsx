@@ -8,6 +8,7 @@ import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import { MainTabParamList } from '../../types/navigation';
 import { databaseService } from '../../services/DatabaseService';
 import { EmojiPickerModal } from '../../components/common/EmojiPickerModal';
+import { InterstitialAdService } from '../../services/InterstitialAdService';
 
 type CreateScreenNavigationProp = BottomTabNavigationProp<MainTabParamList, 'Create'>;
 
@@ -38,6 +39,10 @@ export const CreateScreen: React.FC = () => {
 
         try {
             await databaseService.createMap(mapName.trim(), selectedEmoji, mapType);
+
+            // Show interstitial ad if not premium
+            await InterstitialAdService.show();
+
             // Optional: Haptic feedback here
             navigation.navigate('Home');
         } catch (error) {

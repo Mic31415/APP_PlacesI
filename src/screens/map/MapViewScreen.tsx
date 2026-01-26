@@ -13,6 +13,7 @@ import { PinDetailModal } from '../../components/map/PinDetailModal';
 import { EmojiPickerModal } from '../../components/common/EmojiPickerModal';
 import { MapHeaderMenu } from '../../components/map/MapHeaderMenu';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+import { BannerAdView } from '../../components/ads/BannerAdView';
 
 // ... imports
 import { databaseService, PinData } from '../../services/DatabaseService';
@@ -380,6 +381,7 @@ export const MapViewScreen: React.FC = () => {
                 }}
                 onSelectEmoji={setEditEmoji}
             />
+            <BannerAdView />
         </View>
     );
 };

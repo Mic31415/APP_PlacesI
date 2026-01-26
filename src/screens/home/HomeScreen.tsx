@@ -10,6 +10,7 @@ import { EmptyState } from '../../components/common/EmptyState';
 import { FloatingButton } from '../../components/common/FloatingButton';
 import { getResponsiveValue } from '../../utils/responsive';
 import { MainTabParamList } from '../../types/navigation';
+import { BannerAdView } from '../../components/ads/BannerAdView';
 
 // Mock Data removed
 // import { useFocusEffect } from '@react-navigation/native';
@@ -115,6 +116,7 @@ export const HomeScreen: React.FC = () => {
             />
 
             <FloatingButton onPress={handleCreateMap} />
+            <BannerAdView />
         </View>
     );
 };

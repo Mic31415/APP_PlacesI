@@ -8,8 +8,10 @@ import { ThemeProvider } from './src/theme/ThemeContext';
 import { AppNavigator } from './src/navigation/AppNavigator';
 import { LogBox } from 'react-native';
 import Toast from 'react-native-toast-message';
-
 import { databaseService } from './src/services/DatabaseService';
+import { MobileAds } from 'react-native-google-mobile-ads';
+import { initAdsConsent } from './src/helpers/adConsent';
+import { InterstitialAdService } from './src/services/InterstitialAdService';
 
 LogBox.ignoreAllLogs(true); // Ignore all log notifications
 
@@ -26,6 +28,14 @@ function App() {
       }
     };
     init();
+
+    MobileAds()
+      .initialize()
+      .then(adapterStatuses => {
+        console.log('Ads initialized:', adapterStatuses);
+        initAdsConsent();
+        InterstitialAdService.load();
+      });
   }, []);
 
   return (
