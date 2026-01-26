@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, Alert } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useTheme } from '../../theme/ThemeContext';
@@ -15,6 +15,7 @@ type CreateScreenNavigationProp = BottomTabNavigationProp<MainTabParamList, 'Cre
 export const CreateScreen: React.FC = () => {
     const { theme, colorScheme } = useTheme();
     const navigation = useNavigation<CreateScreenNavigationProp>();
+    const { top, bottom } = useSafeAreaInsets();
 
     const [mapName, setMapName] = useState('');
     const [selectedEmoji, setSelectedEmoji] = useState('🗺️');
@@ -69,7 +70,7 @@ export const CreateScreen: React.FC = () => {
     );
 
     return (
-        <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background[colorScheme] }]}>
+        <View style={[styles.container, { backgroundColor: theme.colors.background[colorScheme], paddingTop: top }]}>
             {/* Header */}
             <View style={[styles.header, { borderBottomColor: theme.colors.border[colorScheme] }]}>
                 <TouchableOpacity onPress={handleCancel} style={styles.headerBtn}>
@@ -129,7 +130,7 @@ export const CreateScreen: React.FC = () => {
                 onClose={() => setEmojiModalVisible(false)}
                 onSelectEmoji={setSelectedEmoji}
             />
-        </SafeAreaView>
+        </View>
     );
 };
 
@@ -188,6 +189,5 @@ const styles = StyleSheet.create({
         paddingVertical: 16,
         borderRadius: 12,
         alignItems: 'center',
-        marginBottom: 40,
     },
 });

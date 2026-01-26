@@ -7,7 +7,7 @@ import { Config } from '../../constants/Config';
 
 // Initialize Geocoder with your Google Maps API Key
 Geocoder.init(Config.GOOGLE_MAPS_API_KEY);
-import { SafeAreaView } from 'react-native-safe-area-context';
+
 import { useNavigation, useRoute } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useTheme } from '../../theme/ThemeContext';
@@ -49,8 +49,6 @@ export const CreatePinScreen: React.FC = () => {
             setCoordinates({ latitude: pin.latitude, longitude: pin.longitude });
         }
     }, [pin, mapEmoji]);
-
-
 
     const handleSave = async () => {
         if (!title.trim()) {
@@ -235,8 +233,7 @@ export const CreatePinScreen: React.FC = () => {
     );
 
     return (
-        <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background[colorScheme] }]} edges={['left', 'right', 'bottom']}>
-            {/* Header */}
+        <View style={[styles.container, { backgroundColor: theme.colors.background[colorScheme] }]}>
             {/* Header */}
             <ScreenHeader
                 leftComponent={
@@ -367,7 +364,7 @@ export const CreatePinScreen: React.FC = () => {
                 onClose={() => setEmojiModalVisible(false)}
                 onSelectEmoji={setSelectedEmoji}
             />
-        </SafeAreaView>
+        </View>
     );
 };
 

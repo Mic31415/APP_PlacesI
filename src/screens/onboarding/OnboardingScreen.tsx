@@ -1,6 +1,5 @@
 import React, { useRef, useState } from 'react';
 import { View, StyleSheet, FlatList, Dimensions, Animated } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -107,7 +106,7 @@ export const OnboardingScreen: React.FC = () => {
     };
 
     return (
-        <SafeAreaView
+        <View
             style={[
                 styles.container,
                 { backgroundColor: theme.colors.background[colorScheme] },
@@ -159,7 +158,7 @@ export const OnboardingScreen: React.FC = () => {
                     )}
                 </View>
             </View>
-        </SafeAreaView>
+        </View>
     );
 };
 

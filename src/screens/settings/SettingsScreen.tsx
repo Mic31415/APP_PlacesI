@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Switch, Alert, Linking, Platform, Modal, ActivityIndicator } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import Share from 'react-native-share';
 import RNFS from 'react-native-fs';
@@ -79,6 +79,7 @@ export const SettingsScreen: React.FC = () => {
     const [notificationsEnabled, setNotificationsEnabled] = useState(true);
     const [isLoading, setIsLoading] = useState(false);
 
+    const { top, bottom } = useSafeAreaInsets();
     const handlePremium = () => Alert.alert("Go Premium", "Premium flow coming soon!");
 
     const handleExport = async () => {
@@ -183,7 +184,7 @@ export const SettingsScreen: React.FC = () => {
     };
 
     return (
-        <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background[colorScheme] }]}>
+        <View style={[styles.container, { backgroundColor: theme.colors.background[colorScheme], paddingTop: top }]}>
             {/* <View style={styles.header}>
                 <Text style={[theme.typography.h2, { color: theme.colors.text.primary[colorScheme] }]}>
                     Settings
@@ -250,9 +251,7 @@ export const SettingsScreen: React.FC = () => {
                     </View>
                 </View>
             </Modal>
-
-
-        </SafeAreaView >
+        </View>
     );
 };
 
