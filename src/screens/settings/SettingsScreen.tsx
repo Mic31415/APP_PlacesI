@@ -75,12 +75,26 @@ const SettingsSection: React.FC<{ title: string; children: React.ReactNode }> = 
 };
 
 export const SettingsScreen: React.FC = () => {
-    const { theme, colorScheme } = useTheme();
+    const { theme, colorScheme, themeType, setAppTheme } = useTheme();
+    const [isThemeModalVisible, setIsThemeModalVisible] = useState(false);
     const [notificationsEnabled, setNotificationsEnabled] = useState(true);
     const [isLoading, setIsLoading] = useState(false);
 
     const { top, bottom } = useSafeAreaInsets();
-    const handlePremium = () => Alert.alert("Go Premium", "Premium flow coming soon!");
+
+    // Helpers
+    const getThemeLabel = (t: string) => {
+        if (t === 'system') return 'Auto (System)';
+        if (t === 'dark') return 'Dark Mode';
+        return 'Light Mode';
+    };
+
+    const handleThemeSelect = (selectedTheme: any) => {
+        setAppTheme(selectedTheme);
+        setIsThemeModalVisible(false);
+    };
+
+    const handlePremium = () => Alert.alert("Go Premium", "Premium flow coming soon!", undefined, { userInterfaceStyle: colorScheme === 'dark' ? 'dark' : 'light' });
 
     const handleExport = async () => {
         if (isLoading) return;
@@ -99,7 +113,7 @@ export const SettingsScreen: React.FC = () => {
             });
         } catch (error) {
             console.error(error);
-            Alert.alert("Export Failed", "Could not export data.");
+            Alert.alert("Export Failed", "Could not export data.", undefined, { userInterfaceStyle: colorScheme === 'dark' ? 'dark' : 'light' });
         } finally {
             setIsLoading(false);
         }
@@ -118,7 +132,7 @@ export const SettingsScreen: React.FC = () => {
                     const stats = await RNFS.stat(res.uri);
                     const sizeInMB = stats.size / (1024 * 1024);
                     if (sizeInMB > 150) {
-                        Alert.alert("File Too Large", "This backup file is too large to import directly on this device.");
+                        Alert.alert("File Too Large", "This backup file is too large to import directly on this device.", undefined, { userInterfaceStyle: colorScheme === 'dark' ? 'dark' : 'light' });
                         return; // Stop here
                     }
                 } catch (statError) {
@@ -136,26 +150,29 @@ export const SettingsScreen: React.FC = () => {
 
                 Alert.alert(
                     "Import Successful",
-                    `Restored ${jsonData.maps?.length || 0} maps and ${jsonData.pins?.length || 0} pins.`
+                    `Restored ${jsonData.maps?.length || 0} maps and ${jsonData.pins?.length || 0} pins.`,
+                    undefined,
+                    { userInterfaceStyle: colorScheme === 'dark' ? 'dark' : 'light' }
                 );
             }
         } catch (err: any) {
             if (DocumentPicker.isCancel(err)) {
                 // User cancelled
             } else if (err instanceof SyntaxError) {
-                Alert.alert("Import Failed", "The selected file is not a valid JSON file.");
+                Alert.alert("Import Failed", "The selected file is not a valid JSON file.", undefined, { userInterfaceStyle: colorScheme === 'dark' ? 'dark' : 'light' });
             } else {
                 console.error(err);
                 if (err.message && (err.message.includes("Failed to allocate") || err.message.includes("OOM") || err.message.includes("OutOfMemory"))) {
-                    Alert.alert("Import Failed", "The backup file is too large for this device's memory.");
+                    Alert.alert("Import Failed", "The backup file is too large for this device's memory.", undefined, { userInterfaceStyle: colorScheme === 'dark' ? 'dark' : 'light' });
                 } else {
-                    Alert.alert("Import Failed", err.message || "An unknown error occurred.");
+                    Alert.alert("Import Failed", err.message || "An unknown error occurred.", undefined, { userInterfaceStyle: colorScheme === 'dark' ? 'dark' : 'light' });
                 }
             }
         } finally {
             setIsLoading(false);
         }
     };
+
     const handleClearData = () => {
         Alert.alert(
             "Clear All Data",
@@ -175,11 +192,12 @@ export const SettingsScreen: React.FC = () => {
                                 visibilityTime: 3000,
                             });
                         } catch (error) {
-                            Alert.alert("Error", "Failed to clear data.");
+                            Alert.alert("Error", "Failed to clear data.", undefined, { userInterfaceStyle: colorScheme === 'dark' ? 'dark' : 'light' });
                         }
                     }
                 }
-            ]
+            ],
+            { userInterfaceStyle: colorScheme === 'dark' ? 'dark' : 'light' }
         );
     };
 
@@ -221,7 +239,12 @@ export const SettingsScreen: React.FC = () => {
 
                 {/* PREFERENCES */}
                 <SettingsSection title="PREFERENCES">
-                    <SettingsRow icon="theme-light-dark" title="Theme" value="Auto" onPress={() => Alert.alert("Theme", "Theme selection coming soon")} />
+                    <SettingsRow
+                        icon="theme-light-dark"
+                        title="Theme"
+                        value={getThemeLabel(themeType)} // Fixed usage
+                        onPress={() => setIsThemeModalVisible(true)}
+                    />
                     <SettingsRow
                         icon="bell"
                         title="Notifications"
@@ -238,18 +261,58 @@ export const SettingsScreen: React.FC = () => {
                     <SettingsRow icon="file-document" title="Terms of Service" onPress={() => Linking.openURL('https://example.com/terms')} />
                 </SettingsSection>
 
-                <View style={{ height: 40 }} />
+                <View style={styles.bottomSpacer} />
             </ScrollView>
+
             {/* Loading Modal */}
             <Modal transparent visible={isLoading} animationType="fade">
-                <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center' }}>
-                    <View style={{ backgroundColor: theme.colors.card[colorScheme], padding: 24, borderRadius: 16, alignItems: 'center' }}>
+                <View style={styles.loadingModalOverlay}>
+                    <View style={[styles.loadingModalContent, { backgroundColor: theme.colors.card[colorScheme] }]}>
                         <ActivityIndicator size="large" color={theme.colors.primary} />
-                        <Text style={[theme.typography.bodyBold, { color: theme.colors.text.primary[colorScheme], marginTop: 16 }]}>
+                        <Text style={[theme.typography.bodyBold, styles.loadingText, { color: theme.colors.text.primary[colorScheme] }]}>
                             Processing Data...
                         </Text>
                     </View>
                 </View>
+            </Modal>
+
+            {/* Theme Selector Modal */}
+            <Modal transparent visible={isThemeModalVisible} animationType="slide" onRequestClose={() => setIsThemeModalVisible(false)}>
+                <TouchableOpacity
+                    style={styles.themeModalOverlay}
+                    activeOpacity={1}
+                    onPress={() => setIsThemeModalVisible(false)}
+                >
+                    <View style={[styles.themeModalContent, {
+                        backgroundColor: theme.colors.card[colorScheme],
+                        paddingBottom: bottom + 20,
+                    }]}>
+                        {/* Drag Handle */}
+                        <View style={[styles.dragHandle, { backgroundColor: theme.colors.text.tertiary[colorScheme] }]} />
+
+                        <Text style={[theme.typography.h3, styles.themeModalTitle, { color: theme.colors.text.primary[colorScheme] }]}>
+                            Choose Theme
+                        </Text>
+
+                        {['light', 'dark', 'system'].map((t) => (
+                            <TouchableOpacity
+                                key={t}
+                                style={[styles.themeOption, {
+                                    borderBottomWidth: t === 'system' ? 0 : StyleSheet.hairlineWidth,
+                                    borderBottomColor: theme.colors.border[colorScheme],
+                                }]}
+                                onPress={() => handleThemeSelect(t)}
+                            >
+                                <Text style={[theme.typography.body, { color: theme.colors.text.primary[colorScheme] }]}>
+                                    {getThemeLabel(t)}
+                                </Text>
+                                {themeType === t && (
+                                    <Icon name="check" size={24} color={theme.colors.primary} />
+                                )}
+                            </TouchableOpacity>
+                        ))}
+                    </View>
+                </TouchableOpacity>
             </Modal>
         </View>
     );
@@ -309,5 +372,50 @@ const styles = StyleSheet.create({
     },
     icon: {
         marginRight: 16,
+    },
+    loadingModalOverlay: {
+        flex: 1,
+        backgroundColor: 'rgba(0,0,0,0.5)',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    loadingModalContent: {
+        padding: 24,
+        borderRadius: 16,
+        alignItems: 'center',
+    },
+    loadingText: {
+        marginTop: 16,
+    },
+    themeModalOverlay: {
+        flex: 1,
+        backgroundColor: 'rgba(0,0,0,0.5)',
+        justifyContent: 'flex-end',
+    },
+    themeModalContent: {
+        width: '100%',
+        borderTopLeftRadius: 24,
+        borderTopRightRadius: 24,
+        paddingHorizontal: 24,
+        paddingTop: 12,
+    },
+    dragHandle: {
+        width: 40,
+        height: 4,
+        borderRadius: 2,
+        alignSelf: 'center',
+        marginBottom: 20,
+    },
+    themeModalTitle: {
+        marginBottom: 20,
+    },
+    themeOption: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingVertical: 16,
+    },
+    bottomSpacer: {
+        height: 40,
     },
 });

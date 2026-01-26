@@ -90,7 +90,7 @@ export const MapViewScreen: React.FC = () => {
 
     const handleSaveMap = async () => {
         if (!editName.trim()) {
-            Alert.alert("Error", "Map name cannot be empty");
+            Alert.alert("Error", "Map name cannot be empty", undefined, { userInterfaceStyle: colorScheme === 'dark' ? 'dark' : 'light' });
             return;
         }
 
@@ -101,7 +101,7 @@ export const MapViewScreen: React.FC = () => {
             setEditModalVisible(false);
         } catch (error) {
             console.error(error);
-            Alert.alert("Error", "Failed to update map");
+            Alert.alert("Error", "Failed to update map", undefined, { userInterfaceStyle: colorScheme === 'dark' ? 'dark' : 'light' });
         }
     };
 
@@ -150,7 +150,7 @@ export const MapViewScreen: React.FC = () => {
             setPins(updatedPins);
         } catch (error) {
             console.error('Failed to delete pin:', error);
-            Alert.alert('Error', 'Failed to delete pin');
+            Alert.alert('Error', 'Failed to delete pin', undefined, { userInterfaceStyle: colorScheme === 'dark' ? 'dark' : 'light' });
         }
     }, [pins]);
 
@@ -209,11 +209,12 @@ export const MapViewScreen: React.FC = () => {
                             navigation.goBack();
                         } catch (error) {
                             console.error('Failed to delete map:', error);
-                            Alert.alert('Error', 'Failed to delete map');
+                            Alert.alert('Error', 'Failed to delete map', undefined, { userInterfaceStyle: colorScheme === 'dark' ? 'dark' : 'light' });
                         }
                     }
                 }
-            ]
+            ],
+            { userInterfaceStyle: colorScheme === 'dark' ? 'dark' : 'light' }
         );
     };
 
@@ -315,7 +316,7 @@ export const MapViewScreen: React.FC = () => {
             {/* Edit Map Modal */}
             <Modal
                 visible={editModalVisible}
-                animationType="fade"
+                animationType="slide"
                 transparent={true}
                 onRequestClose={() => setEditModalVisible(false)}
             >

@@ -74,7 +74,8 @@ export const HomeScreen: React.FC = () => {
                         }
                     }
                 }
-            ]
+            ],
+            { userInterfaceStyle: colorScheme === 'dark' ? 'dark' : 'light' }
         );
     }, [maps]);
 

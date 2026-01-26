@@ -35,7 +35,8 @@ export const PinDetailModal: React.FC<PinDetailModalProps> = ({ visible, pin, on
                         onClose();
                     }
                 }
-            ]
+            ],
+            { userInterfaceStyle: colorScheme === 'dark' ? 'dark' : 'light' }
         );
     };
 

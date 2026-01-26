@@ -34,7 +34,7 @@ export const CreateScreen: React.FC = () => {
 
     const handleCreate = async () => {
         if (!mapName.trim()) {
-            Alert.alert('Required', 'Please enter a map name');
+            Alert.alert('Required', 'Please enter a map name', undefined, { userInterfaceStyle: colorScheme === 'dark' ? 'dark' : 'light' });
             return;
         }
 
@@ -48,7 +48,7 @@ export const CreateScreen: React.FC = () => {
             navigation.navigate('Home');
         } catch (error) {
             console.error('Error creating map:', error);
-            Alert.alert('Error', 'Failed to create map. Please try again.');
+            Alert.alert('Error', 'Failed to create map. Please try again.', undefined, { userInterfaceStyle: colorScheme === 'dark' ? 'dark' : 'light' });
         }
     };
 

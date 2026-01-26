@@ -96,7 +96,7 @@ export const CreatePinScreen: React.FC = () => {
             if (Platform.OS === 'android') {
                 const hasPermission = await PermissionsAndroid.request(PermissionsAndroid.PERMISSIONS.CAMERA);
                 if (hasPermission !== PermissionsAndroid.RESULTS.GRANTED) {
-                    Alert.alert("Permission Denied", "Camera permission is required to take photos.");
+                    Alert.alert("Permission Denied", "Camera permission is required to take photos.", undefined, { userInterfaceStyle: colorScheme === 'dark' ? 'dark' : 'light' });
                     return;
                 }
             }
@@ -111,13 +111,13 @@ export const CreatePinScreen: React.FC = () => {
                 console.log('User cancelled image picker');
             } else if (result.errorCode) {
                 console.log('ImagePicker Error: ', result.errorMessage);
-                Alert.alert('Error', result.errorMessage || 'Failed to open camera');
+                Alert.alert('Error', result.errorMessage || 'Failed to open camera', undefined, { userInterfaceStyle: colorScheme === 'dark' ? 'dark' : 'light' });
             } else if (result.assets && result.assets.length > 0) {
                 setImageUri(result.assets[0].uri || null);
             }
         } catch (error) {
             console.error('Camera Launch Error:', error);
-            Alert.alert('Error', 'An unexpected error occurred opening current camera.');
+            Alert.alert('Error', 'An unexpected error occurred opening current camera.', undefined, { userInterfaceStyle: colorScheme === 'dark' ? 'dark' : 'light' });
         }
     };
 
@@ -169,7 +169,7 @@ export const CreatePinScreen: React.FC = () => {
         } catch (e) { }
 
         if (!hasPermission) {
-            Alert.alert("Permission Denied", "Location permission is required to use this feature.");
+            Alert.alert("Permission Denied", "Location permission is required to use this feature.", undefined, { userInterfaceStyle: colorScheme === 'dark' ? 'dark' : 'light' });
             return;
         }
 
@@ -195,7 +195,7 @@ export const CreatePinScreen: React.FC = () => {
             },
             (error) => {
                 console.error(error);
-                Alert.alert("Error", "Failed to get current location. Make sure GPS is on.");
+                Alert.alert("Error", "Failed to get current location. Make sure GPS is on.", undefined, { userInterfaceStyle: colorScheme === 'dark' ? 'dark' : 'light' });
                 setIsLoadingLocation(false);
             },
             { enableHighAccuracy: false, timeout: 20000, maximumAge: 1000 }

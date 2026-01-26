@@ -31,7 +31,7 @@ export const MapHeaderMenu: React.FC<MapHeaderMenuProps> = ({ onEdit, onShare, o
             <Modal
                 transparent={true}
                 visible={visible}
-                animationType="fade"
+                animationType="slide"
                 onRequestClose={closeMenu}
             >
                 <TouchableWithoutFeedback onPress={closeMenu}>
