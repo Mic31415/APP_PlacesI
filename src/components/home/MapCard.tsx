@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { useTheme } from '../../theme/ThemeContext';
 import { Card } from '../common/Card';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+import { moderateScale } from '../../utils/responsive';
 
 interface MapCardProps {
     map: {
@@ -27,15 +28,15 @@ export const MapCard: React.FC<MapCardProps> = ({ map, onPress, onLongPress, sty
             activeOpacity={0.7}
             style={style}
         >
-            <Card style={styles.card}>
-                <View style={styles.emojiContainer}>
+            <View style={[styles.card, { backgroundColor: theme.colors.surface[colorScheme] }]}>
+                <View style={[styles.emojiContainer, { backgroundColor: theme.colors.innerSurface[colorScheme] }]}>
                     <Text style={styles.emoji}>{map.emoji}</Text>
                 </View>
                 <View style={styles.content}>
                     <Text
                         style={[
-                            theme.typography.bodyBold,
-                            { color: theme.colors.text.primary[colorScheme], marginBottom: 4 },
+                            styles.mapName,
+                            { color: theme.colors.text.primary[colorScheme], },
                         ]}
                         numberOfLines={1}
                     >
@@ -43,15 +44,15 @@ export const MapCard: React.FC<MapCardProps> = ({ map, onPress, onLongPress, sty
                     </Text>
                     <Text
                         style={[
-                            theme.typography.caption,
+                            styles.mapType,
                             { color: theme.colors.text.secondary[colorScheme] },
                         ]}
                     >
-                        {map.type || 'Custom Map'} • {map.pinCount || 0} pins
+                        {map.type || 'Custom Map'}  |  {map.pinCount || 0} pins
                     </Text>
                 </View>
-                <Icon name="chevron-right" size={24} color={theme.colors.text.tertiary[colorScheme]} />
-            </Card>
+                <Icon name="chevron-right" size={30} color={theme.colors.text.tertiary[colorScheme]} />
+            </View>
         </TouchableOpacity>
     );
 };
@@ -60,13 +61,14 @@ const styles = StyleSheet.create({
     card: {
         flexDirection: 'row',
         alignItems: 'center',
-        padding: 16,
+        padding: 10,
+        borderRadius: 12,
     },
     emojiContainer: {
-        width: 60,
-        height: 60,
-        borderRadius: 30,
-        backgroundColor: 'rgba(0,0,0,0.05)',
+        width: 80,
+        height: 80,
+        borderRadius: 8,
+        backgroundColor: 'rgba(0,0,0,0.08)',
         justifyContent: 'center',
         alignItems: 'center',
         marginRight: 16,
@@ -77,5 +79,14 @@ const styles = StyleSheet.create({
     content: {
         flex: 1,
         justifyContent: 'center',
+    },
+    mapName: {
+        fontSize: moderateScale(16),
+        fontWeight: '600',
+        marginBottom: 4
+    },
+    mapType: {
+        fontSize: moderateScale(14),
+        fontWeight: '400',
     },
 });

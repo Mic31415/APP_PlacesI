@@ -1,4 +1,5 @@
 import { TextStyle } from 'react-native';
+import { moderateScale } from '../utils/responsive';
 
 export interface TypographyStyle extends TextStyle {
     fontSize: number;
@@ -8,53 +9,53 @@ export interface TypographyStyle extends TextStyle {
 
 export const typography: Record<string, TypographyStyle> = {
     h1: {
-        fontSize: 34,
+        fontSize: moderateScale(30),
         fontWeight: '700',
-        lineHeight: 41,
+        lineHeight: moderateScale(41),
     },
     h2: {
-        fontSize: 28,
+        fontSize: moderateScale(20),
         fontWeight: '700',
-        lineHeight: 34,
+        lineHeight: moderateScale(30),
     },
     h3: {
-        fontSize: 22,
+        fontSize: moderateScale(22),
         fontWeight: '700',
-        lineHeight: 28,
+        lineHeight: moderateScale(28),
     },
     h4: {
-        fontSize: 20,
+        fontSize: moderateScale(20),
         fontWeight: '700',
-        lineHeight: 25,
+        lineHeight: moderateScale(25),
     },
     body: {
-        fontSize: 17,
-        fontWeight: '400',
-        lineHeight: 22,
+        fontSize: moderateScale(16),
+        fontWeight: '300',
+        lineHeight: moderateScale(20),
     },
     bodyBold: {
-        fontSize: 17,
+        fontSize: moderateScale(16),
         fontWeight: '600',
-        lineHeight: 22,
+        lineHeight: moderateScale(22),
     },
     caption: {
-        fontSize: 13,
+        fontSize: moderateScale(13),
         fontWeight: '400',
-        lineHeight: 18,
+        lineHeight: moderateScale(18),
     },
     captionBold: {
-        fontSize: 13,
+        fontSize: moderateScale(13),
         fontWeight: '600',
-        lineHeight: 18,
+        lineHeight: moderateScale(18),
     },
     small: {
-        fontSize: 11,
+        fontSize: moderateScale(11),
         fontWeight: '400',
-        lineHeight: 13,
+        lineHeight: moderateScale(13),
     },
     button: {
-        fontSize: 17,
-        fontWeight: '600',
-        lineHeight: 22,
+        fontSize: moderateScale(17),
+        fontWeight: '500',
+        lineHeight: moderateScale(22),
     },
 };

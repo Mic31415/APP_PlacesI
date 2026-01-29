@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { useTheme } from '../../theme/ThemeContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { moderateScale } from '../../utils/responsive';
 
 interface ScreenHeaderProps {
     leftComponent?: React.ReactNode;

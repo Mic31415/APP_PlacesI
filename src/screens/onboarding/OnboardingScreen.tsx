@@ -1,5 +1,5 @@
 import React, { useRef, useState } from 'react';
-import { View, StyleSheet, FlatList, Dimensions, Animated } from 'react-native';
+import { View, StyleSheet, FlatList, Dimensions, Animated, Text, ImageSourcePropType } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -8,30 +8,27 @@ import { RootStackParamList } from '../../types/navigation';
 import { Button } from '../../components/common';
 import { OnboardingSlide } from './OnboardingSlide';
 
-const { width } = Dimensions.get('window');
+const { width, height } = Dimensions.get('window');
 
 // Onboarding Data
-const slides = [
+const slides: { id: string; title: string; description: string; image: ImageSourcePropType }[] = [
     {
         id: '1',
-        title: 'Welcome to Places I...',
-        description: 'Track your world, one memory at a time. Keep a personal log of all the amazing places you visit.',
-        emoji: '🌎',
-        image: null,
+        title: 'Track your World, One Pin at a Time',
+        description: 'Track your world, one memory at a time.keep a personal log of all the amazing places you visit.',
+        image: require('../../assets/Images/OnBoarding1.png'),
     },
     {
         id: '2',
         title: 'Create Custom Maps',
-        description: 'Organize your places into custom maps like "Places I Eat", "Dream Destinations", or "Hiking Trails".',
-        emoji: '🗺️',
-        image: null,
+        description: 'Organize your places into custom maps like “Places I Eat”, “Dream Destinations”, or “Hiking Trails”.',
+        image: require('../../assets/Images/OnBoarding2.png'),
     },
     {
         id: '3',
         title: 'Pin Your Memories',
         description: 'Drop pins, add photos, and write notes. Fully offline and private - your data stays with you.',
-        emoji: '📍',
-        image: null,
+        image: require('../../assets/Images/OnBoarding3.png'),
     },
 ];
 
@@ -77,7 +74,7 @@ export const OnboardingScreen: React.FC = () => {
 
                     const dotWidth = scrollX.interpolate({
                         inputRange,
-                        outputRange: [10, 20, 10],
+                        outputRange: [10, 39, 10],
                         extrapolate: 'clamp',
                     });
 
@@ -112,7 +109,7 @@ export const OnboardingScreen: React.FC = () => {
                 { backgroundColor: theme.colors.background[colorScheme] },
             ]}
         >
-            <View style={{ flex: 3 }}>
+            <View style={{ height: height * 0.6 }}>
                 <FlatList
                     data={slides}
                     renderItem={({ item }) => <OnboardingSlide item={item} />}
@@ -131,24 +128,43 @@ export const OnboardingScreen: React.FC = () => {
                 />
             </View>
 
-            <Paginator />
+            <View style={styles.bottomContainer}>
 
-            <View style={styles.footer}>
-                <View style={styles.buttonContainer}>
+                <Paginator />
+
+                <View style={styles.textContainer}>
+                    <Text
+                        style={[
+                            theme.typography.h2,
+                            {
+                                color: theme.colors.text.primary[colorScheme],
+                                textAlign: 'center',
+                                marginBottom: 20,
+                            },
+                        ]}
+                    >
+                        {slides[currentIndex].title}
+                    </Text>
+                    <Text
+                        style={[
+                            theme.typography.body,
+                            {
+                                color: theme.colors.text.primary[colorScheme],
+                                textAlign: 'center',
+                            },
+                        ]}
+                    >
+                        {slides[currentIndex].description}
+                    </Text>
+                </View>
+
+                <View style={styles.footer}>
                     {currentIndex < slides.length - 1 ? (
-                        <View style={styles.rowButtons}>
-                            <Button
-                                title="Skip"
-                                onPress={completeOnboarding}
-                                variant="text"
-                                style={{ marginRight: 'auto' }}
-                            />
-                            <Button
-                                title="Next"
-                                onPress={scrollTo}
-                                style={{ minWidth: 120 }}
-                            />
-                        </View>
+                        <Button
+                            title="Next"
+                            onPress={scrollTo}
+                            fullWidth
+                        />
                     ) : (
                         <Button
                             title="Get Started"
@@ -165,31 +181,31 @@ export const OnboardingScreen: React.FC = () => {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        alignItems: 'center',
-        justifyContent: 'center',
     },
     paginatorContainer: {
         flexDirection: 'row',
-        height: 64,
+        height: 40,
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginBottom: 15,
     },
     dot: {
-        height: 10,
-        borderRadius: 5,
-        marginHorizontal: 8,
+        height: 8,
+        borderRadius: 4,
+        marginHorizontal: 4,
+    },
+    bottomContainer: {
+        flex: 1,
+        justifyContent: 'flex-start',
+        paddingHorizontal: 20,
+        paddingTop: 10,
+    },
+    textContainer: {
+        alignItems: 'center',
+        marginBottom: 'auto',
     },
     footer: {
-        flex: 1,
+        paddingBottom: 40,
         width: '100%',
-        paddingHorizontal: 20,
-        justifyContent: 'center',
     },
-    buttonContainer: {
-        marginBottom: 20,
-    },
-    rowButtons: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        width: '100%',
-    }
 });

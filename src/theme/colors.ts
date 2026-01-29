@@ -1,16 +1,21 @@
 export const colors = {
-  primary: '#2A9D8F', // Wanderlust Teal
+  primary: '#2F80ED', // Brand Blue
   secondary: '#E9C46A', // Warm Sand
   accent: '#264653', // Dark Charcoal Blue
 
   background: {
     light: '#FFFFFF',
-    dark: '#000000',
+    dark: '#0F0F0F',
   },
 
   surface: {
-    light: '#F2F2F7',
+    light: '#F6F6F6',
     dark: '#1C1C1E',
+  },
+
+  innerSurface: {
+    light: '#FFFFFF',
+    dark: '#29292b',
   },
 
   card: {
@@ -28,8 +33,8 @@ export const colors = {
       dark: '#EBEBF5',
     },
     tertiary: {
-      light: '#8E8E93',
-      dark: '#8E8E93',
+      light: '#B4BAC5',
+      dark: '#B4BAC5',
     },
   },
 

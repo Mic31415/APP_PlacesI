@@ -3,6 +3,7 @@ import { View, Text, StyleSheet } from 'react-native';
 import { useTheme } from '../../theme/ThemeContext';
 import { Button } from './Button';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+import { moderateScale } from '../../utils/responsive';
 
 interface EmptyStateProps {
     title: string;
@@ -25,22 +26,22 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
         <View style={styles.container}>
             <Icon
                 name={icon}
-                size={64}
+                size={70}
                 color={theme.colors.text.tertiary[colorScheme]}
                 style={{ marginBottom: 16 }}
             />
             <Text
                 style={[
-                    theme.typography.h2,
-                    { color: theme.colors.text.primary[colorScheme], textAlign: 'center', marginBottom: 8 },
+                    styles.title,
+                    { color: theme.colors.text.primary[colorScheme] },
                 ]}
             >
                 {title}
             </Text>
             <Text
                 style={[
-                    theme.typography.body,
-                    { color: theme.colors.text.secondary[colorScheme], textAlign: 'center', marginBottom: 24, maxWidth: 300 },
+                    styles.description,
+                    { color: theme.colors.text.secondary[colorScheme] },
                 ]}
             >
                 {description}
@@ -63,4 +64,17 @@ const styles = StyleSheet.create({
         fontSize: 64,
         marginBottom: 16,
     },
+    title: {
+        textAlign: 'center',
+        marginBottom: 8,
+        fontSize: moderateScale(20),
+        fontWeight: '600',
+    },
+    description: {
+        textAlign: 'center',
+        marginBottom: 24,
+        maxWidth: 300,
+        fontSize: moderateScale(14),
+        fontWeight: '400',
+    }
 });

@@ -37,7 +37,7 @@ export const MapPickerScreen: React.FC = () => {
 
     const [address, setAddress] = useState<string>('');
     const [isLoadingAddress, setIsLoadingAddress] = useState<boolean>(false);
-    const debounceTimeout = useRef<NodeJS.Timeout | null>(null);
+    const debounceTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     // Initial reverse geocode
     useEffect(() => {

@@ -1,47 +1,22 @@
 import React from 'react';
-import { View, Text, StyleSheet, Image, Dimensions } from 'react-native';
-import { useTheme } from '../../theme/ThemeContext';
-import { getResponsiveValue, scaleFont } from '../../utils/responsive';
+import { View, StyleSheet, Image, Dimensions, ImageSourcePropType } from 'react-native';
 
 const { width } = Dimensions.get('window');
 
 interface OnboardingSlideProps {
     item: {
         id: string;
-        title: string;
-        description: string;
-        image: any; // Placeholder for now, can be ImageSourcePropType
-        emoji: string;
+        image: ImageSourcePropType;
     };
 }
 
 export const OnboardingSlide: React.FC<OnboardingSlideProps> = ({ item }) => {
-    const { theme, colorScheme } = useTheme();
-
     return (
         <View style={[styles.container, { width }]}>
-            <View style={styles.imageContainer}>
-                {/* Using Emoji as placeholder for image since we don't have assets yet */}
-                <Text style={{ fontSize: 100 }}>{item.emoji}</Text>
-            </View>
-            <View style={styles.content}>
-                <Text
-                    style={[
-                        theme.typography.h1,
-                        { color: theme.colors.text.primary[colorScheme], textAlign: 'center', marginBottom: theme.spacing.md },
-                    ]}
-                >
-                    {item.title}
-                </Text>
-                <Text
-                    style={[
-                        theme.typography.body,
-                        { color: theme.colors.text.secondary[colorScheme], textAlign: 'center', paddingHorizontal: theme.spacing.xl },
-                    ]}
-                >
-                    {item.description}
-                </Text>
-            </View>
+            <Image
+                source={item.image}
+                style={[styles.image, { width, resizeMode: 'cover' }]}
+            />
         </View>
     );
 };
@@ -51,14 +26,12 @@ const styles = StyleSheet.create({
         flex: 1,
         alignItems: 'center',
         justifyContent: 'center',
+        overflow: 'hidden', // Ensure image doesn't bleed if rounded needed
     },
-    imageContainer: {
-        flex: 0.5,
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    content: {
-        flex: 0.3,
-        alignItems: 'center',
+    image: {
+        flex: 1,
+        height: '100%',
+        borderBottomLeftRadius: 40,
+        borderBottomRightRadius: 40,
     },
 });

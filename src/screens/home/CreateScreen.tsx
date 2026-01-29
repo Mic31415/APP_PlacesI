@@ -9,6 +9,8 @@ import { MainTabParamList } from '../../types/navigation';
 import { databaseService } from '../../services/DatabaseService';
 import { EmojiPickerModal } from '../../components/common/EmojiPickerModal';
 import { InterstitialAdService } from '../../services/InterstitialAdService';
+import { moderateScale } from '../../utils/responsive';
+import { ScreenHeader } from '../../components/common/ScreenHeader';
 
 type CreateScreenNavigationProp = BottomTabNavigationProp<MainTabParamList, 'Create'>;
 
@@ -73,17 +75,14 @@ export const CreateScreen: React.FC = () => {
     );
 
     return (
-        <View style={[styles.container, { backgroundColor: theme.colors.background[colorScheme], paddingTop: top }]}>
-            {/* Header */}
-            <View style={[styles.header, { borderBottomColor: theme.colors.border[colorScheme] }]}>
-                <TouchableOpacity onPress={handleCancel} style={styles.headerBtn}>
-                    <Text style={[theme.typography.body, { color: theme.colors.text.secondary[colorScheme] }]}>Cancel</Text>
-                </TouchableOpacity>
-                <Text style={[theme.typography.h3, { color: theme.colors.text.primary[colorScheme] }]}>New Map</Text>
-                <TouchableOpacity onPress={handleCreate} style={styles.headerBtn}>
-                    <Icon name="check" size={28} color={theme.colors.primary} />
-                </TouchableOpacity>
-            </View>
+        <View style={[styles.container, { backgroundColor: theme.colors.background[colorScheme] }]}>
+            <ScreenHeader
+                centerComponent={
+                    <Text style={[styles.headerText, { color: theme.colors.text.primary[colorScheme] }]}>
+                        New Map
+                    </Text>
+                }
+            />
 
             <ScrollView contentContainerStyle={styles.content}>
 
@@ -102,11 +101,16 @@ export const CreateScreen: React.FC = () => {
                 {/* Emoji Selector */}
                 <Text style={[styles.label, { color: theme.colors.text.secondary[colorScheme] }]}>Choose Emoji</Text>
                 <TouchableOpacity
-                    style={[styles.emojiSelector, { backgroundColor: theme.colors.surface[colorScheme] }]}
+                    style={[
+                        styles.emojiSelector,
+                        { backgroundColor: theme.colors.surface[colorScheme] }
+                    ]}
                     onPress={() => setEmojiModalVisible(true)}
                 >
-                    <Text style={styles.emojiPreview}>{selectedEmoji}</Text>
-                    <Text style={[theme.typography.caption, { color: theme.colors.text.tertiary[colorScheme], marginTop: 8 }]}>
+                    <View style={[styles.emojiInnerContainer, { backgroundColor: theme.colors.innerSurface[colorScheme] }]}>
+                        <Text style={styles.emojiPreview}>{selectedEmoji}</Text>
+                    </View>
+                    <Text style={[styles.caption, { color: theme.colors.text.tertiary[colorScheme], marginTop: 12 }]}>
                         Tap to change
                     </Text>
                 </TouchableOpacity>
@@ -149,6 +153,10 @@ const styles = StyleSheet.create({
         paddingVertical: 12,
         borderBottomWidth: 0.5,
     },
+    headerText: {
+        fontSize: moderateScale(20),
+        fontWeight: '600',
+    },
     headerBtn: {
         padding: 4,
     },
@@ -156,8 +164,8 @@ const styles = StyleSheet.create({
         padding: 24,
     },
     label: {
-        fontSize: 14,
-        fontWeight: '600',
+        fontSize: moderateScale(14),
+        fontWeight: '500',
         marginBottom: 8,
         marginTop: 16,
     },
@@ -167,16 +175,27 @@ const styles = StyleSheet.create({
         paddingVertical: 12,
     },
     input: {
-        fontSize: 16,
+        fontSize: moderateScale(12),
     },
     emojiSelector: {
         alignItems: 'center',
-        padding: 24,
-        borderRadius: 12,
+        paddingVertical: 20,
+        paddingHorizontal: 20,
+        borderRadius: 24,
+        marginBottom: 8,
+        width: '100%',
+        justifyContent: 'center',
+    },
+    emojiInnerContainer: {
+        width: '100%',
+        height: 100,
+        borderRadius: 16,
+        alignItems: 'center',
+        justifyContent: 'center',
         marginBottom: 8,
     },
     emojiPreview: {
-        fontSize: 64,
+        fontSize: moderateScale(60),
     },
     radioButtonContainer: {
         flexDirection: 'row',
@@ -184,7 +203,8 @@ const styles = StyleSheet.create({
         paddingVertical: 12,
     },
     radioLabel: {
-        fontSize: 16,
+        fontSize: moderateScale(12),
+        fontWeight: '500',
         marginLeft: 12,
     },
     createButton: {
@@ -192,5 +212,9 @@ const styles = StyleSheet.create({
         paddingVertical: 16,
         borderRadius: 12,
         alignItems: 'center',
+    },
+    caption: {
+        fontSize: moderateScale(12),
+        fontWeight: '400',
     },
 });

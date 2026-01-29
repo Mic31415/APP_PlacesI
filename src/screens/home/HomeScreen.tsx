@@ -8,7 +8,7 @@ import { databaseService, MapData } from '../../services/DatabaseService';
 import { MapCard } from '../../components/home/MapCard';
 import { EmptyState } from '../../components/common/EmptyState';
 import { FloatingButton } from '../../components/common/FloatingButton';
-import { getResponsiveValue } from '../../utils/responsive';
+import { getResponsiveValue, moderateScale } from '../../utils/responsive';
 import { MainTabParamList } from '../../types/navigation';
 import { BannerAdView } from '../../components/ads/BannerAdView';
 
@@ -82,8 +82,8 @@ export const HomeScreen: React.FC = () => {
     return (
         <View style={[styles.container, { backgroundColor: theme.colors.background[colorScheme] }]}>
             <ScreenHeader
-                leftComponent={
-                    <Text style={[theme.typography.h3, { color: theme.colors.text.primary[colorScheme] }]}>
+                centerComponent={
+                    <Text style={[styles.headerText, { color: theme.colors.text.primary[colorScheme] }]}>
                         My Maps
                     </Text>
                 }
@@ -125,5 +125,9 @@ export const HomeScreen: React.FC = () => {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
+    },
+    headerText: {
+        fontSize: moderateScale(20),
+        fontWeight: '600',
     },
 });
