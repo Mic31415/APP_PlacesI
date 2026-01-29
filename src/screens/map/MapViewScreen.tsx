@@ -268,7 +268,7 @@ export const MapViewScreen: React.FC = () => {
 
                 <FloatingButton
                     onPress={handleAddPin}
-                    style={{ bottom: 100, right: 0 }}
+                    style={{ bottom: pins.length === 0 ? 0 : 100, right: 0 }}
                     icon="map-marker-plus-outline"
                 />
 
@@ -279,7 +279,6 @@ export const MapViewScreen: React.FC = () => {
                         data={filteredPins}
                         keyExtractor={(item) => item.id}
                         showsHorizontalScrollIndicator={false}
-
                         snapToInterval={280 + 16} // card width + margin
                         decelerationRate="fast"
                         contentContainerStyle={{ paddingHorizontal: 16 }}
@@ -287,7 +286,7 @@ export const MapViewScreen: React.FC = () => {
                             <TouchableOpacity
                                 style={[styles.card, { backgroundColor: theme.colors.card[colorScheme], borderColor: theme.colors.border[colorScheme] }]}
                                 onPress={() => handleMarkerPress(item)}
-                                activeOpacity={0.9}
+                                activeOpacity={0.98}
                             >
                                 <Text style={styles.cardEmoji}>📍</Text>
                                 <View style={styles.cardContent}>

@@ -61,7 +61,7 @@ export const MapHeaderMenu: React.FC<MapHeaderMenuProps> = ({ onEdit, onShare, o
                                 </TouchableOpacity>
 
                                 <TouchableOpacity
-                                    style={styles.option}
+                                    style={[styles.option, { borderBottomWidth: 0 }]}
                                     onPress={() => handleOption(onDelete)}
                                 >
                                     <Icon name="trash-can-outline" size={24} color={theme.colors.error} style={styles.icon} />

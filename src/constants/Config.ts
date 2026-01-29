@@ -1,5 +1,0 @@
-export const Config = {
-    GOOGLE_MAPS_API_KEY: '',
-    // REVENUE_CAT_API_KEY: '',
-    // ADMOB_APP_ID: '',
-};

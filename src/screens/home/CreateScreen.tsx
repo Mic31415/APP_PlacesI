@@ -45,6 +45,9 @@ export const CreateScreen: React.FC = () => {
             await InterstitialAdService.show();
 
             // Optional: Haptic feedback here
+            setMapName('');
+            setSelectedEmoji('🗺️');
+            setMapType('exact');
             navigation.navigate('Home');
         } catch (error) {
             console.error('Error creating map:', error);
