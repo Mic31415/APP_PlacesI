@@ -7,7 +7,7 @@ group_name = 'PlacesI'
 project = Xcodeproj::Project.open(project_path)
 target = project.targets.first
 
-group = project.main_group.find_sub_group(group_name)
+group = project.main_group['PlacesI']
 if group
     unless group.find_file_by_path('Secrets.swift')
         file_ref = group.new_file('Secrets.swift')
