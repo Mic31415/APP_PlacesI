@@ -1,4 +1,6 @@
 
+import { Secrets } from './secrets';
+
 export const AppConfig = {
     // AdMob Test IDs
     admob: {
@@ -13,7 +15,7 @@ export const AppConfig = {
         nativeAndroid: "ca-app-pub-3940256099942544/2247696110",
         nativeIOS: "ca-app-pub-3940256099942544/3986624511",
     },
-    GOOGLE_MAPS_API_KEY: 'AIzaSyD-w9vozROrUz1M2gpCWgQ-b1z6V1FZJnc',
+    GOOGLE_MAPS_API_KEY: Secrets.GOOGLE_MAPS_API_KEY,
 };
 
 

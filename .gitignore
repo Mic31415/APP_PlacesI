@@ -85,3 +85,5 @@ ios/FoodNutritionScanner.xcodeproj/project.pbxproj
 .env
 .env.local
 .env.*.local
+src/config/secrets.ts
+ios/PlacesI/Secrets.swift
