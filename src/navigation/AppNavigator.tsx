@@ -25,12 +25,15 @@ import { CreatePinScreen } from '../screens/home/CreatePinScreen';
 
 // ...
 
+import { MapPickerScreen } from '../screens/map/MapPickerScreen';
+
 const HomeStackNavigator = () => {
     return (
         <HomeStack.Navigator screenOptions={{ headerShown: false }}>
             <HomeStack.Screen name="MapList" component={HomeScreen} />
             <HomeStack.Screen name="MapView" component={MapViewScreen} />
             <HomeStack.Screen name="CreatePin" component={CreatePinScreen} />
+            <HomeStack.Screen name="MapPicker" component={MapPickerScreen} />
         </HomeStack.Navigator>
     );
 };

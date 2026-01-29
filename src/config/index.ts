@@ -13,6 +13,8 @@ export const AppConfig = {
         nativeAndroid: "ca-app-pub-3940256099942544/2247696110",
         nativeIOS: "ca-app-pub-3940256099942544/3986624511",
     },
+    GOOGLE_MAPS_API_KEY: 'AIzaSyD-w9vozROrUz1M2gpCWgQ-b1z6V1FZJnc',
 };
+
 
 export default AppConfig;

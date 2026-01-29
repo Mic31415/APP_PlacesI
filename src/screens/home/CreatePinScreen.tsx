@@ -3,10 +3,9 @@ import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, Keyboa
 import Geolocation from '@react-native-community/geolocation';
 import Geocoder from 'react-native-geocoding';
 import { launchCamera, launchImageLibrary } from 'react-native-image-picker';
-import { Config } from '../../constants/Config';
 
 // Initialize Geocoder with your Google Maps API Key
-Geocoder.init(Config.GOOGLE_MAPS_API_KEY);
+Geocoder.init(AppConfig.GOOGLE_MAPS_API_KEY);
 
 import { useNavigation, useRoute } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
@@ -14,8 +13,8 @@ import { useTheme } from '../../theme/ThemeContext';
 import { RatingPicker } from '../../components/common/RatingPicker';
 import { ScreenHeader } from '../../components/common/ScreenHeader';
 import { databaseService } from '../../services/DatabaseService';
-import { MAP_EMOJIS } from '../../constants/emojis';
 import { EmojiPickerModal } from '../../components/common/EmojiPickerModal';
+import AppConfig from '../../config';
 
 export const CreatePinScreen: React.FC = () => {
     const { theme, colorScheme } = useTheme();
@@ -291,7 +290,23 @@ export const CreatePinScreen: React.FC = () => {
                                     {isLoadingLocation ? 'Fetching...' : 'Use Current'}
                                 </Text>
                             </TouchableOpacity>
-                            <TouchableOpacity style={[styles.locationBtn, { borderColor: theme.colors.border[colorScheme] }]}>
+                            <TouchableOpacity
+                                style={[styles.locationBtn, { borderColor: theme.colors.border[colorScheme] }]}
+                                onPress={() => {
+                                    navigation.navigate('MapPicker' as any, {
+                                        initialRegion: coordinates ? {
+                                            latitude: coordinates.latitude,
+                                            longitude: coordinates.longitude,
+                                            latitudeDelta: 0.005,
+                                            longitudeDelta: 0.005,
+                                        } : undefined,
+                                        onSelectLocation: (loc: { latitude: number; longitude: number; address: string }) => {
+                                            setCoordinates({ latitude: loc.latitude, longitude: loc.longitude });
+                                            setLocation(loc.address);
+                                        }
+                                    });
+                                }}
+                            >
                                 <Icon name="map-marker-outline" size={18} color={theme.colors.primary} />
                                 <Text style={[styles.locationBtnText, { color: theme.colors.primary }]}>Pick on Map</Text>
                             </TouchableOpacity>

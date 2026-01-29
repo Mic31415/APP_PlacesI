@@ -14,11 +14,29 @@ export type HomeStackParamList = {
     MapView: { mapId: string; mapName: string; emoji: string };
     PinDetail: { pinId: string };
     CreatePin: { mapId: string; mapEmoji?: string; pin?: any };
+    MapPicker: {
+        initialRegion?: {
+            latitude: number;
+            longitude: number;
+            latitudeDelta: number;
+            longitudeDelta: number;
+        };
+        onSelectLocation: (location: { latitude: number; longitude: number; address: string }) => void;
+    };
 };
 
 export type CreateStackParamList = {
     CreateMap: undefined;
     CreatePin: { mapId: string; mapEmoji?: string };
+    MapPicker: {
+        initialRegion?: {
+            latitude: number;
+            longitude: number;
+            latitudeDelta: number;
+            longitudeDelta: number;
+        };
+        onSelectLocation: (location: { latitude: number; longitude: number; address: string }) => void;
+    };
 };
 
 export type SettingsStackParamList = {

@@ -26,6 +26,9 @@ end
 target 'PlacesI' do
   config = use_native_modules!
 
+  # React Native Maps dependencies
+  pod 'GoogleMaps'
+
   use_react_native!(
     :path => config[:reactNativePath],
     # An absolute path to your application root.

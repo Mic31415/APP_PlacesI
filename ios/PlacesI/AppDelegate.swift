@@ -2,6 +2,7 @@ import UIKit
 import React
 import React_RCTAppDelegate
 import ReactAppDependencyProvider
+import GoogleMaps
 import GoogleMobileAds
 
 @main
@@ -15,6 +16,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     _ application: UIApplication,
     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil
   ) -> Bool {
+    GMSServices.provideAPIKey("AIzaSyD-w9vozROrUz1M2gpCWgQ-b1z6V1FZJnc")
     MobileAds.shared.start(completionHandler: nil)
 
     let delegate = ReactNativeDelegate()
