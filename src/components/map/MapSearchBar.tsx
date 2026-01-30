@@ -1,8 +1,9 @@
-import React from 'react';
-import { View, TextInput, StyleSheet, TouchableOpacity, ViewStyle, Text } from 'react-native';
+import { View, TextInput, StyleSheet, TouchableOpacity, ViewStyle, Text, Image } from 'react-native';
 import { useTheme } from '../../theme/ThemeContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+import FilterIcon from '../../assets/Icon/Filter.png';
+import { moderateScale } from '../../utils/responsive';
 
 interface MapSearchBarProps {
     value: string;
@@ -52,12 +53,27 @@ export const MapSearchBar: React.FC<MapSearchBarProps> = ({
                     value={value}
                     onChangeText={onChangeText}
                 />
-                {onFilterPress && (
-                    <TouchableOpacity onPress={onFilterPress} style={styles.filterButton}>
-                        <Icon name="filter-variant" size={24} color={theme.colors.text.primary[colorScheme]} />
-                    </TouchableOpacity>
-                )}
             </View>
+            {onFilterPress && (
+                <TouchableOpacity
+                    onPress={onFilterPress}
+                    style={[
+                        styles.filterButton,
+                        {
+                            backgroundColor: theme.colors.background[colorScheme],
+                            ...theme.shadows.md,
+                        },
+                    ]}
+                >
+                    <Image
+                        source={FilterIcon}
+                        style={[
+                            styles.filterIcon,
+                            { tintColor: theme.colors.text.primary[colorScheme] }
+                        ]}
+                    />
+                </TouchableOpacity>
+            )}
         </View>
     );
 };
@@ -68,16 +84,21 @@ const styles = StyleSheet.create({
         left: 0,
         right: 0,
         zIndex: 10,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
     },
     searchContainer: {
+        flex: 1,
         flexDirection: 'row',
         alignItems: 'center',
         height: 50,
         borderRadius: 25,
         paddingHorizontal: 16,
+        marginRight: 12, // Space between search and filter button
     },
     searchIcon: {
-        fontSize: 18,
+        fontSize: moderateScale(18),
         marginRight: 8,
     },
     input: {
@@ -85,6 +106,15 @@ const styles = StyleSheet.create({
         height: '100%',
     },
     filterButton: {
-        padding: 8,
+        height: 50,
+        width: 50,
+        borderRadius: 25,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    filterIcon: {
+        width: 24,
+        height: 24,
+        resizeMode: 'contain',
     },
 });

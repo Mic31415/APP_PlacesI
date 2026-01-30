@@ -3,6 +3,7 @@ import { TouchableOpacity, StyleSheet, Text, ViewStyle } from 'react-native';
 import { useTheme } from '../../theme/ThemeContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+import { moderateScale } from '../../utils/responsive';
 
 interface FloatingButtonProps {
     onPress: () => void;
@@ -47,7 +48,7 @@ const styles = StyleSheet.create({
         zIndex: 999,
     },
     icon: {
-        fontSize: 28,
+        fontSize: moderateScale(28),
         fontWeight: 'bold',
     },
 });

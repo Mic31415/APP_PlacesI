@@ -1,5 +1,5 @@
 import React, { useState, useRef, useMemo, useCallback, useEffect } from 'react';
-import { View, StyleSheet, TouchableOpacity, Text, FlatList, Alert, Modal, TextInput, Share } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, Text, FlatList, Alert, Modal, TextInput, Share, KeyboardAvoidingView, Platform } from 'react-native';
 import MapView, { PROVIDER_DEFAULT } from 'react-native-maps';
 import { useNavigation, useRoute, RouteProp, useFocusEffect } from '@react-navigation/native';
 import { useTheme } from '../../theme/ThemeContext';
@@ -17,6 +17,7 @@ import { BannerAdView } from '../../components/ads/BannerAdView';
 
 // ... imports
 import { databaseService, PinData } from '../../services/DatabaseService';
+import { moderateScale } from '../../utils/responsive';
 
 // Default Region (Tokyo)
 const INITIAL_REGION = {
@@ -235,7 +236,7 @@ export const MapViewScreen: React.FC = () => {
                     </TouchableOpacity>
                 }
                 centerComponent={
-                    <Text style={[theme.typography.h3, { color: theme.colors.text.primary[colorScheme] }]}>
+                    <Text style={[styles.headerText, { color: theme.colors.text.primary[colorScheme] }]}>
                         {currentMapEmoji || '🗺️'} {currentMapName || 'Map'}
                     </Text>
                 }
@@ -319,58 +320,79 @@ export const MapViewScreen: React.FC = () => {
                 transparent={true}
                 onRequestClose={() => setEditModalVisible(false)}
             >
-                <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', padding: 24 }}>
-                    <View style={{ backgroundColor: theme.colors.card[colorScheme], borderRadius: 16, padding: 20 }}>
-                        <Text style={[theme.typography.h3, { color: theme.colors.text.primary[colorScheme], marginBottom: 16 }]}>Edit Map</Text>
+                <KeyboardAvoidingView
+                    behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+                    style={styles.bottomSheetOverlay}
+                >
+                    <View style={[styles.bottomSheetContent, { backgroundColor: theme.colors.card[colorScheme] }]}>
+                        {/* Handle */}
+                        <View style={styles.sheetHandleContainer}>
+                            <View style={styles.sheetHandle} />
+                        </View>
 
-                        <Text style={[theme.typography.caption, { color: theme.colors.text.secondary[colorScheme], marginBottom: 8 }]}>Name</Text>
+                        {/* Header */}
+                        <View style={styles.sheetHeader}>
+                            <Text style={[styles.sheetTitle, { color: theme.colors.text.primary[colorScheme] }]}>Edit Map</Text>
+                            <TouchableOpacity onPress={() => setEditModalVisible(false)}>
+                                <Icon name="close" size={24} color={theme.colors.text.primary[colorScheme]} />
+                            </TouchableOpacity>
+                        </View>
+
+                        {/* Name Input */}
+                        <Text style={[styles.label, { color: theme.colors.text.primary[colorScheme] }]}>Name</Text>
                         <TextInput
-                            style={{
-                                backgroundColor: theme.colors.surface[colorScheme],
-                                borderRadius: 8,
-                                padding: 12,
-                                color: theme.colors.text.primary[colorScheme],
-                                fontSize: 16,
-                                marginBottom: 16
-                            }}
+                            style={[
+                                styles.inputContainer,
+                                {
+                                    backgroundColor: theme.colors.surface[colorScheme],
+                                    color: theme.colors.text.primary[colorScheme],
+                                }
+                            ]}
                             value={editName}
                             onChangeText={setEditName}
                             placeholder="Map Name"
                             placeholderTextColor={theme.colors.text.tertiary[colorScheme]}
                         />
 
-                        <Text style={[theme.typography.caption, { color: theme.colors.text.secondary[colorScheme], marginBottom: 8 }]}>Icon</Text>
+                        {/* Icon Selector */}
+                        <Text style={[styles.label, { color: theme.colors.text.primary[colorScheme] }]}>Icon</Text>
                         <TouchableOpacity
-                            style={{
-                                flexDirection: 'row',
-                                alignItems: 'center',
-                                backgroundColor: theme.colors.surface[colorScheme],
-                                padding: 12,
-                                borderRadius: 8,
-                                marginBottom: 24
-                            }}
+                            style={[
+                                styles.iconSelector,
+                                {
+                                    borderColor: theme.colors.primary,
+                                    backgroundColor: theme.colors.surface[colorScheme] // Or white if preferred? Using surface for dark mode support
+                                }
+                            ]}
                             onPress={() => {
                                 setEditModalVisible(false);
                                 setTimeout(() => setEmojiPickerVisible(true), 300);
                             }}
                         >
-                            <Text style={{ fontSize: 24, marginRight: 12 }}>{editEmoji}</Text>
-                            <Text style={{ color: theme.colors.text.secondary[colorScheme] }}>Change Icon</Text>
+                            <View style={{ width: 40, height: 40, borderRadius: 8, backgroundColor: '#E0F2FE', alignItems: 'center', justifyContent: 'center', marginRight: 12 }}>
+                                <Text style={{ fontSize: moderateScale(24) }}>{editEmoji}</Text>
+                            </View>
+                            <Text style={{ color: theme.colors.text.primary[colorScheme], fontSize: moderateScale(16) }}>Change Icon</Text>
                         </TouchableOpacity>
 
-                        <View style={{ flexDirection: 'row', justifyContent: 'flex-end', gap: 12 }}>
-                            <TouchableOpacity onPress={() => setEditModalVisible(false)} style={{ padding: 12 }}>
-                                <Text style={{ color: theme.colors.text.secondary[colorScheme], fontWeight: '600' }}>Cancel</Text>
+                        {/* Action Buttons */}
+                        <View style={styles.buttonRow}>
+                            <TouchableOpacity
+                                onPress={() => setEditModalVisible(false)}
+                                style={[styles.actionButton, { backgroundColor: theme.colors.surface[colorScheme] }]}
+                            >
+                                <Text style={[styles.cancelButtonText, { color: theme.colors.text.primary[colorScheme] }]}>Cancel</Text>
                             </TouchableOpacity>
+
                             <TouchableOpacity
                                 onPress={handleSaveMap}
-                                style={{ backgroundColor: theme.colors.primary, paddingHorizontal: 20, paddingVertical: 12, borderRadius: 8 }}
+                                style={[styles.actionButton, { backgroundColor: theme.colors.primary }]}
                             >
-                                <Text style={{ color: '#fff', fontWeight: 'bold' }}>Save</Text>
+                                <Text style={styles.saveButtonText}>Save</Text>
                             </TouchableOpacity>
                         </View>
                     </View>
-                </View>
+                </KeyboardAvoidingView>
             </Modal>
 
             <EmojiPickerModal
@@ -419,10 +441,90 @@ const styles = StyleSheet.create({
         elevation: 3,
     },
     cardEmoji: {
-        fontSize: 32,
+        fontSize: moderateScale(32),
         marginRight: 12,
     },
     cardContent: {
         flex: 1,
+    },
+    headerText: {
+        fontSize: moderateScale(20),
+        fontWeight: '600',
+    },
+    // Bottom Sheet Styles
+    bottomSheetOverlay: {
+        flex: 1,
+        backgroundColor: 'rgba(0,0,0,0.5)',
+        justifyContent: 'flex-end',
+    },
+    bottomSheetContent: {
+        borderTopLeftRadius: 24,
+        borderTopRightRadius: 24,
+        padding: 24,
+        paddingBottom: 40,
+        elevation: 5,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: -2 },
+        shadowOpacity: 0.25,
+        shadowRadius: 5,
+    },
+    sheetHandleContainer: {
+        alignItems: 'center',
+        marginBottom: 16,
+    },
+    sheetHandle: {
+        width: 40,
+        height: 5,
+        borderRadius: 3,
+        backgroundColor: '#E0E0E0',
+    },
+    sheetHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 24,
+    },
+    sheetTitle: {
+        fontSize: moderateScale(20),
+        fontWeight: 'bold',
+    },
+    label: {
+        fontSize: moderateScale(16),
+        fontWeight: '500',
+        marginBottom: 8,
+    },
+    inputContainer: {
+        borderRadius: 12,
+        padding: 16,
+        marginBottom: 24,
+    },
+    iconSelector: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        borderRadius: 12,
+        padding: 12,
+        marginBottom: 32,
+        borderWidth: 2,
+    },
+    buttonRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        gap: 16,
+    },
+    actionButton: {
+        flex: 1,
+        paddingVertical: 16,
+        borderRadius: 12,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    cancelButtonText: {
+        fontSize: moderateScale(16),
+        fontWeight: 'bold',
+    },
+    saveButtonText: {
+        color: '#FFFFFF',
+        fontSize: moderateScale(16),
+        fontWeight: 'bold',
     },
 });

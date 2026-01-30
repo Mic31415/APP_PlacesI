@@ -15,6 +15,8 @@ import { ScreenHeader } from '../../components/common/ScreenHeader';
 import { databaseService } from '../../services/DatabaseService';
 import { EmojiPickerModal } from '../../components/common/EmojiPickerModal';
 import AppConfig from '../../config';
+import { moderateScale } from '../../utils/responsive';
+import { Button } from '../../components/common';
 
 export const CreatePinScreen: React.FC = () => {
     const { theme, colorScheme } = useTheme();
@@ -201,6 +203,25 @@ export const CreatePinScreen: React.FC = () => {
         );
     };
 
+    const handlePickOnMap = () => {
+        // @ts-ignore - Ignoring strict navigation type check for now or cast navigation
+        navigation.navigate('MapPicker', {
+            initialRegion: coordinates ? {
+                latitude: coordinates.latitude,
+                longitude: coordinates.longitude,
+                latitudeDelta: 0.0922,
+                longitudeDelta: 0.0421,
+            } : undefined,
+            onSelectLocation: (selectedLocation: { latitude: number; longitude: number; address: string }) => {
+                setCoordinates({
+                    latitude: selectedLocation.latitude,
+                    longitude: selectedLocation.longitude
+                });
+                setLocation(selectedLocation.address);
+            }
+        });
+    };
+
     const renderInput = (
         label: string,
         value: string,
@@ -237,18 +258,13 @@ export const CreatePinScreen: React.FC = () => {
             <ScreenHeader
                 leftComponent={
                     <TouchableOpacity onPress={handleBack} style={styles.headerBtn}>
-                        <Icon name="chevron-left" size={32} color={theme.colors.primary} />
+                        <Icon name="chevron-left" size={32} color={theme.colors.text.primary[colorScheme]} />
                     </TouchableOpacity>
                 }
                 centerComponent={
-                    <Text style={[theme.typography.h3, { color: theme.colors.text.primary[colorScheme] }]}>
+                    <Text style={[styles.headerText, { color: theme.colors.text.primary[colorScheme] }]}>
                         {pin ? 'Edit Pin' : 'Add Pin'}
                     </Text>
-                }
-                rightComponent={
-                    <TouchableOpacity onPress={handleSave} style={styles.headerBtn}>
-                        <Text style={[theme.typography.bodyBold, { color: theme.colors.primary }]}>Save</Text>
-                    </TouchableOpacity>
                 }
             />
 
@@ -292,20 +308,7 @@ export const CreatePinScreen: React.FC = () => {
                             </TouchableOpacity>
                             <TouchableOpacity
                                 style={[styles.locationBtn, { borderColor: theme.colors.border[colorScheme] }]}
-                                onPress={() => {
-                                    navigation.navigate('MapPicker' as any, {
-                                        initialRegion: coordinates ? {
-                                            latitude: coordinates.latitude,
-                                            longitude: coordinates.longitude,
-                                            latitudeDelta: 0.005,
-                                            longitudeDelta: 0.005,
-                                        } : undefined,
-                                        onSelectLocation: (loc: { latitude: number; longitude: number; address: string }) => {
-                                            setCoordinates({ latitude: loc.latitude, longitude: loc.longitude });
-                                            setLocation(loc.address);
-                                        }
-                                    });
-                                }}
+                                onPress={handlePickOnMap}
                             >
                                 <Icon name="map-marker-outline" size={18} color={theme.colors.primary} />
                                 <Text style={[styles.locationBtnText, { color: theme.colors.primary }]}>Pick on Map</Text>
@@ -325,12 +328,18 @@ export const CreatePinScreen: React.FC = () => {
                     {/* Emoji Selector */}
                     <View style={styles.inputGroup}>
                         <Text style={[styles.label, { color: theme.colors.text.secondary[colorScheme] }]}>Icon</Text>
+
                         <TouchableOpacity
-                            style={[styles.emojiSelector, { backgroundColor: theme.colors.surface[colorScheme] }]}
+                            style={[
+                                styles.emojiSelector,
+                                { backgroundColor: theme.colors.surface[colorScheme] }
+                            ]}
                             onPress={() => setEmojiModalVisible(true)}
                         >
-                            <Text style={styles.emojiPreview}>{selectedEmoji}</Text>
-                            <Text style={[theme.typography.caption, { color: theme.colors.text.tertiary[colorScheme], marginTop: 8 }]}>
+                            <View style={[styles.emojiInnerContainer, { backgroundColor: theme.colors.innerSurface[colorScheme] }]}>
+                                <Text style={styles.emojiPreview}>{selectedEmoji}</Text>
+                            </View>
+                            <Text style={[styles.caption, { color: theme.colors.text.tertiary[colorScheme], marginTop: 12 }]}>
                                 Tap to change
                             </Text>
                         </TouchableOpacity>
@@ -369,6 +378,11 @@ export const CreatePinScreen: React.FC = () => {
                         )}
                     </View>
 
+                    <Button
+                        title="Save"
+                        onPress={handleSave}
+                        fullWidth
+                    />
                     <View style={{ height: 40 }} />
                 </ScrollView>
             </KeyboardAvoidingView>
@@ -405,8 +419,8 @@ const styles = StyleSheet.create({
         marginBottom: 24,
     },
     label: {
-        fontSize: 14,
-        fontWeight: '600',
+        fontSize: moderateScale(14),
+        fontWeight: '500',
         marginBottom: 8,
     },
     inputContainer: {
@@ -415,7 +429,8 @@ const styles = StyleSheet.create({
         paddingVertical: 12,
     },
     input: {
-        fontSize: 16,
+        fontSize: moderateScale(13),
+        fontWeight: '300',
         padding: 0,
     },
     locationActions: {
@@ -433,8 +448,8 @@ const styles = StyleSheet.create({
         gap: 6,
     },
     locationBtnText: {
-        fontSize: 14,
-        fontWeight: '500',
+        fontSize: moderateScale(13),
+        fontWeight: '400',
     },
     photoActions: {
         flexDirection: 'row',
@@ -450,10 +465,11 @@ const styles = StyleSheet.create({
         gap: 8,
         borderWidth: 1,
         borderColor: 'rgba(0,0,0,0.05)',
+        flexDirection: 'row',
     },
     photoBtnText: {
-        fontSize: 14,
-        fontWeight: '500',
+        fontSize: moderateScale(13),
+        fontWeight: '400',
     },
     imagePreview: {
         height: 150,
@@ -470,6 +486,22 @@ const styles = StyleSheet.create({
         marginBottom: 8,
     },
     emojiPreview: {
-        fontSize: 64,
+        fontSize: moderateScale(64),
+    },
+    headerText: {
+        fontSize: moderateScale(20),
+        fontWeight: '600',
+    },
+    emojiInnerContainer: {
+        width: '100%',
+        height: 100,
+        borderRadius: 16,
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginBottom: 8,
+    },
+    caption: {
+        fontSize: moderateScale(12),
+        fontWeight: '400',
     },
 });

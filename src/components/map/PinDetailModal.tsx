@@ -4,6 +4,7 @@ import ViewShot, { captureRef } from 'react-native-view-shot';
 import Share from 'react-native-share';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useTheme } from '../../theme/ThemeContext';
+import { moderateScale } from '../../utils/responsive';
 
 interface PinDetailModalProps {
     visible: boolean;
@@ -204,7 +205,7 @@ const styles = StyleSheet.create({
         marginTop: 6,
     },
     description: {
-        fontSize: 16,
+        fontSize: moderateScale(16),
         lineHeight: 24,
         marginBottom: 24,
     },
@@ -215,7 +216,7 @@ const styles = StyleSheet.create({
         gap: 12,
     },
     infoText: {
-        fontSize: 15,
+        fontSize: moderateScale(15),
     },
     actions: {
         flexDirection: 'row',
@@ -229,7 +230,7 @@ const styles = StyleSheet.create({
         gap: 4,
     },
     actionLabel: {
-        fontSize: 12,
+        fontSize: moderateScale(12),
         fontWeight: '500',
     }
 });

@@ -8,6 +8,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../../theme/ThemeContext';
 import { HomeStackParamList } from '../../types/navigation';
 import AppConfig from '../../config';
+import { moderateScale } from '../../utils/responsive';
 
 // Initialize Geocoder if not already initialized
 Geocoder.init(AppConfig.GOOGLE_MAPS_API_KEY);
@@ -208,7 +209,7 @@ const styles = StyleSheet.create({
         elevation: 4,
     },
     headerTitle: {
-        fontSize: 16,
+        fontSize: moderateScale(16),
         fontWeight: '600',
     },
     bottomSheet: {
@@ -226,7 +227,7 @@ const styles = StyleSheet.create({
         elevation: 10,
     },
     addressLabel: {
-        fontSize: 12,
+        fontSize: moderateScale(12),
         fontWeight: '600',
         marginBottom: 8,
         textTransform: 'uppercase',
@@ -236,7 +237,7 @@ const styles = StyleSheet.create({
         marginBottom: 24,
     },
     addressText: {
-        fontSize: 16,
+        fontSize: moderateScale(16),
         fontWeight: '500',
         lineHeight: 22,
     },
@@ -248,7 +249,7 @@ const styles = StyleSheet.create({
     },
     confirmButtonText: {
         color: '#FFFFFF',
-        fontSize: 16,
+        fontSize: moderateScale(16),
         fontWeight: '700',
     },
 });

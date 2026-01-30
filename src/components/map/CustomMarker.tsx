@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { Marker, MapMarkerProps } from 'react-native-maps';
 import { useTheme } from '../../theme/ThemeContext';
+import { moderateScale } from '../../utils/responsive';
 
 interface CustomMarkerProps extends Omit<MapMarkerProps, 'coordinate'> {
     coordinate: { latitude: number; longitude: number };
@@ -43,7 +44,7 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
     },
     emoji: {
-        fontSize: 32,
+        fontSize: moderateScale(32),
         textShadowColor: 'rgba(0, 0, 0, 0.3)',
         textShadowOffset: { width: 0, height: 1 },
         textShadowRadius: 2,

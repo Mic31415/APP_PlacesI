@@ -3,3 +3,5 @@ declare module 'react-native-vector-icons/MaterialCommunityIcons' {
     import { Component } from 'react';
     export default class MaterialCommunityIcons extends Component<IconProps> { }
 }
+
+declare module '*.png';

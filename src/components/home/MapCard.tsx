@@ -48,7 +48,7 @@ export const MapCard: React.FC<MapCardProps> = ({ map, onPress, onLongPress, sty
                             { color: theme.colors.text.secondary[colorScheme] },
                         ]}
                     >
-                        {map.type || 'Custom Map'}  |  {map.pinCount || 0} pins
+                        {map.type || 'Custom Map'}    |     {map.pinCount || 0} pins
                     </Text>
                 </View>
                 <Icon name="chevron-right" size={30} color={theme.colors.text.tertiary[colorScheme]} />
@@ -74,7 +74,7 @@ const styles = StyleSheet.create({
         marginRight: 16,
     },
     emoji: {
-        fontSize: 32,
+        fontSize: moderateScale(40),
     },
     content: {
         flex: 1,

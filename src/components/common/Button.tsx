@@ -8,6 +8,7 @@ import {
     TextStyle,
 } from 'react-native';
 import { useTheme } from '../../theme/ThemeContext';
+import { moderateScale } from '../../utils/responsive';
 
 export type ButtonVariant = 'primary' | 'secondary' | 'outline' | 'text';
 export type ButtonSize = 'small' | 'medium' | 'large';
@@ -95,9 +96,9 @@ export const Button: React.FC<ButtonProps> = ({
         };
 
         const sizeTextStyles: Record<ButtonSize, TextStyle> = {
-            small: { fontSize: 15 },
-            medium: { fontSize: 17 },
-            large: { fontSize: 19 },
+            small: { fontSize: moderateScale(15) },
+            medium: { fontSize: moderateScale(17) },
+            large: { fontSize: moderateScale(19) },
         };
 
         const variantTextStyles: Record<ButtonVariant, TextStyle> = {

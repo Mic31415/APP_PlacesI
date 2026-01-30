@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { View, TouchableOpacity, Modal, Text, StyleSheet, TouchableWithoutFeedback, Dimensions } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useTheme } from '../../theme/ThemeContext';
+import { moderateScale } from '../../utils/responsive';
 
 interface MapHeaderMenuProps {
     onEdit: () => void;
@@ -25,7 +26,7 @@ export const MapHeaderMenu: React.FC<MapHeaderMenuProps> = ({ onEdit, onShare, o
     return (
         <>
             <TouchableOpacity onPress={openMenu} style={{ padding: 8 }}>
-                <Icon name="dots-horizontal" size={28} color={theme.colors.text.primary[colorScheme]} />
+                <Icon name="dots-vertical" size={28} color={theme.colors.text.primary[colorScheme]} />
             </TouchableOpacity>
 
             <Modal
@@ -38,9 +39,17 @@ export const MapHeaderMenu: React.FC<MapHeaderMenuProps> = ({ onEdit, onShare, o
                     <View style={styles.overlay}>
                         <TouchableWithoutFeedback>
                             <View style={[styles.sheet, { backgroundColor: theme.colors.card[colorScheme] }]}>
-                                {/* Header / Handle */}
-                                <View style={styles.handleContainer}>
-                                    <View style={[styles.handle, { backgroundColor: theme.colors.border[colorScheme] }]} />
+                                {/* Header Row */}
+                                <View style={[styles.headerRow, { borderBottomColor: theme.colors.border[colorScheme] }]}>
+                                    <View style={styles.headerLeft}>
+                                        <Text style={[styles.headerTitle, { color: theme.colors.text.primary[colorScheme] }]}>More</Text>
+                                    </View>
+                                    <View style={styles.headerCenter}>
+                                        <View style={[styles.handle, { backgroundColor: theme.colors.border[colorScheme] }]} />
+                                    </View>
+                                    <TouchableOpacity onPress={closeMenu} style={styles.closeButton}>
+                                        <Icon name="close" size={24} color={theme.colors.text.primary[colorScheme]} />
+                                    </TouchableOpacity>
                                 </View>
 
                                 {/* Options */}
@@ -68,13 +77,7 @@ export const MapHeaderMenu: React.FC<MapHeaderMenuProps> = ({ onEdit, onShare, o
                                     <Text style={[styles.optionText, { color: theme.colors.error }]}>Delete Map</Text>
                                 </TouchableOpacity>
 
-                                {/* Cancel Button */}
-                                <TouchableOpacity
-                                    style={[styles.cancelButton, { backgroundColor: theme.colors.surface[colorScheme], marginTop: 16 }]}
-                                    onPress={closeMenu}
-                                >
-                                    <Text style={[styles.cancelText, { color: theme.colors.text.primary[colorScheme] }]}>Cancel</Text>
-                                </TouchableOpacity>
+
                             </View>
                         </TouchableWithoutFeedback>
                     </View>
@@ -91,24 +94,52 @@ const styles = StyleSheet.create({
         justifyContent: 'flex-end',
     },
     sheet: {
-        borderTopLeftRadius: 20,
-        borderTopRightRadius: 20,
-        padding: 20,
+        borderTopLeftRadius: 30,
+        borderTopRightRadius: 30,
+        paddingHorizontal: 20,
         paddingBottom: 40,
+        paddingTop: 10,
         elevation: 5,
         shadowColor: '#000',
         shadowOffset: { width: 0, height: -2 },
         shadowOpacity: 0.25,
         shadowRadius: 5,
     },
-    handleContainer: {
+    headerRow: {
+        flexDirection: 'row',
         alignItems: 'center',
-        marginBottom: 20,
+        justifyContent: 'space-between',
+        position: 'relative',
+        borderBottomWidth: 0.5,
+    },
+    headerLeft: {
+        flex: 1,
+        alignItems: 'flex-start',
+    },
+    headerCenter: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        alignItems: 'center',
+        justifyContent: 'center',
+        height: '100%',
+        pointerEvents: 'none',
+    },
+    headerTitle: {
+        fontSize: moderateScale(20),
+        fontWeight: 'bold',
+        marginTop: 10,
     },
     handle: {
         width: 40,
         height: 5,
         borderRadius: 3,
+        marginTop: -30, // Move handle up nicely
+    },
+    closeButton: {
+        paddingVertical: 8,
+        marginTop: 10,
     },
     option: {
         flexDirection: 'row',
@@ -120,17 +151,7 @@ const styles = StyleSheet.create({
         marginRight: 16,
     },
     optionText: {
-        fontSize: 18,
+        fontSize: moderateScale(18),
         fontWeight: '500',
     },
-    cancelButton: {
-        paddingVertical: 14,
-        borderRadius: 12,
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    cancelText: {
-        fontSize: 16,
-        fontWeight: 'bold',
-    }
 });

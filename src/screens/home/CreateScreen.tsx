@@ -178,9 +178,10 @@ const styles = StyleSheet.create({
         fontSize: moderateScale(12),
     },
     emojiSelector: {
+        flexDirection: 'column',
         alignItems: 'center',
-        paddingVertical: 20,
-        paddingHorizontal: 20,
+        paddingVertical: 24,
+        paddingHorizontal: 16,
         borderRadius: 24,
         marginBottom: 8,
         width: '100%',

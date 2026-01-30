@@ -9,6 +9,8 @@ import Toast from 'react-native-toast-message';
 import { useTheme } from '../../theme/ThemeContext';
 import { Card } from '../../components/common/Card';
 import { databaseService } from '../../services/DatabaseService';
+import { moderateScale } from '../../utils/responsive';
+import { ScreenHeader } from '../../components/common/ScreenHeader';
 
 interface SettingsRowProps {
     icon: string;
@@ -35,10 +37,10 @@ const SettingsRow: React.FC<SettingsRowProps> = ({
             disabled={hasToggle}
             activeOpacity={0.7}
         >
-            <Card style={styles.cardRow}>
+            <View style={[styles.cardRow, { backgroundColor: theme.colors.surface[colorScheme] }]}>
                 <View style={styles.rowLeft}>
                     <Icon name={icon} size={24} color={iconColor} style={styles.icon} />
-                    <Text style={[theme.typography.body, { color: textColor }]}>{title}</Text>
+                    <Text style={[styles.titleText, { color: textColor }]}>{title}</Text>
                 </View>
                 <View style={styles.rowRight}>
                     {value && (
@@ -55,18 +57,20 @@ const SettingsRow: React.FC<SettingsRowProps> = ({
                         />
                     )}
                 </View>
-            </Card>
+            </View>
         </TouchableOpacity>
     );
 };
 
-const SettingsSection: React.FC<{ title: string; children: React.ReactNode }> = ({ title, children }) => {
+const SettingsSection: React.FC<{ title: string; children: React.ReactNode }> = ({ title = "", children }) => {
     const { theme, colorScheme } = useTheme();
     return (
         <View style={styles.section}>
-            <Text style={[styles.sectionTitle, { color: theme.colors.text.secondary[colorScheme] }]}>
-                {title}
-            </Text>
+            {title && (
+                <Text style={[styles.sectionTitle, { color: theme.colors.text.secondary[colorScheme], textTransform: 'none' }]}>
+                    {title}
+                </Text>
+            )}
             <View>
                 {children}
             </View>
@@ -202,43 +206,45 @@ export const SettingsScreen: React.FC = () => {
     };
 
     return (
-        <View style={[styles.container, { backgroundColor: theme.colors.background[colorScheme], paddingTop: top }]}>
-            {/* <View style={styles.header}>
-                <Text style={[theme.typography.h2, { color: theme.colors.text.primary[colorScheme] }]}>
-                    Settings
-                </Text>
-            </View> */}
+        <View style={[styles.container, { backgroundColor: theme.colors.background[colorScheme] }]}>
+            <ScreenHeader
+                centerComponent={
+                    <Text style={[styles.headerText, { color: theme.colors.text.primary[colorScheme] }]}>
+                        Settings
+                    </Text>
+                }
+            />
 
             <ScrollView contentContainerStyle={styles.scrollContent}>
 
                 {/* PREMIUM */}
-                <SettingsSection title="PREMIUM">
+                <SettingsSection title="">
                     <TouchableOpacity
                         onPress={handlePremium}
                         activeOpacity={0.7}
                     >
-                        <Card style={styles.premiumCard}>
+                        <View style={[styles.premiumCard, { backgroundColor: '#EAF2FD' }]}>
                             <View style={styles.rowLeft}>
-                                <Icon name="crown" size={24} color="#FFD700" style={styles.icon} />
+                                <Icon name="crown" size={36} color="#FFD700" style={styles.icon} />
                                 <View>
-                                    <Text style={[theme.typography.bodyBold, { color: theme.colors.text.primary[colorScheme] }]}>Go Premium</Text>
-                                    <Text style={[theme.typography.caption, { color: theme.colors.text.secondary[colorScheme] }]}>Remove ads</Text>
+                                    <Text style={[styles.premiumCardText, { color: '000000' }]}>Go Premium</Text>
+                                    <Text style={[styles.premiumCardCaption, { color: '#3C3C43' }]}>Remove ads</Text>
                                 </View>
                             </View>
                             {/* Chevron Removed */}
-                        </Card>
+                        </View>
                     </TouchableOpacity>
                 </SettingsSection>
 
                 {/* DATA */}
-                <SettingsSection title="DATA">
+                <SettingsSection title="Data">
                     <SettingsRow icon="database-export" title="Export Data" onPress={handleExport} />
                     <SettingsRow icon="database-import" title="Import Data" onPress={handleImport} />
                     <SettingsRow icon="delete" title="Clear All Data" isDestructive onPress={handleClearData} />
                 </SettingsSection>
 
                 {/* PREFERENCES */}
-                <SettingsSection title="PREFERENCES">
+                <SettingsSection title="Preferences">
                     <SettingsRow
                         icon="theme-light-dark"
                         title="Theme"
@@ -255,10 +261,10 @@ export const SettingsScreen: React.FC = () => {
                 </SettingsSection>
 
                 {/* ABOUT */}
-                <SettingsSection title="ABOUT">
+                <SettingsSection title="About">
                     <SettingsRow icon="information" title="Version" value="1.0.0" onPress={() => { }} />
-                    <SettingsRow icon="shield-check" title="Privacy Policy" onPress={() => Linking.openURL('https://example.com/privacy')} />
-                    <SettingsRow icon="file-document" title="Terms of Service" onPress={() => Linking.openURL('https://example.com/terms')} />
+                    <SettingsRow icon="shield-check" title="Privacy Policy" onPress={() => Linking.openURL('https://upriseix.com/PrivacyPolicy.html')} />
+                    <SettingsRow icon="file-document" title="Terms of Service" onPress={() => Linking.openURL('https://upriseix.com/TC.html')} />
                 </SettingsSection>
 
                 <View style={styles.bottomSpacer} />
@@ -290,7 +296,7 @@ export const SettingsScreen: React.FC = () => {
                         {/* Drag Handle */}
                         <View style={[styles.dragHandle, { backgroundColor: theme.colors.text.tertiary[colorScheme] }]} />
 
-                        <Text style={[theme.typography.h3, styles.themeModalTitle, { color: theme.colors.text.primary[colorScheme] }]}>
+                        <Text style={[styles.chooseThemeText, { color: theme.colors.text.primary[colorScheme] }]}>
                             Choose Theme
                         </Text>
 
@@ -322,18 +328,19 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
     },
-    header: {
-        paddingHorizontal: 24,
-        paddingVertical: 16,
+    headerText: {
+        fontSize: moderateScale(20),
+        fontWeight: '600',
     },
     scrollContent: {
         paddingHorizontal: 16,
+        paddingVertical: 20,
     },
     section: {
         marginBottom: 24,
     },
     sectionTitle: {
-        fontSize: 13,
+        fontSize: moderateScale(15),
         fontWeight: '600',
         marginBottom: 8,
         marginLeft: 16,
@@ -353,6 +360,7 @@ const styles = StyleSheet.create({
         padding: 20,
         marginBottom: 12,
         minHeight: 70,
+        borderRadius: 12,
     },
     premiumCard: {
         flexDirection: 'row',
@@ -361,6 +369,7 @@ const styles = StyleSheet.create({
         padding: 20,
         marginBottom: 12,
         minHeight: 70,
+        borderRadius: 12,
     },
     rowLeft: {
         flexDirection: 'row',
@@ -418,4 +427,20 @@ const styles = StyleSheet.create({
     bottomSpacer: {
         height: 40,
     },
+    premiumCardText: {
+        fontSize: moderateScale(16),
+        fontWeight: '600',
+    },
+    premiumCardCaption: {
+        fontSize: moderateScale(14),
+        fontWeight: '300',
+    },
+    titleText: {
+        fontSize: moderateScale(13),
+        fontWeight: '400',
+    },
+    chooseThemeText: {
+        fontSize: moderateScale(18),
+        fontWeight: '500',
+    }
 });

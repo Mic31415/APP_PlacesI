@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, View, Text } from 'react-native';
-import { NavigationContainer } from '@react-navigation/native';
+import { NavigationContainer, getFocusedRouteNameFromRoute } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -65,11 +65,26 @@ const TabNavigator = () => {
             <Tab.Screen
                 name="Home"
                 component={HomeStackNavigator}
-                options={{
-                    tabBarLabel: 'Maps',
-                    tabBarIcon: ({ color, size }) => (
-                        <Icon name="map-marker-multiple" color={color} size={size} />
-                    ),
+                options={({ route }) => {
+                    const routeName = getFocusedRouteNameFromRoute(route) ?? 'MapList';
+                    const hiddenRoutes = ['MapView', 'CreatePin', 'MapPicker'];
+                    const isHidden = hiddenRoutes.includes(routeName);
+
+                    return {
+                        tabBarLabel: 'Maps',
+                        tabBarIcon: ({ color, size }) => (
+                            <Icon name="map-marker-multiple" color={color} size={size} />
+                        ),
+                        tabBarStyle: {
+                            backgroundColor: theme.colors.card[colorScheme],
+                            borderTopColor: theme.colors.border[colorScheme],
+                            borderTopWidth: 0.5,
+                            height: 60 + insets.bottom,
+                            paddingBottom: insets.bottom,
+                            paddingTop: 8,
+                            display: isHidden ? 'none' : 'flex',
+                        },
+                    };
                 }}
             />
             <Tab.Screen

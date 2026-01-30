@@ -61,7 +61,7 @@ const styles = StyleSheet.create({
         padding: 24,
     },
     emoji: {
-        fontSize: 64,
+        fontSize: moderateScale(64),
         marginBottom: 16,
     },
     title: {
