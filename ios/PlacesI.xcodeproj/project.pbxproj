@@ -33,6 +33,7 @@
 		69F98389FBE1402FB5A145FD /* FontAwesome6_Brands.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = FontAwesome6_Brands.ttf; path = "../node_modules/react-native-vector-icons/Fonts/FontAwesome6_Brands.ttf"; sourceTree = "<group>"; };
 		761780EC2CA45674006654EE /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AppDelegate.swift; path = PlacesI/AppDelegate.swift; sourceTree = "<group>"; };
 		81AB9BB72411601600AC10FF /* LaunchScreen.storyboard */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.storyboard; name = LaunchScreen.storyboard; path = PlacesI/LaunchScreen.storyboard; sourceTree = "<group>"; };
+		88AD02B52F3078A400AC998F /* PlacesI-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "PlacesI-Bridging-Header.h"; sourceTree = "<group>"; };
 		89A4791F852447409E357874 /* Foundation.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = Foundation.ttf; path = "../node_modules/react-native-vector-icons/Fonts/Foundation.ttf"; sourceTree = "<group>"; };
 		8AD8BD6B468442AC969A1E88 /* Fontisto.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = Fontisto.ttf; path = "../node_modules/react-native-vector-icons/Fonts/Fontisto.ttf"; sourceTree = "<group>"; };
 		8B54C26B905E4592807885E5 /* FontAwesome5_Regular.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = FontAwesome5_Regular.ttf; path = "../node_modules/react-native-vector-icons/Fonts/FontAwesome5_Regular.ttf"; sourceTree = "<group>"; };
@@ -63,6 +64,7 @@
 		13B07FAE1A68108700A75B9A /* PlacesI */ = {
 			isa = PBXGroup;
 			children = (
+				88AD02B52F3078A400AC998F /* PlacesI-Bridging-Header.h */,
 				13B07FB51A68108700A75B9A /* Images.xcassets */,
 				761780EC2CA45674006654EE /* AppDelegate.swift */,
 				13B07FB61A68108700A75B9A /* Info.plist */,
@@ -340,6 +342,7 @@
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.placesi.traveljourney;
 				PRODUCT_NAME = PlacesI;
+				SWIFT_OBJC_BRIDGING_HEADER = "PlacesI/PlacesI-Bridging-Header.h";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 5.0;
 				VERSIONING_SYSTEM = "apple-generic";
@@ -368,6 +371,7 @@
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.placesi.traveljourney;
 				PRODUCT_NAME = PlacesI;
+				SWIFT_OBJC_BRIDGING_HEADER = "PlacesI/PlacesI-Bridging-Header.h";
 				SWIFT_VERSION = 5.0;
 				VERSIONING_SYSTEM = "apple-generic";
 			};

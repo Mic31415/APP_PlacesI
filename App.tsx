@@ -12,6 +12,7 @@ import { databaseService } from './src/services/DatabaseService';
 import { MobileAds } from 'react-native-google-mobile-ads';
 import { initAdsConsent } from './src/helpers/adConsent';
 import { InterstitialAdService } from './src/services/InterstitialAdService';
+import SplashScreen from 'react-native-splash-screen';
 
 LogBox.ignoreAllLogs(true); // Ignore all log notifications
 
@@ -20,12 +21,18 @@ function App() {
   const isDarkMode = colorScheme === 'dark';
 
   React.useEffect(() => {
+    let splashTimeout: ReturnType<typeof setTimeout>;
+
     const init = async () => {
       try {
         await databaseService.initDatabase();
       } catch (e) {
         console.error('Failed to init DB', e);
       }
+      // Hide splash screen after initialization with a delay
+      splashTimeout = setTimeout(() => {
+        SplashScreen.hide();
+      }, 2000); // 2 seconds delay
     };
     init();
 
@@ -36,6 +43,13 @@ function App() {
         initAdsConsent();
         InterstitialAdService.load();
       });
+
+    // Cleanup timeout on unmount
+    return () => {
+      if (splashTimeout) {
+        clearTimeout(splashTimeout);
+      }
+    };
   }, []);
 
   return (

@@ -34,6 +34,9 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
       launchOptions: launchOptions
     )
 
+    // Show splash screen
+    RNSplashScreen.show()
+
     return true
   }
 }

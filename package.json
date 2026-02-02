@@ -36,6 +36,7 @@
     "react-native-safe-area-context": "^5.5.2",
     "react-native-screens": "^4.20.0",
     "react-native-share": "^12.2.4",
+    "react-native-splash-screen": "github:HtSpChakradharCholleti/react-native-splash-screen#c408c58",
     "react-native-sqlite-storage": "^6.0.1",
     "react-native-toast-message": "^2.3.3",
     "react-native-vector-icons": "^10.3.0",
