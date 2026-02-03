@@ -192,6 +192,11 @@ export const MapViewScreen: React.FC = () => {
     };
 
     const handleAddPin = () => {
+        if (!mapId) {
+            console.error('Missing mapId in MapViewScreen');
+            Alert.alert('Error', 'Map ID is missing. Cannot create pin.');
+            return;
+        }
         navigation.navigate('CreatePin', { mapId, mapEmoji: emoji });
     };
 
