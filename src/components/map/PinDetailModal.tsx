@@ -1,10 +1,17 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Modal, TouchableWithoutFeedback, Alert, Image, Platform } from 'react-native';
 import ViewShot, { captureRef } from 'react-native-view-shot';
 import Share from 'react-native-share';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useTheme } from '../../theme/ThemeContext';
 import { moderateScale } from '../../utils/responsive';
+import Animated, {
+    useSharedValue,
+    useAnimatedStyle,
+    withSpring,
+    withTiming,
+    Easing
+} from 'react-native-reanimated';
 
 interface PinDetailModalProps {
     visible: boolean;
@@ -18,6 +25,48 @@ interface PinDetailModalProps {
 export const PinDetailModal: React.FC<PinDetailModalProps> = ({ visible, pin, onClose, onDelete, onEdit, onShare }) => {
     const { theme, colorScheme } = useTheme();
 
+    // Animation values for soft, smooth animations
+    const backdropOpacity = useSharedValue(0);
+    const modalTranslateY = useSharedValue(500); // Start from bottom
+
+    const viewShotRef = React.useRef(null);
+
+    // Trigger smooth animations when visible changes
+    useEffect(() => {
+        if (visible) {
+            // Entrance animation - very smooth and soft
+            backdropOpacity.value = withTiming(1, {
+                duration: 400,
+                easing: Easing.bezier(0.25, 0.1, 0.25, 1) // Gentle ease out
+            });
+            modalTranslateY.value = withSpring(0, {
+                damping: 30, // Higher damping for softer spring
+                stiffness: 150, // Medium stiffness for smooth motion
+                mass: 1
+            });
+        } else {
+            // Exit animation - smooth fade and slide down
+            backdropOpacity.value = withTiming(0, {
+                duration: 350,
+                easing: Easing.bezier(0.4, 0.0, 0.2, 1) // Gentle ease in
+            });
+            modalTranslateY.value = withTiming(500, {
+                duration: 350,
+                easing: Easing.bezier(0.4, 0.0, 0.2, 1)
+            });
+        }
+    }, [visible]);
+
+    // Animated styles
+    const backdropAnimatedStyle = useAnimatedStyle(() => ({
+        opacity: backdropOpacity.value,
+    }));
+
+    const modalAnimatedStyle = useAnimatedStyle(() => ({
+        transform: [{ translateY: modalTranslateY.value }],
+    }));
+
+    // Early return after all hooks
     if (!pin) return null;
 
     const handleDelete = () => {
@@ -40,8 +89,6 @@ export const PinDetailModal: React.FC<PinDetailModalProps> = ({ visible, pin, on
             { userInterfaceStyle: colorScheme === 'dark' ? 'dark' : 'light' }
         );
     };
-
-    const viewShotRef = React.useRef(null);
 
     const handleShare = async () => {
         try {
@@ -68,14 +115,14 @@ export const PinDetailModal: React.FC<PinDetailModalProps> = ({ visible, pin, on
     return (
         <Modal
             visible={visible}
-            animationType="slide"
+            animationType="none"
             transparent={true}
             onRequestClose={onClose}
         >
             <TouchableWithoutFeedback onPress={onClose}>
-                <View style={styles.overlay}>
+                <Animated.View style={[styles.overlay, backdropAnimatedStyle]}>
                     <TouchableWithoutFeedback>
-                        <View style={{ width: '100%', borderTopLeftRadius: 24, borderTopRightRadius: 24, overflow: 'hidden' }}>
+                        <Animated.View style={[{ width: '100%', borderTopLeftRadius: 24, borderTopRightRadius: 24, overflow: 'hidden' }, modalAnimatedStyle]}>
                             <ViewShot ref={viewShotRef} style={{ backgroundColor: theme.colors.card[colorScheme] }} options={{ format: "png", quality: 0.9 }}>
                                 <View style={[styles.content, { backgroundColor: theme.colors.card[colorScheme] }]}>
                                     {/* Drag Handle (Visual only for Modal) */}
@@ -160,9 +207,9 @@ export const PinDetailModal: React.FC<PinDetailModalProps> = ({ visible, pin, on
                                     <Text style={[styles.actionLabel, { color: theme.colors.error }]}>Delete</Text>
                                 </TouchableOpacity>
                             </View>
-                        </View>
+                        </Animated.View>
                     </TouchableWithoutFeedback>
-                </View>
+                </Animated.View>
             </TouchableWithoutFeedback>
         </Modal>
     );
@@ -172,6 +219,7 @@ const styles = StyleSheet.create({
     overlay: {
         flex: 1,
         justifyContent: 'flex-end',
+        backgroundColor: 'rgba(0, 0, 0, 0.5)', // Semi-transparent backdrop
     },
     content: {
         padding: 24,

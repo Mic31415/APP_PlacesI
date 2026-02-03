@@ -25,6 +25,7 @@ export const HomeScreen: React.FC = () => {
     const navigation = useNavigation<HomeScreenNavigationProp>();
     // Initialize with empty array
     const [maps, setMaps] = useState<MapData[]>([]);
+    const [shouldAnimate, setShouldAnimate] = useState(false);
 
     useFocusEffect(
         React.useCallback(() => {
@@ -32,11 +33,24 @@ export const HomeScreen: React.FC = () => {
                 try {
                     const fetchedMaps = await databaseService.getMaps();
                     setMaps(fetchedMaps);
+
+                    // Trigger animations after data is loaded
+                    setTimeout(() => {
+                        setShouldAnimate(true);
+                    }, 100);
                 } catch (error) {
                     console.error('Failed to load maps:', error);
                 }
             };
+
+            // Reset animation state when screen comes into focus
+            setShouldAnimate(false);
             loadMaps();
+
+            return () => {
+                // Reset on blur
+                setShouldAnimate(false);
+            };
         }, [])
     );
 
@@ -92,12 +106,14 @@ export const HomeScreen: React.FC = () => {
             <FlatList
                 data={maps}
                 keyExtractor={(item) => item.id}
-                renderItem={({ item }) => (
+                renderItem={({ item, index }) => (
                     <MapCard
                         map={item}
                         onPress={() => handleMapPress(item)}
                         onLongPress={() => handleDeleteMap(item)}
                         style={{ flex: 1, margin: theme.spacing.sm }}
+                        index={index}
+                        shouldAnimate={shouldAnimate}
                     />
                 )}
                 numColumns={numColumns}

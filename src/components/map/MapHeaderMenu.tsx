@@ -1,8 +1,15 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, TouchableOpacity, Modal, Text, StyleSheet, TouchableWithoutFeedback, Dimensions } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useTheme } from '../../theme/ThemeContext';
 import { moderateScale } from '../../utils/responsive';
+import Animated, {
+    useSharedValue,
+    useAnimatedStyle,
+    withTiming,
+    withSpring,
+    Easing
+} from 'react-native-reanimated';
 
 interface MapHeaderMenuProps {
     onEdit: () => void;
@@ -13,6 +20,87 @@ interface MapHeaderMenuProps {
 export const MapHeaderMenu: React.FC<MapHeaderMenuProps> = ({ onEdit, onShare, onDelete }) => {
     const { theme, colorScheme } = useTheme();
     const [visible, setVisible] = useState(false);
+
+    // Animation values for smooth menu entrance
+    const backdropOpacity = useSharedValue(0);
+    const sheetTranslateY = useSharedValue(400);
+
+    // Individual menu item animations for staggered entrance
+    const menuItem1Opacity = useSharedValue(0);
+    const menuItem1TranslateX = useSharedValue(-20);
+
+    const menuItem2Opacity = useSharedValue(0);
+    const menuItem2TranslateX = useSharedValue(-20);
+
+    const menuItem3Opacity = useSharedValue(0);
+    const menuItem3TranslateX = useSharedValue(-20);
+
+    // Trigger animations when visible changes
+    useEffect(() => {
+        if (visible) {
+            // Entrance animation - very smooth
+            backdropOpacity.value = withTiming(1, {
+                duration: 400,
+                easing: Easing.bezier(0.25, 0.1, 0.25, 1)
+            });
+            sheetTranslateY.value = withSpring(0, {
+                damping: 30,
+                stiffness: 150
+            });
+
+            // Stagger menu items with gentle timing
+            setTimeout(() => {
+                menuItem1Opacity.value = withTiming(1, { duration: 500, easing: Easing.bezier(0.25, 0.1, 0.25, 1) });
+                menuItem1TranslateX.value = withTiming(0, { duration: 500, easing: Easing.bezier(0.25, 0.1, 0.25, 1) });
+            }, 150);
+
+            setTimeout(() => {
+                menuItem2Opacity.value = withTiming(1, { duration: 500, easing: Easing.bezier(0.25, 0.1, 0.25, 1) });
+                menuItem2TranslateX.value = withTiming(0, { duration: 500, easing: Easing.bezier(0.25, 0.1, 0.25, 1) });
+            }, 250);
+
+            setTimeout(() => {
+                menuItem3Opacity.value = withTiming(1, { duration: 500, easing: Easing.bezier(0.25, 0.1, 0.25, 1) });
+                menuItem3TranslateX.value = withTiming(0, { duration: 500, easing: Easing.bezier(0.25, 0.1, 0.25, 1) });
+            }, 350);
+        } else {
+            // Exit animation - smooth and quick
+            backdropOpacity.value = withTiming(0, { duration: 300, easing: Easing.bezier(0.4, 0.0, 0.2, 1) });
+            sheetTranslateY.value = withTiming(400, { duration: 300, easing: Easing.bezier(0.4, 0.0, 0.2, 1) });
+
+            // Reset menu items
+            menuItem1Opacity.value = 0;
+            menuItem1TranslateX.value = -20;
+            menuItem2Opacity.value = 0;
+            menuItem2TranslateX.value = -20;
+            menuItem3Opacity.value = 0;
+            menuItem3TranslateX.value = -20;
+        }
+    }, [visible]);
+
+    // Animated styles
+    const backdropAnimatedStyle = useAnimatedStyle(() => ({
+        opacity: backdropOpacity.value,
+    }));
+
+    const sheetAnimatedStyle = useAnimatedStyle(() => ({
+        transform: [{ translateY: sheetTranslateY.value }],
+    }));
+
+    const menuItem1AnimatedStyle = useAnimatedStyle(() => ({
+        opacity: menuItem1Opacity.value,
+        transform: [{ translateX: menuItem1TranslateX.value }],
+    }));
+
+    const menuItem2AnimatedStyle = useAnimatedStyle(() => ({
+        opacity: menuItem2Opacity.value,
+        transform: [{ translateX: menuItem2TranslateX.value }],
+    }));
+
+    const menuItem3AnimatedStyle = useAnimatedStyle(() => ({
+        opacity: menuItem3Opacity.value,
+        transform: [{ translateX: menuItem3TranslateX.value }],
+    }));
 
     const openMenu = () => setVisible(true);
     const closeMenu = () => setVisible(false);
@@ -32,13 +120,13 @@ export const MapHeaderMenu: React.FC<MapHeaderMenuProps> = ({ onEdit, onShare, o
             <Modal
                 transparent={true}
                 visible={visible}
-                animationType="slide"
+                animationType="none"
                 onRequestClose={closeMenu}
             >
                 <TouchableWithoutFeedback onPress={closeMenu}>
-                    <View style={styles.overlay}>
+                    <Animated.View style={[styles.overlay, backdropAnimatedStyle]}>
                         <TouchableWithoutFeedback>
-                            <View style={[styles.sheet, { backgroundColor: theme.colors.card[colorScheme] }]}>
+                            <Animated.View style={[styles.sheet, { backgroundColor: theme.colors.card[colorScheme] }, sheetAnimatedStyle]}>
                                 {/* Header Row */}
                                 <View style={[styles.headerRow, { borderBottomColor: theme.colors.border[colorScheme] }]}>
                                     <View style={styles.headerLeft}>
@@ -53,34 +141,40 @@ export const MapHeaderMenu: React.FC<MapHeaderMenuProps> = ({ onEdit, onShare, o
                                 </View>
 
                                 {/* Options */}
-                                <TouchableOpacity
-                                    style={[styles.option, { borderBottomColor: theme.colors.border[colorScheme] }]}
-                                    onPress={() => handleOption(onEdit)}
-                                >
-                                    <Icon name="pencil" size={24} color={theme.colors.text.primary[colorScheme]} style={styles.icon} />
-                                    <Text style={[styles.optionText, { color: theme.colors.text.primary[colorScheme] }]}>Edit Map</Text>
-                                </TouchableOpacity>
+                                <Animated.View style={menuItem1AnimatedStyle}>
+                                    <TouchableOpacity
+                                        style={[styles.option, { borderBottomColor: theme.colors.border[colorScheme] }]}
+                                        onPress={() => handleOption(onEdit)}
+                                    >
+                                        <Icon name="pencil" size={24} color={theme.colors.text.primary[colorScheme]} style={styles.icon} />
+                                        <Text style={[styles.optionText, { color: theme.colors.text.primary[colorScheme] }]}>Edit Map</Text>
+                                    </TouchableOpacity>
+                                </Animated.View>
 
-                                <TouchableOpacity
-                                    style={[styles.option, { borderBottomColor: theme.colors.border[colorScheme] }]}
-                                    onPress={() => handleOption(onShare)}
-                                >
-                                    <Icon name="share-variant" size={24} color={theme.colors.text.primary[colorScheme]} style={styles.icon} />
-                                    <Text style={[styles.optionText, { color: theme.colors.text.primary[colorScheme] }]}>Share</Text>
-                                </TouchableOpacity>
+                                <Animated.View style={menuItem2AnimatedStyle}>
+                                    <TouchableOpacity
+                                        style={[styles.option, { borderBottomColor: theme.colors.border[colorScheme] }]}
+                                        onPress={() => handleOption(onShare)}
+                                    >
+                                        <Icon name="share-variant" size={24} color={theme.colors.text.primary[colorScheme]} style={styles.icon} />
+                                        <Text style={[styles.optionText, { color: theme.colors.text.primary[colorScheme] }]}>Share</Text>
+                                    </TouchableOpacity>
+                                </Animated.View>
 
-                                <TouchableOpacity
-                                    style={[styles.option, { borderBottomWidth: 0 }]}
-                                    onPress={() => handleOption(onDelete)}
-                                >
-                                    <Icon name="trash-can-outline" size={24} color={theme.colors.error} style={styles.icon} />
-                                    <Text style={[styles.optionText, { color: theme.colors.error }]}>Delete Map</Text>
-                                </TouchableOpacity>
+                                <Animated.View style={menuItem3AnimatedStyle}>
+                                    <TouchableOpacity
+                                        style={[styles.option, { borderBottomWidth: 0 }]}
+                                        onPress={() => handleOption(onDelete)}
+                                    >
+                                        <Icon name="trash-can-outline" size={24} color={theme.colors.error} style={styles.icon} />
+                                        <Text style={[styles.optionText, { color: theme.colors.error }]}>Delete Map</Text>
+                                    </TouchableOpacity>
+                                </Animated.View>
 
 
-                            </View>
+                            </Animated.View>
                         </TouchableWithoutFeedback>
-                    </View>
+                    </Animated.View>
                 </TouchableWithoutFeedback>
             </Modal>
         </>

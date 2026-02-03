@@ -14,6 +14,13 @@ import { EmojiPickerModal } from '../../components/common/EmojiPickerModal';
 import { MapHeaderMenu } from '../../components/map/MapHeaderMenu';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { BannerAdView } from '../../components/ads/BannerAdView';
+import Animated, {
+    useSharedValue,
+    useAnimatedStyle,
+    withSpring,
+    withTiming,
+    Easing
+} from 'react-native-reanimated';
 
 // ... imports
 import { databaseService, PinData } from '../../services/DatabaseService';
@@ -61,6 +68,29 @@ export const MapViewScreen: React.FC = () => {
         );
     }, [pins, searchQuery]);
 
+    // Animation values for smooth, soft animations
+    const searchBarOpacity = useSharedValue(0);
+    const searchBarTranslateY = useSharedValue(-20); // Smaller distance for subtle effect
+
+    const horizontalListOpacity = useSharedValue(0);
+    const horizontalListTranslateY = useSharedValue(30); // Smaller distance
+
+    const fabOpacity = useSharedValue(0);
+    const fabScale = useSharedValue(0.8); // Scale instead of translate for softer feel
+
+    // Edit Map modal animation values
+    const editModalBackdropOpacity = useSharedValue(0);
+    const editModalTranslateY = useSharedValue(500);
+
+    const editFieldOpacity = useSharedValue(0);
+    const editFieldTranslateY = useSharedValue(20);
+
+    const editIconOpacity = useSharedValue(0);
+    const editIconTranslateY = useSharedValue(20);
+
+    const editButtonsOpacity = useSharedValue(0);
+    const editButtonsTranslateY = useSharedValue(20);
+
     useFocusEffect(
         React.useCallback(() => {
             if (!mapId) return;
@@ -74,6 +104,61 @@ export const MapViewScreen: React.FC = () => {
                 }
             };
             loadPins();
+
+            // Trigger smooth entrance animations
+            // Reset to initial state
+            searchBarOpacity.value = 0;
+            searchBarTranslateY.value = -20;
+            horizontalListOpacity.value = 0;
+            horizontalListTranslateY.value = 30;
+            fabOpacity.value = 0;
+            fabScale.value = 0.8;
+
+            // Animate with very smooth, soft timing
+            setTimeout(() => {
+                // Search bar - gentle fade and slide (200ms delay)
+                setTimeout(() => {
+                    searchBarOpacity.value = withTiming(1, {
+                        duration: 600,
+                        easing: Easing.bezier(0.25, 0.1, 0.25, 1) // Ease out
+                    });
+                    searchBarTranslateY.value = withTiming(0, {
+                        duration: 600,
+                        easing: Easing.bezier(0.25, 0.1, 0.25, 1)
+                    });
+                }, 200);
+
+                // Horizontal list - very soft slide up (400ms delay)
+                setTimeout(() => {
+                    horizontalListOpacity.value = withTiming(1, {
+                        duration: 700,
+                        easing: Easing.bezier(0.25, 0.1, 0.25, 1)
+                    });
+                    horizontalListTranslateY.value = withSpring(0, {
+                        damping: 25, // Higher damping for softer spring
+                        stiffness: 80 // Lower stiffness for gentler motion
+                    });
+                }, 400);
+
+                // FAB - gentle scale and fade (500ms delay)
+                setTimeout(() => {
+                    fabOpacity.value = withTiming(1, {
+                        duration: 600,
+                        easing: Easing.bezier(0.25, 0.1, 0.25, 1)
+                    });
+                    fabScale.value = withSpring(1, {
+                        damping: 20,
+                        stiffness: 100
+                    });
+                }, 500);
+            }, 100);
+
+            return () => {
+                // Cleanup
+                searchBarOpacity.value = 0;
+                horizontalListOpacity.value = 0;
+                fabOpacity.value = 0;
+            };
         }, [mapId])
     );
 
@@ -227,6 +312,89 @@ export const MapViewScreen: React.FC = () => {
         />
     ), [handleEditMap, currentMapName, currentMapEmoji, pins]);
 
+    // Animated styles for smooth, soft animations
+    const searchBarAnimatedStyle = useAnimatedStyle(() => ({
+        opacity: searchBarOpacity.value,
+        transform: [{ translateY: searchBarTranslateY.value }],
+    }));
+
+    const horizontalListAnimatedStyle = useAnimatedStyle(() => ({
+        opacity: horizontalListOpacity.value,
+        transform: [{ translateY: horizontalListTranslateY.value }],
+    }));
+
+    const fabAnimatedStyle = useAnimatedStyle(() => ({
+        opacity: fabOpacity.value,
+        transform: [{ scale: fabScale.value }],
+    }));
+
+    // Edit Map modal animated styles
+    const editModalBackdropAnimatedStyle = useAnimatedStyle(() => ({
+        opacity: editModalBackdropOpacity.value,
+    }));
+
+    const editModalAnimatedStyle = useAnimatedStyle(() => ({
+        transform: [{ translateY: editModalTranslateY.value }],
+    }));
+
+    const editFieldAnimatedStyle = useAnimatedStyle(() => ({
+        opacity: editFieldOpacity.value,
+        transform: [{ translateY: editFieldTranslateY.value }],
+    }));
+
+    const editIconAnimatedStyle = useAnimatedStyle(() => ({
+        opacity: editIconOpacity.value,
+        transform: [{ translateY: editIconTranslateY.value }],
+    }));
+
+    const editButtonsAnimatedStyle = useAnimatedStyle(() => ({
+        opacity: editButtonsOpacity.value,
+        transform: [{ translateY: editButtonsTranslateY.value }],
+    }));
+
+    // Trigger Edit Map modal animations
+    React.useEffect(() => {
+        if (editModalVisible) {
+            // Entrance animation
+            editModalBackdropOpacity.value = withTiming(1, {
+                duration: 400,
+                easing: Easing.bezier(0.25, 0.1, 0.25, 1)
+            });
+            editModalTranslateY.value = withSpring(0, {
+                damping: 30,
+                stiffness: 150
+            });
+
+            // Stagger form fields
+            setTimeout(() => {
+                editFieldOpacity.value = withTiming(1, { duration: 500, easing: Easing.bezier(0.25, 0.1, 0.25, 1) });
+                editFieldTranslateY.value = withTiming(0, { duration: 500, easing: Easing.bezier(0.25, 0.1, 0.25, 1) });
+            }, 150);
+
+            setTimeout(() => {
+                editIconOpacity.value = withTiming(1, { duration: 500, easing: Easing.bezier(0.25, 0.1, 0.25, 1) });
+                editIconTranslateY.value = withTiming(0, { duration: 500, easing: Easing.bezier(0.25, 0.1, 0.25, 1) });
+            }, 250);
+
+            setTimeout(() => {
+                editButtonsOpacity.value = withTiming(1, { duration: 500, easing: Easing.bezier(0.25, 0.1, 0.25, 1) });
+                editButtonsTranslateY.value = withTiming(0, { duration: 500, easing: Easing.bezier(0.25, 0.1, 0.25, 1) });
+            }, 350);
+        } else {
+            // Exit animation
+            editModalBackdropOpacity.value = withTiming(0, { duration: 300, easing: Easing.bezier(0.4, 0.0, 0.2, 1) });
+            editModalTranslateY.value = withTiming(500, { duration: 300, easing: Easing.bezier(0.4, 0.0, 0.2, 1) });
+
+            // Reset fields
+            editFieldOpacity.value = 0;
+            editFieldTranslateY.value = 20;
+            editIconOpacity.value = 0;
+            editIconTranslateY.value = 20;
+            editButtonsOpacity.value = 0;
+            editButtonsTranslateY.value = 20;
+        }
+    }, [editModalVisible]);
+
     return (
         <View style={styles.container}>
             <ScreenHeader
@@ -260,21 +428,24 @@ export const MapViewScreen: React.FC = () => {
                     ))}
                 </MapView>
 
-                <MapSearchBar
-                    value={searchQuery}
-                    onChangeText={setSearchQuery}
-                    onFilterPress={() => console.log('Filter')}
-                    style={{ top: 10 }}
-                />
+                <Animated.View style={searchBarAnimatedStyle}>
+                    <MapSearchBar
+                        value={searchQuery}
+                        onChangeText={setSearchQuery}
+                        onFilterPress={() => console.log('Filter')}
+                        style={{ top: 10 }}
+                    />
+                </Animated.View>
 
-                <FloatingButton
-                    onPress={handleAddPin}
-                    style={{ bottom: pins.length === 0 ? 0 : 100, right: 0 }}
-                    icon="map-marker-plus-outline"
-                />
+                <Animated.View style={[fabAnimatedStyle, { position: 'absolute', bottom: pins.length === 0 ? 0 : 100, right: 0 }]}>
+                    <FloatingButton
+                        onPress={handleAddPin}
+                        icon="map-marker-plus-outline"
+                    />
+                </Animated.View>
 
                 {/* Horizontal Pin List */}
-                <View style={styles.horizontalListContainer}>
+                <Animated.View style={[styles.horizontalListContainer, horizontalListAnimatedStyle]}>
                     <FlatList
                         horizontal
                         data={filteredPins}
@@ -301,7 +472,7 @@ export const MapViewScreen: React.FC = () => {
                             </TouchableOpacity>
                         )}
                     />
-                </View>
+                </Animated.View>
             </View>
 
             <PinDetailModal
@@ -316,83 +487,89 @@ export const MapViewScreen: React.FC = () => {
             {/* Edit Map Modal */}
             <Modal
                 visible={editModalVisible}
-                animationType="slide"
+                animationType="none"
                 transparent={true}
                 onRequestClose={() => setEditModalVisible(false)}
             >
-                <KeyboardAvoidingView
-                    behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-                    style={styles.bottomSheetOverlay}
-                >
-                    <View style={[styles.bottomSheetContent, { backgroundColor: theme.colors.card[colorScheme] }]}>
-                        {/* Handle */}
-                        <View style={styles.sheetHandleContainer}>
-                            <View style={styles.sheetHandle} />
-                        </View>
-
-                        {/* Header */}
-                        <View style={styles.sheetHeader}>
-                            <Text style={[styles.sheetTitle, { color: theme.colors.text.primary[colorScheme] }]}>Edit Map</Text>
-                            <TouchableOpacity onPress={() => setEditModalVisible(false)}>
-                                <Icon name="close" size={24} color={theme.colors.text.primary[colorScheme]} />
-                            </TouchableOpacity>
-                        </View>
-
-                        {/* Name Input */}
-                        <Text style={[styles.label, { color: theme.colors.text.primary[colorScheme] }]}>Name</Text>
-                        <TextInput
-                            style={[
-                                styles.inputContainer,
-                                {
-                                    backgroundColor: theme.colors.surface[colorScheme],
-                                    color: theme.colors.text.primary[colorScheme],
-                                }
-                            ]}
-                            value={editName}
-                            onChangeText={setEditName}
-                            placeholder="Map Name"
-                            placeholderTextColor={theme.colors.text.tertiary[colorScheme]}
-                        />
-
-                        {/* Icon Selector */}
-                        <Text style={[styles.label, { color: theme.colors.text.primary[colorScheme] }]}>Icon</Text>
-                        <TouchableOpacity
-                            style={[
-                                styles.iconSelector,
-                                {
-                                    borderColor: theme.colors.primary,
-                                    backgroundColor: theme.colors.surface[colorScheme] // Or white if preferred? Using surface for dark mode support
-                                }
-                            ]}
-                            onPress={() => {
-                                setEditModalVisible(false);
-                                setTimeout(() => setEmojiPickerVisible(true), 300);
-                            }}
-                        >
-                            <View style={{ width: 40, height: 40, borderRadius: 8, backgroundColor: '#E0F2FE', alignItems: 'center', justifyContent: 'center', marginRight: 12 }}>
-                                <Text style={{ fontSize: moderateScale(24) }}>{editEmoji}</Text>
+                <Animated.View style={[styles.bottomSheetOverlay, editModalBackdropAnimatedStyle]}>
+                    <KeyboardAvoidingView
+                        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+                        style={{ flex: 1, justifyContent: 'flex-end' }}
+                    >
+                        <Animated.View style={[styles.bottomSheetContent, { backgroundColor: theme.colors.card[colorScheme] }, editModalAnimatedStyle]}>
+                            {/* Handle */}
+                            <View style={styles.sheetHandleContainer}>
+                                <View style={styles.sheetHandle} />
                             </View>
-                            <Text style={{ color: theme.colors.text.primary[colorScheme], fontSize: moderateScale(16) }}>Change Icon</Text>
-                        </TouchableOpacity>
 
-                        {/* Action Buttons */}
-                        <View style={styles.buttonRow}>
-                            <TouchableOpacity
-                                onPress={() => setEditModalVisible(false)}
-                                style={[styles.actionButton, { backgroundColor: theme.colors.surface[colorScheme] }]}
-                            >
-                                <Text style={[styles.cancelButtonText, { color: theme.colors.text.primary[colorScheme] }]}>Cancel</Text>
-                            </TouchableOpacity>
+                            {/* Header */}
+                            <View style={styles.sheetHeader}>
+                                <Text style={[styles.sheetTitle, { color: theme.colors.text.primary[colorScheme] }]}>Edit Map</Text>
+                                <TouchableOpacity onPress={() => setEditModalVisible(false)}>
+                                    <Icon name="close" size={24} color={theme.colors.text.primary[colorScheme]} />
+                                </TouchableOpacity>
+                            </View>
 
-                            <TouchableOpacity
-                                onPress={handleSaveMap}
-                                style={[styles.actionButton, { backgroundColor: theme.colors.primary }]}
-                            >
-                                <Text style={styles.saveButtonText}>Save</Text>
-                            </TouchableOpacity>
-                        </View>
-                    </View>
-                </KeyboardAvoidingView>
+                            {/* Name Input */}
+                            <Animated.View style={editFieldAnimatedStyle}>
+                                <Text style={[styles.label, { color: theme.colors.text.primary[colorScheme] }]}>Name</Text>
+                                <TextInput
+                                    style={[
+                                        styles.inputContainer,
+                                        {
+                                            backgroundColor: theme.colors.surface[colorScheme],
+                                            color: theme.colors.text.primary[colorScheme],
+                                        }
+                                    ]}
+                                    value={editName}
+                                    onChangeText={setEditName}
+                                    placeholder="Map Name"
+                                    placeholderTextColor={theme.colors.text.tertiary[colorScheme]}
+                                />
+                            </Animated.View>
+
+                            {/* Icon Selector */}
+                            <Animated.View style={editIconAnimatedStyle}>
+                                <Text style={[styles.label, { color: theme.colors.text.primary[colorScheme] }]}>Icon</Text>
+                                <TouchableOpacity
+                                    style={[
+                                        styles.iconSelector,
+                                        {
+                                            borderColor: theme.colors.primary,
+                                            backgroundColor: theme.colors.surface[colorScheme]
+                                        }
+                                    ]}
+                                    onPress={() => {
+                                        setEditModalVisible(false);
+                                        setTimeout(() => setEmojiPickerVisible(true), 300);
+                                    }}
+                                >
+                                    <View style={{ width: 40, height: 40, borderRadius: 8, backgroundColor: '#E0F2FE', alignItems: 'center', justifyContent: 'center', marginRight: 12 }}>
+                                        <Text style={{ fontSize: moderateScale(24) }}>{editEmoji}</Text>
+                                    </View>
+                                    <Text style={{ color: theme.colors.text.primary[colorScheme], fontSize: moderateScale(16) }}>Change Icon</Text>
+                                </TouchableOpacity>
+                            </Animated.View>
+
+                            {/* Action Buttons */}
+                            <Animated.View style={[styles.buttonRow, editButtonsAnimatedStyle]}>
+                                <TouchableOpacity
+                                    onPress={() => setEditModalVisible(false)}
+                                    style={[styles.actionButton, { backgroundColor: theme.colors.surface[colorScheme] }]}
+                                >
+                                    <Text style={[styles.cancelButtonText, { color: theme.colors.text.primary[colorScheme] }]}>Cancel</Text>
+                                </TouchableOpacity>
+
+                                <TouchableOpacity
+                                    onPress={handleSaveMap}
+                                    style={[styles.actionButton, { backgroundColor: theme.colors.primary }]}
+                                >
+                                    <Text style={styles.saveButtonText}>Save</Text>
+                                </TouchableOpacity>
+                            </Animated.View>
+                        </Animated.View>
+                    </KeyboardAvoidingView>
+                </Animated.View>
             </Modal>
 
             <EmojiPickerModal
@@ -404,7 +581,7 @@ export const MapViewScreen: React.FC = () => {
                 onSelectEmoji={setEditEmoji}
             />
             <BannerAdView />
-        </View>
+        </View >
     );
 };
 

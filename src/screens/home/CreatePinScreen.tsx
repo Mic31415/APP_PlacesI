@@ -17,6 +17,12 @@ import { EmojiPickerModal } from '../../components/common/EmojiPickerModal';
 import AppConfig from '../../config';
 import { moderateScale } from '../../utils/responsive';
 import { Button } from '../../components/common';
+import Animated, {
+    useSharedValue,
+    useAnimatedStyle,
+    withTiming,
+    Easing
+} from 'react-native-reanimated';
 
 export const CreatePinScreen: React.FC = () => {
     const { theme, colorScheme } = useTheme();
@@ -38,6 +44,94 @@ export const CreatePinScreen: React.FC = () => {
         pin ? { latitude: pin.latitude, longitude: pin.longitude } : null
     );
     const [isLoadingLocation, setIsLoadingLocation] = useState(false);
+
+    // Animation values for smooth, soft sequential entrance
+    const locationOpacity = useSharedValue(0);
+    const locationTranslateX = useSharedValue(-30);
+
+    const titleOpacity = useSharedValue(0);
+    const titleTranslateX = useSharedValue(-30);
+
+    const descriptionOpacity = useSharedValue(0);
+    const descriptionTranslateX = useSharedValue(-30);
+
+    const ratingOpacity = useSharedValue(0);
+    const ratingTranslateX = useSharedValue(-30);
+
+    const emojiOpacity = useSharedValue(0);
+    const emojiTranslateX = useSharedValue(-30);
+
+    const photoOpacity = useSharedValue(0);
+    const photoTranslateX = useSharedValue(-30);
+
+    const buttonOpacity = useSharedValue(0);
+    const buttonScale = useSharedValue(0.9);
+
+    // Trigger smooth entrance animations on mount
+    React.useEffect(() => {
+        // Reset to initial state
+        locationOpacity.value = 0;
+        locationTranslateX.value = -30;
+        titleOpacity.value = 0;
+        titleTranslateX.value = -30;
+        descriptionOpacity.value = 0;
+        descriptionTranslateX.value = -30;
+        ratingOpacity.value = 0;
+        ratingTranslateX.value = -30;
+        emojiOpacity.value = 0;
+        emojiTranslateX.value = -30;
+        photoOpacity.value = 0;
+        photoTranslateX.value = -30;
+        buttonOpacity.value = 0;
+        buttonScale.value = 0.9;
+
+        // Stagger animations with gentle timing
+        const easing = Easing.bezier(0.25, 0.1, 0.25, 1);
+        const duration = 600;
+        const stagger = 100;
+
+        setTimeout(() => {
+            // Location (0ms)
+            locationOpacity.value = withTiming(1, { duration, easing });
+            locationTranslateX.value = withTiming(0, { duration, easing });
+
+            // Title (100ms)
+            setTimeout(() => {
+                titleOpacity.value = withTiming(1, { duration, easing });
+                titleTranslateX.value = withTiming(0, { duration, easing });
+            }, stagger);
+
+            // Description (200ms)
+            setTimeout(() => {
+                descriptionOpacity.value = withTiming(1, { duration, easing });
+                descriptionTranslateX.value = withTiming(0, { duration, easing });
+            }, stagger * 2);
+
+            // Rating (300ms)
+            setTimeout(() => {
+                ratingOpacity.value = withTiming(1, { duration, easing });
+                ratingTranslateX.value = withTiming(0, { duration, easing });
+            }, stagger * 3);
+
+            // Emoji (400ms)
+            setTimeout(() => {
+                emojiOpacity.value = withTiming(1, { duration, easing });
+                emojiTranslateX.value = withTiming(0, { duration, easing });
+            }, stagger * 4);
+
+            // Photo (500ms)
+            setTimeout(() => {
+                photoOpacity.value = withTiming(1, { duration, easing });
+                photoTranslateX.value = withTiming(0, { duration, easing });
+            }, stagger * 5);
+
+            // Button (600ms)
+            setTimeout(() => {
+                buttonOpacity.value = withTiming(1, { duration, easing });
+                buttonScale.value = withTiming(1, { duration, easing });
+            }, stagger * 6);
+        }, 100);
+    }, []);
 
     // Sync state with pin param if it changes (defensive)
     React.useEffect(() => {
@@ -227,9 +321,10 @@ export const CreatePinScreen: React.FC = () => {
         value: string,
         setValue: (text: string) => void,
         placeholder: string,
-        multiline = false
+        multiline = false,
+        animatedStyle?: any
     ) => (
-        <View style={styles.inputGroup}>
+        <Animated.View style={[styles.inputGroup, animatedStyle]}>
             <Text style={[styles.label, { color: theme.colors.text.secondary[colorScheme] }]}>{label}</Text>
             <View style={[
                 styles.inputContainer,
@@ -249,8 +344,44 @@ export const CreatePinScreen: React.FC = () => {
                     multiline={multiline}
                 />
             </View>
-        </View>
+        </Animated.View>
     );
+
+    // Animated styles for smooth entrance
+    const locationAnimatedStyle = useAnimatedStyle(() => ({
+        opacity: locationOpacity.value,
+        transform: [{ translateX: locationTranslateX.value }],
+    }));
+
+    const titleAnimatedStyle = useAnimatedStyle(() => ({
+        opacity: titleOpacity.value,
+        transform: [{ translateX: titleTranslateX.value }],
+    }));
+
+    const descriptionAnimatedStyle = useAnimatedStyle(() => ({
+        opacity: descriptionOpacity.value,
+        transform: [{ translateX: descriptionTranslateX.value }],
+    }));
+
+    const ratingAnimatedStyle = useAnimatedStyle(() => ({
+        opacity: ratingOpacity.value,
+        transform: [{ translateX: ratingTranslateX.value }],
+    }));
+
+    const emojiAnimatedStyle = useAnimatedStyle(() => ({
+        opacity: emojiOpacity.value,
+        transform: [{ translateX: emojiTranslateX.value }],
+    }));
+
+    const photoAnimatedStyle = useAnimatedStyle(() => ({
+        opacity: photoOpacity.value,
+        transform: [{ translateX: photoTranslateX.value }],
+    }));
+
+    const buttonAnimatedStyle = useAnimatedStyle(() => ({
+        opacity: buttonOpacity.value,
+        transform: [{ scale: buttonScale.value }],
+    }));
 
     return (
         <View style={[styles.container, { backgroundColor: theme.colors.background[colorScheme] }]}>
@@ -275,7 +406,7 @@ export const CreatePinScreen: React.FC = () => {
                 <ScrollView contentContainerStyle={styles.content}>
 
                     {/* Location (Simplified Search) */}
-                    <View style={styles.inputGroup}>
+                    <Animated.View style={[styles.inputGroup, locationAnimatedStyle]}>
                         <Text style={[styles.label, { color: theme.colors.text.secondary[colorScheme] }]}>Location</Text>
                         <View style={[styles.inputContainer, { backgroundColor: theme.colors.surface[colorScheme], flexDirection: 'row', alignItems: 'center' }]}>
                             <Icon name="magnify" size={24} color={theme.colors.text.tertiary[colorScheme]} style={{ marginRight: 8 }} />
@@ -314,19 +445,19 @@ export const CreatePinScreen: React.FC = () => {
                                 <Text style={[styles.locationBtnText, { color: theme.colors.primary }]}>Pick on Map</Text>
                             </TouchableOpacity>
                         </View>
-                    </View>
+                    </Animated.View>
 
-                    {renderInput('Title', title, setTitle, 'Enter title...')}
-                    {renderInput('Description', description, setDescription, 'Add notes...', true)}
+                    {renderInput('Title', title, setTitle, 'Enter title...', false, titleAnimatedStyle)}
+                    {renderInput('Description', description, setDescription, 'Add notes...', true, descriptionAnimatedStyle)}
 
                     {/* Rating */}
-                    <View style={styles.inputGroup}>
+                    <Animated.View style={[styles.inputGroup, ratingAnimatedStyle]}>
                         <Text style={[styles.label, { color: theme.colors.text.secondary[colorScheme] }]}>Rating</Text>
                         <RatingPicker value={rating} onValueChange={setRating} />
-                    </View>
+                    </Animated.View>
 
                     {/* Emoji Selector */}
-                    <View style={styles.inputGroup}>
+                    <Animated.View style={[styles.inputGroup, emojiAnimatedStyle]}>
                         <Text style={[styles.label, { color: theme.colors.text.secondary[colorScheme] }]}>Icon</Text>
 
                         <TouchableOpacity
@@ -343,10 +474,10 @@ export const CreatePinScreen: React.FC = () => {
                                 Tap to change
                             </Text>
                         </TouchableOpacity>
-                    </View>
+                    </Animated.View>
 
                     {/* Photo */}
-                    <View style={styles.inputGroup}>
+                    <Animated.View style={[styles.inputGroup, photoAnimatedStyle]}>
                         <Text style={[styles.label, { color: theme.colors.text.secondary[colorScheme] }]}>Photo (Optional)</Text>
                         <View style={styles.photoActions}>
                             <TouchableOpacity
@@ -376,13 +507,16 @@ export const CreatePinScreen: React.FC = () => {
                                 </TouchableOpacity>
                             </View>
                         )}
-                    </View>
+                    </Animated.View>
 
-                    <Button
-                        title="Save"
-                        onPress={handleSave}
-                        fullWidth
-                    />
+                    {/* Save Button */}
+                    <Animated.View style={buttonAnimatedStyle}>
+                        <Button
+                            title={pin ? 'Save Pin' : 'Add Pin'}
+                            onPress={handleSave}
+                            fullWidth
+                        />
+                    </Animated.View>
                     <View style={{ height: 40 }} />
                 </ScrollView>
             </KeyboardAvoidingView>

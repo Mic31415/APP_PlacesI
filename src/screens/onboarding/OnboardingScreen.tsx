@@ -1,5 +1,5 @@
-import React, { useRef, useState } from 'react';
-import { View, StyleSheet, FlatList, Dimensions, Animated, Text, ImageSourcePropType } from 'react-native';
+import React, { useRef, useState, useEffect } from 'react';
+import { View, StyleSheet, FlatList, Dimensions, Animated, Text, ImageSourcePropType, Pressable } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -7,6 +7,7 @@ import { useTheme } from '../../theme/ThemeContext';
 import { RootStackParamList } from '../../types/navigation';
 import { Button } from '../../components/common';
 import { OnboardingSlide } from './OnboardingSlide';
+import ReanimatedAnimated, { useSharedValue, useAnimatedStyle, withSpring, withTiming } from 'react-native-reanimated';
 
 const { width, height } = Dimensions.get('window');
 
@@ -21,7 +22,7 @@ const slides: { id: string; title: string; description: string; image: ImageSour
     {
         id: '2',
         title: 'Create Custom Maps',
-        description: 'Organize your places into custom maps like “Places I Eat”, “Dream Destinations”, or “Hiking Trails”.',
+        description: 'Organize your places into custom maps like "Places I Eat", "Dream Destinations", or "Hiking Trails".',
         image: require('../../assets/Images/OnBoarding2.png'),
     },
     {
@@ -41,6 +42,13 @@ export const OnboardingScreen: React.FC = () => {
     const scrollX = useRef(new Animated.Value(0)).current;
     const slidesRef = useRef<FlatList>(null);
 
+    // Reanimated values for text animations
+    const textOpacity = useSharedValue(0);
+    const textTranslateY = useSharedValue(20);
+
+    // Reanimated values for button press
+    const buttonScale = useSharedValue(1);
+
     const viewableItemsChanged = useRef(({ viewableItems }: any) => {
         if (viewableItems && viewableItems.length > 0) {
             setCurrentIndex(viewableItems[0].index);
@@ -49,7 +57,29 @@ export const OnboardingScreen: React.FC = () => {
 
     const viewConfig = useRef({ viewAreaCoveragePercentThreshold: 50 }).current;
 
+    // Animate text when currentIndex changes
+    useEffect(() => {
+        // Reset and animate text
+        textOpacity.value = 0;
+        textTranslateY.value = 20;
+
+        textOpacity.value = withTiming(1, { duration: 300 });
+        textTranslateY.value = withSpring(0, { damping: 15 });
+    }, [currentIndex]);
+
+    const textAnimatedStyle = useAnimatedStyle(() => {
+        return {
+            opacity: textOpacity.value,
+            transform: [{ translateY: textTranslateY.value }],
+        };
+    });
+
     const scrollTo = () => {
+        // Button press animation
+        buttonScale.value = withSpring(0.95, { damping: 10 }, () => {
+            buttonScale.value = withSpring(1, { damping: 10 });
+        });
+
         if (currentIndex < slides.length - 1) {
             slidesRef.current?.scrollToIndex({ index: currentIndex + 1 });
         } else {
@@ -102,6 +132,12 @@ export const OnboardingScreen: React.FC = () => {
         );
     };
 
+    const buttonAnimatedStyle = useAnimatedStyle(() => {
+        return {
+            transform: [{ scale: buttonScale.value }],
+        };
+    });
+
     return (
         <View
             style={[
@@ -112,7 +148,9 @@ export const OnboardingScreen: React.FC = () => {
             <View style={{ height: height * 0.6 }}>
                 <FlatList
                     data={slides}
-                    renderItem={({ item }) => <OnboardingSlide item={item} />}
+                    renderItem={({ item, index }) => (
+                        <OnboardingSlide item={item} index={index} currentIndex={currentIndex} />
+                    )}
                     horizontal
                     showsHorizontalScrollIndicator={false}
                     pagingEnabled
@@ -132,7 +170,7 @@ export const OnboardingScreen: React.FC = () => {
 
                 <Paginator />
 
-                <View style={styles.textContainer}>
+                <ReanimatedAnimated.View style={[styles.textContainer, textAnimatedStyle]}>
                     <Text
                         style={[
                             theme.typography.h2,
@@ -156,9 +194,9 @@ export const OnboardingScreen: React.FC = () => {
                     >
                         {slides[currentIndex].description}
                     </Text>
-                </View>
+                </ReanimatedAnimated.View>
 
-                <View style={styles.footer}>
+                <ReanimatedAnimated.View style={[styles.footer, buttonAnimatedStyle]}>
                     {currentIndex < slides.length - 1 ? (
                         <Button
                             title="Next"
@@ -172,7 +210,7 @@ export const OnboardingScreen: React.FC = () => {
                             fullWidth
                         />
                     )}
-                </View>
+                </ReanimatedAnimated.View>
             </View>
         </View>
     );

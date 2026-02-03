@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Switch, Alert, Linking, Platform, Modal, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TouchableWithoutFeedback, Switch, Alert, Linking, Platform, Modal, ActivityIndicator } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import Share from 'react-native-share';
@@ -11,6 +11,13 @@ import { Card } from '../../components/common/Card';
 import { databaseService } from '../../services/DatabaseService';
 import { moderateScale } from '../../utils/responsive';
 import { ScreenHeader } from '../../components/common/ScreenHeader';
+import Animated, {
+    useSharedValue,
+    useAnimatedStyle,
+    withTiming,
+    withSpring,
+    Easing
+} from 'react-native-reanimated';
 
 interface SettingsRowProps {
     icon: string;
@@ -85,6 +92,151 @@ export const SettingsScreen: React.FC = () => {
     const [isLoading, setIsLoading] = useState(false);
 
     const { top, bottom } = useSafeAreaInsets();
+
+    // Animation values for smooth sequential entrance
+    const premiumOpacity = useSharedValue(0);
+    const premiumTranslateY = useSharedValue(30);
+
+    const dataOpacity = useSharedValue(0);
+    const dataTranslateY = useSharedValue(30);
+
+    const preferencesOpacity = useSharedValue(0);
+    const preferencesTranslateY = useSharedValue(30);
+
+    const aboutOpacity = useSharedValue(0);
+    const aboutTranslateY = useSharedValue(30);
+
+    // Theme modal animation values
+    const themeBackdropOpacity = useSharedValue(0);
+    const themeSheetTranslateY = useSharedValue(400);
+
+    const themeOption1Opacity = useSharedValue(0);
+    const themeOption1TranslateX = useSharedValue(-20);
+
+    const themeOption2Opacity = useSharedValue(0);
+    const themeOption2TranslateX = useSharedValue(-20);
+
+    const themeOption3Opacity = useSharedValue(0);
+    const themeOption3TranslateX = useSharedValue(-20);
+
+    // Trigger smooth entrance animations on mount
+    React.useEffect(() => {
+        const easing = Easing.bezier(0.25, 0.1, 0.25, 1);
+        const duration = 600;
+        const stagger = 150;
+
+        setTimeout(() => {
+            // Premium section (0ms)
+            premiumOpacity.value = withTiming(1, { duration, easing });
+            premiumTranslateY.value = withTiming(0, { duration, easing });
+
+            // Data section (150ms)
+            setTimeout(() => {
+                dataOpacity.value = withTiming(1, { duration, easing });
+                dataTranslateY.value = withTiming(0, { duration, easing });
+            }, stagger);
+
+            // Preferences section (300ms)
+            setTimeout(() => {
+                preferencesOpacity.value = withTiming(1, { duration, easing });
+                preferencesTranslateY.value = withTiming(0, { duration, easing });
+            }, stagger * 2);
+
+            // About section (450ms)
+            setTimeout(() => {
+                aboutOpacity.value = withTiming(1, { duration, easing });
+                aboutTranslateY.value = withTiming(0, { duration, easing });
+            }, stagger * 3);
+        }, 100);
+    }, []);
+
+    // Animated styles
+    const premiumAnimatedStyle = useAnimatedStyle(() => ({
+        opacity: premiumOpacity.value,
+        transform: [{ translateY: premiumTranslateY.value }],
+    }));
+
+    const dataAnimatedStyle = useAnimatedStyle(() => ({
+        opacity: dataOpacity.value,
+        transform: [{ translateY: dataTranslateY.value }],
+    }));
+
+    const preferencesAnimatedStyle = useAnimatedStyle(() => ({
+        opacity: preferencesOpacity.value,
+        transform: [{ translateY: preferencesTranslateY.value }],
+    }));
+
+    const aboutAnimatedStyle = useAnimatedStyle(() => ({
+        opacity: aboutOpacity.value,
+        transform: [{ translateY: aboutTranslateY.value }],
+    }));
+
+    // Theme modal animated styles
+    const themeBackdropAnimatedStyle = useAnimatedStyle(() => ({
+        opacity: themeBackdropOpacity.value,
+    }));
+
+    const themeSheetAnimatedStyle = useAnimatedStyle(() => ({
+        transform: [{ translateY: themeSheetTranslateY.value }],
+    }));
+
+    const themeOption1AnimatedStyle = useAnimatedStyle(() => ({
+        opacity: themeOption1Opacity.value,
+        transform: [{ translateX: themeOption1TranslateX.value }],
+    }));
+
+    const themeOption2AnimatedStyle = useAnimatedStyle(() => ({
+        opacity: themeOption2Opacity.value,
+        transform: [{ translateX: themeOption2TranslateX.value }],
+    }));
+
+    const themeOption3AnimatedStyle = useAnimatedStyle(() => ({
+        opacity: themeOption3Opacity.value,
+        transform: [{ translateX: themeOption3TranslateX.value }],
+    }));
+
+    // Trigger theme modal animations
+    React.useEffect(() => {
+        if (isThemeModalVisible) {
+            // Entrance animation
+            themeBackdropOpacity.value = withTiming(1, {
+                duration: 400,
+                easing: Easing.bezier(0.25, 0.1, 0.25, 1)
+            });
+            themeSheetTranslateY.value = withSpring(0, {
+                damping: 30,
+                stiffness: 150
+            });
+
+            // Stagger theme options
+            setTimeout(() => {
+                themeOption1Opacity.value = withTiming(1, { duration: 500, easing: Easing.bezier(0.25, 0.1, 0.25, 1) });
+                themeOption1TranslateX.value = withTiming(0, { duration: 500, easing: Easing.bezier(0.25, 0.1, 0.25, 1) });
+            }, 150);
+
+            setTimeout(() => {
+                themeOption2Opacity.value = withTiming(1, { duration: 500, easing: Easing.bezier(0.25, 0.1, 0.25, 1) });
+                themeOption2TranslateX.value = withTiming(0, { duration: 500, easing: Easing.bezier(0.25, 0.1, 0.25, 1) });
+            }, 250);
+
+            setTimeout(() => {
+                themeOption3Opacity.value = withTiming(1, { duration: 500, easing: Easing.bezier(0.25, 0.1, 0.25, 1) });
+                themeOption3TranslateX.value = withTiming(0, { duration: 500, easing: Easing.bezier(0.25, 0.1, 0.25, 1) });
+            }, 350);
+        } else {
+            // Exit animation
+            themeBackdropOpacity.value = withTiming(0, { duration: 300, easing: Easing.bezier(0.4, 0.0, 0.2, 1) });
+            themeSheetTranslateY.value = withTiming(400, { duration: 300, easing: Easing.bezier(0.4, 0.0, 0.2, 1) });
+
+            // Reset options
+            themeOption1Opacity.value = 0;
+            themeOption1TranslateX.value = -20;
+            themeOption2Opacity.value = 0;
+            themeOption2TranslateX.value = -20;
+            themeOption3Opacity.value = 0;
+            themeOption3TranslateX.value = -20;
+        }
+    }, [isThemeModalVisible]);
 
     // Helpers
     const getThemeLabel = (t: string) => {
@@ -218,54 +370,62 @@ export const SettingsScreen: React.FC = () => {
             <ScrollView contentContainerStyle={styles.scrollContent}>
 
                 {/* PREMIUM */}
-                <SettingsSection title="">
-                    <TouchableOpacity
-                        onPress={handlePremium}
-                        activeOpacity={0.7}
-                    >
-                        <View style={[styles.premiumCard, { backgroundColor: '#EAF2FD' }]}>
-                            <View style={styles.rowLeft}>
-                                <Icon name="crown" size={36} color="#FFD700" style={styles.icon} />
-                                <View>
-                                    <Text style={[styles.premiumCardText, { color: '000000' }]}>Go Premium</Text>
-                                    <Text style={[styles.premiumCardCaption, { color: '#3C3C43' }]}>Remove ads</Text>
+                <Animated.View style={premiumAnimatedStyle}>
+                    <SettingsSection title="">
+                        <TouchableOpacity
+                            onPress={handlePremium}
+                            activeOpacity={0.7}
+                        >
+                            <View style={[styles.premiumCard, { backgroundColor: '#EAF2FD' }]}>
+                                <View style={styles.rowLeft}>
+                                    <Icon name="crown" size={36} color="#FFD700" style={styles.icon} />
+                                    <View>
+                                        <Text style={[styles.premiumCardText, { color: '000000' }]}>Go Premium</Text>
+                                        <Text style={[styles.premiumCardCaption, { color: '#3C3C43' }]}>Remove ads</Text>
+                                    </View>
                                 </View>
+                                {/* Chevron Removed */}
                             </View>
-                            {/* Chevron Removed */}
-                        </View>
-                    </TouchableOpacity>
-                </SettingsSection>
+                        </TouchableOpacity>
+                    </SettingsSection>
+                </Animated.View>
 
                 {/* DATA */}
-                <SettingsSection title="Data">
-                    <SettingsRow icon="database-export" title="Export Data" onPress={handleExport} />
-                    <SettingsRow icon="database-import" title="Import Data" onPress={handleImport} />
-                    <SettingsRow icon="delete" title="Clear All Data" isDestructive onPress={handleClearData} />
-                </SettingsSection>
+                <Animated.View style={dataAnimatedStyle}>
+                    <SettingsSection title="Data">
+                        <SettingsRow icon="database-export" title="Export Data" onPress={handleExport} />
+                        <SettingsRow icon="database-import" title="Import Data" onPress={handleImport} />
+                        <SettingsRow icon="delete" title="Clear All Data" isDestructive onPress={handleClearData} />
+                    </SettingsSection>
+                </Animated.View>
 
                 {/* PREFERENCES */}
-                <SettingsSection title="Preferences">
-                    <SettingsRow
-                        icon="theme-light-dark"
-                        title="Theme"
-                        value={getThemeLabel(themeType)} // Fixed usage
-                        onPress={() => setIsThemeModalVisible(true)}
-                    />
-                    <SettingsRow
-                        icon="bell"
-                        title="Notifications"
-                        hasToggle
-                        isToggled={notificationsEnabled}
-                        onToggle={setNotificationsEnabled}
-                    />
-                </SettingsSection>
+                <Animated.View style={preferencesAnimatedStyle}>
+                    <SettingsSection title="Preferences">
+                        <SettingsRow
+                            icon="theme-light-dark"
+                            title="Theme"
+                            value={getThemeLabel(themeType)} // Fixed usage
+                            onPress={() => setIsThemeModalVisible(true)}
+                        />
+                        <SettingsRow
+                            icon="bell"
+                            title="Notifications"
+                            hasToggle
+                            isToggled={notificationsEnabled}
+                            onToggle={setNotificationsEnabled}
+                        />
+                    </SettingsSection>
+                </Animated.View>
 
                 {/* ABOUT */}
-                <SettingsSection title="About">
-                    <SettingsRow icon="information" title="Version" value="1.0.0" onPress={() => { }} />
-                    <SettingsRow icon="shield-check" title="Privacy Policy" onPress={() => Linking.openURL('https://upriseix.com/PrivacyPolicy.html')} />
-                    <SettingsRow icon="file-document" title="Terms of Service" onPress={() => Linking.openURL('https://upriseix.com/TC.html')} />
-                </SettingsSection>
+                <Animated.View style={aboutAnimatedStyle}>
+                    <SettingsSection title="About">
+                        <SettingsRow icon="information" title="Version" value="1.0.0" onPress={() => { }} />
+                        <SettingsRow icon="shield-check" title="Privacy Policy" onPress={() => Linking.openURL('https://upriseix.com/PrivacyPolicy.html')} />
+                        <SettingsRow icon="file-document" title="Terms of Service" onPress={() => Linking.openURL('https://upriseix.com/TC.html')} />
+                    </SettingsSection>
+                </Animated.View>
 
                 <View style={styles.bottomSpacer} />
             </ScrollView>
@@ -283,42 +443,77 @@ export const SettingsScreen: React.FC = () => {
             </Modal>
 
             {/* Theme Selector Modal */}
-            <Modal transparent visible={isThemeModalVisible} animationType="slide" onRequestClose={() => setIsThemeModalVisible(false)}>
-                <TouchableOpacity
-                    style={styles.themeModalOverlay}
-                    activeOpacity={1}
-                    onPress={() => setIsThemeModalVisible(false)}
-                >
-                    <View style={[styles.themeModalContent, {
-                        backgroundColor: theme.colors.card[colorScheme],
-                        paddingBottom: bottom + 20,
-                    }]}>
-                        {/* Drag Handle */}
-                        <View style={[styles.dragHandle, { backgroundColor: theme.colors.text.tertiary[colorScheme] }]} />
+            <Modal transparent visible={isThemeModalVisible} animationType="none" onRequestClose={() => setIsThemeModalVisible(false)}>
+                <TouchableWithoutFeedback onPress={() => setIsThemeModalVisible(false)}>
+                    <Animated.View style={[styles.themeModalOverlay, themeBackdropAnimatedStyle]}>
+                        <TouchableWithoutFeedback>
+                            <Animated.View style={[styles.themeModalContent, {
+                                backgroundColor: theme.colors.card[colorScheme],
+                                paddingBottom: bottom + 20,
+                            }, themeSheetAnimatedStyle]}>
+                                {/* Drag Handle */}
+                                <View style={[styles.dragHandle, { backgroundColor: theme.colors.text.tertiary[colorScheme] }]} />
 
-                        <Text style={[styles.chooseThemeText, { color: theme.colors.text.primary[colorScheme] }]}>
-                            Choose Theme
-                        </Text>
-
-                        {['light', 'dark', 'system'].map((t) => (
-                            <TouchableOpacity
-                                key={t}
-                                style={[styles.themeOption, {
-                                    borderBottomWidth: t === 'system' ? 0 : StyleSheet.hairlineWidth,
-                                    borderBottomColor: theme.colors.border[colorScheme],
-                                }]}
-                                onPress={() => handleThemeSelect(t)}
-                            >
-                                <Text style={[theme.typography.body, { color: theme.colors.text.primary[colorScheme] }]}>
-                                    {getThemeLabel(t)}
+                                <Text style={[styles.chooseThemeText, { color: theme.colors.text.primary[colorScheme] }]}>
+                                    Choose Theme
                                 </Text>
-                                {themeType === t && (
-                                    <Icon name="check" size={24} color={theme.colors.primary} />
-                                )}
-                            </TouchableOpacity>
-                        ))}
-                    </View>
-                </TouchableOpacity>
+
+                                {/* Light Mode */}
+                                <Animated.View style={themeOption1AnimatedStyle}>
+                                    <TouchableOpacity
+                                        style={[styles.themeOption, {
+                                            borderBottomWidth: StyleSheet.hairlineWidth,
+                                            borderBottomColor: theme.colors.border[colorScheme],
+                                        }]}
+                                        onPress={() => handleThemeSelect('light')}
+                                    >
+                                        <Text style={[theme.typography.body, { color: theme.colors.text.primary[colorScheme] }]}>
+                                            {getThemeLabel('light')}
+                                        </Text>
+                                        {themeType === 'light' && (
+                                            <Icon name="check" size={24} color={theme.colors.primary} />
+                                        )}
+                                    </TouchableOpacity>
+                                </Animated.View>
+
+                                {/* Dark Mode */}
+                                <Animated.View style={themeOption2AnimatedStyle}>
+                                    <TouchableOpacity
+                                        style={[styles.themeOption, {
+                                            borderBottomWidth: StyleSheet.hairlineWidth,
+                                            borderBottomColor: theme.colors.border[colorScheme],
+                                        }]}
+                                        onPress={() => handleThemeSelect('dark')}
+                                    >
+                                        <Text style={[theme.typography.body, { color: theme.colors.text.primary[colorScheme] }]}>
+                                            {getThemeLabel('dark')}
+                                        </Text>
+                                        {themeType === 'dark' && (
+                                            <Icon name="check" size={24} color={theme.colors.primary} />
+                                        )}
+                                    </TouchableOpacity>
+                                </Animated.View>
+
+                                {/* System Mode */}
+                                <Animated.View style={themeOption3AnimatedStyle}>
+                                    <TouchableOpacity
+                                        style={[styles.themeOption, {
+                                            borderBottomWidth: 0,
+                                        }]}
+                                        onPress={() => handleThemeSelect('system')}
+                                    >
+                                        <Text style={[theme.typography.body, { color: theme.colors.text.primary[colorScheme] }]}>
+                                            {getThemeLabel('system')}
+                                        </Text>
+                                        {themeType === 'system' && (
+                                            <Icon name="check" size={24} color={theme.colors.primary} />
+                                        )}
+                                    </TouchableOpacity>
+                                </Animated.View>
+                            </Animated.View>
+                        </TouchableWithoutFeedback>
+                    </Animated.View>
+                </TouchableWithoutFeedback>
             </Modal>
         </View>
     );

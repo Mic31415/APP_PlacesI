@@ -1,9 +1,17 @@
-import React from 'react';
-import { TouchableOpacity, StyleSheet, Text, ViewStyle } from 'react-native';
+import React, { useEffect } from 'react';
+import { Pressable, StyleSheet, ViewStyle } from 'react-native';
 import { useTheme } from '../../theme/ThemeContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { moderateScale } from '../../utils/responsive';
+import Animated, {
+    useSharedValue,
+    useAnimatedStyle,
+    withSpring,
+    withTiming,
+    withDelay,
+    withSequence
+} from 'react-native-reanimated';
 
 interface FloatingButtonProps {
     onPress: () => void;
@@ -15,10 +23,53 @@ export const FloatingButton: React.FC<FloatingButtonProps> = ({ onPress, icon = 
     const { theme, colorScheme } = useTheme();
     const insets = useSafeAreaInsets();
 
+    // Entrance animation
+    const opacity = useSharedValue(0);
+    const translateY = useSharedValue(50);
+
+    // Press animation
+    const scale = useSharedValue(1);
+    const rotation = useSharedValue(0);
+
+    useEffect(() => {
+        // Entrance animation with delay
+        opacity.value = withDelay(400, withTiming(1, { duration: 300 }));
+        translateY.value = withDelay(400, withSpring(0, { damping: 15 }));
+    }, []);
+
+    const animatedStyle = useAnimatedStyle(() => {
+        return {
+            opacity: opacity.value,
+            transform: [
+                { translateY: translateY.value },
+                { scale: scale.value },
+                { rotate: `${rotation.value}deg` }
+            ],
+        };
+    });
+
+    const handlePressIn = () => {
+        scale.value = withSpring(0.9, { damping: 10 });
+    };
+
+    const handlePressOut = () => {
+        // Bounce back with rotation
+        scale.value = withSequence(
+            withSpring(1.1, { damping: 10 }),
+            withSpring(1, { damping: 10 })
+        );
+        rotation.value = withSequence(
+            withSpring(90, { damping: 15 }),
+            withSpring(0, { damping: 15 })
+        );
+    };
+
+    const handlePress = () => {
+        onPress();
+    };
+
     return (
-        <TouchableOpacity
-            onPress={onPress}
-            activeOpacity={0.8}
+        <Animated.View
             style={[
                 styles.container,
                 {
@@ -28,10 +79,18 @@ export const FloatingButton: React.FC<FloatingButtonProps> = ({ onPress, icon = 
                     ...theme.shadows.lg,
                 },
                 style,
+                animatedStyle,
             ]}
         >
-            <Icon name={icon} size={28} color="#FFFFFF" />
-        </TouchableOpacity>
+            <Pressable
+                onPress={handlePress}
+                onPressIn={handlePressIn}
+                onPressOut={handlePressOut}
+                style={styles.pressable}
+            >
+                <Icon name={icon} size={28} color="#FFFFFF" />
+            </Pressable>
+        </Animated.View>
     );
 };
 
@@ -43,9 +102,13 @@ const styles = StyleSheet.create({
         width: 56,
         height: 56,
         borderRadius: 28,
+        zIndex: 999,
+    },
+    pressable: {
+        width: '100%',
+        height: '100%',
         justifyContent: 'center',
         alignItems: 'center',
-        zIndex: 999,
     },
     icon: {
         fontSize: moderateScale(28),
