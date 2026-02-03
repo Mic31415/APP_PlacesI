@@ -224,6 +224,7 @@ const styles = StyleSheet.create({
         fontSize: moderateScale(20),
         fontWeight: 'bold',
         marginTop: 10,
+        fontFamily: 'poppins_bold',
     },
     handle: {
         width: 40,
@@ -247,5 +248,6 @@ const styles = StyleSheet.create({
     optionText: {
         fontSize: moderateScale(18),
         fontWeight: '500',
+        fontFamily: 'poppins_medium',
     },
 });

@@ -133,10 +133,12 @@ const styles = StyleSheet.create({
     mapName: {
         fontSize: moderateScale(16),
         fontWeight: '600',
-        marginBottom: 4
+        marginBottom: 4,
+        fontFamily: 'poppins_semibold',
     },
     mapType: {
         fontSize: moderateScale(14),
         fontWeight: '400',
+        fontFamily: 'poppins_regular',
     },
 });

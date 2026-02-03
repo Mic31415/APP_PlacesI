@@ -91,6 +91,7 @@ const styles = StyleSheet.create({
         marginBottom: 8,
         fontSize: moderateScale(20),
         fontWeight: '600',
+        fontFamily: 'poppins_bold',
     },
     description: {
         textAlign: 'center',
@@ -98,5 +99,6 @@ const styles = StyleSheet.create({
         maxWidth: 300,
         fontSize: moderateScale(14),
         fontWeight: '400',
+        fontFamily: 'poppins_light',
     }
 });

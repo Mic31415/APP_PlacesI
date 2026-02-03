@@ -556,6 +556,14 @@ const styles = StyleSheet.create({
         fontSize: moderateScale(14),
         fontWeight: '500',
         marginBottom: 8,
+        marginTop: 16,
+        fontFamily: 'poppins_medium',
+    },
+    hint: {
+        fontSize: moderateScale(12),
+        fontWeight: '300',
+        marginTop: 4,
+        fontFamily: 'poppins_light',
     },
     inputContainer: {
         borderRadius: 12,
@@ -600,6 +608,11 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         borderColor: 'rgba(0,0,0,0.05)',
         flexDirection: 'row',
+    },
+    addressText: {
+        fontSize: moderateScale(14),
+        fontWeight: '400',
+        fontFamily: 'poppins_regular',
     },
     photoBtnText: {
         fontSize: moderateScale(13),

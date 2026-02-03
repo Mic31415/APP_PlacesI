@@ -271,7 +271,7 @@ export const CreateScreen: React.FC = () => {
                         style={[styles.createButton, { backgroundColor: theme.colors.primary }]}
                         onPress={handleCreate}
                     >
-                        <Text style={[theme.typography.bodyBold, { color: '#ffffff' }]}>Create Map</Text>
+                        <Text style={styles.createButtonText}>Create Map</Text>
                     </TouchableOpacity>
                 </Animated.View>
 
@@ -302,6 +302,7 @@ const styles = StyleSheet.create({
     headerText: {
         fontSize: moderateScale(20),
         fontWeight: '600',
+        fontFamily: 'poppins_bold',
     },
     headerBtn: {
         padding: 4,
@@ -314,6 +315,7 @@ const styles = StyleSheet.create({
         fontWeight: '500',
         marginBottom: 8,
         marginTop: 16,
+        fontFamily: 'poppins_medium',
     },
     inputContainer: {
         borderRadius: 12,
@@ -322,6 +324,7 @@ const styles = StyleSheet.create({
     },
     input: {
         fontSize: moderateScale(12),
+        fontFamily: 'poppins_regular',
     },
     emojiSelector: {
         flexDirection: 'column',
@@ -353,6 +356,7 @@ const styles = StyleSheet.create({
         fontSize: moderateScale(12),
         fontWeight: '500',
         marginLeft: 12,
+        fontFamily: 'poppins_medium',
     },
     createButton: {
         marginTop: 32,
@@ -363,5 +367,12 @@ const styles = StyleSheet.create({
     caption: {
         fontSize: moderateScale(12),
         fontWeight: '400',
+        fontFamily: 'poppins_regular',
+    },
+    createButtonText: {
+        fontSize: moderateScale(16),
+        fontWeight: '600',
+        fontFamily: 'poppins_semibold',
+        color: '#ffffff',
     },
 });

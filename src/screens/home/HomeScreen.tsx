@@ -145,5 +145,6 @@ const styles = StyleSheet.create({
     headerText: {
         fontSize: moderateScale(20),
         fontWeight: '600',
+        fontFamily: 'poppins_bold',
     },
 });

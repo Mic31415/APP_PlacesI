@@ -45,7 +45,7 @@ export const MapSearchBar: React.FC<MapSearchBarProps> = ({
                 <TextInput
                     style={[
                         styles.input,
-                        theme.typography.body,
+                        styles.inputText,
                         { color: theme.colors.text.primary[colorScheme] },
                     ]}
                     placeholder="Search places..."
@@ -116,5 +116,11 @@ const styles = StyleSheet.create({
         width: 24,
         height: 24,
         resizeMode: 'contain',
+    },
+    inputText: {
+        fontSize: moderateScale(16),
+        fontWeight: '400',
+        lineHeight: moderateScale(20),
+        fontFamily: 'poppins_regular',
     },
 });

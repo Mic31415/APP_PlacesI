@@ -146,7 +146,7 @@ export const PinDetailModal: React.FC<PinDetailModalProps> = ({ visible, pin, on
 
                                     {/* Title & Rating */}
                                     <View style={styles.headerRow}>
-                                        <Text style={[theme.typography.h2, { flex: 1, color: theme.colors.text.primary[colorScheme] }]}>
+                                        <Text style={[styles.pinTitle, { flex: 1, color: theme.colors.text.primary[colorScheme] }]}>
                                             {pin.emoji || '📍'} {pin.title}
                                         </Text>
                                         <View style={styles.ratingContainer}>
@@ -280,5 +280,12 @@ const styles = StyleSheet.create({
     actionLabel: {
         fontSize: moderateScale(12),
         fontWeight: '500',
-    }
+        fontFamily: 'poppins_medium',
+    },
+    pinTitle: {
+        fontSize: moderateScale(20),
+        fontWeight: '700',
+        lineHeight: moderateScale(30),
+        fontFamily: 'poppins_bold',
+    },
 });

@@ -8,6 +8,7 @@ import {
     TextInputProps as RNTextInputProps,
 } from 'react-native';
 import { useTheme } from '../../theme/ThemeContext';
+import { moderateScale } from '../../utils/responsive';
 
 interface TextInputProps extends RNTextInputProps {
     label?: string;
@@ -29,31 +30,34 @@ export const TextInput: React.FC<TextInputProps> = ({
     const { theme, colorScheme } = useTheme();
     const [isFocused, setIsFocused] = useState(false);
 
-    const inputStyle = {
-        ...theme.typography.body,
-        backgroundColor: theme.colors.surface[colorScheme],
-        borderWidth: 1.5,
-        borderColor: error
-            ? theme.colors.error
-            : isFocused
-                ? theme.colors.primary
-                : theme.colors.border[colorScheme],
-        borderRadius: theme.borderRadius.md,
-        paddingHorizontal: theme.spacing.md,
-        paddingVertical: theme.spacing.md,
-        color: theme.colors.text.primary[colorScheme],
-        minHeight: 44,
-    };
+    const inputStyle = [
+        styles.input,
+        {
+            backgroundColor: theme.colors.surface[colorScheme],
+            borderWidth: 1.5,
+            borderColor: error
+                ? theme.colors.error
+                : isFocused
+                    ? theme.colors.primary
+                    : theme.colors.border[colorScheme],
+            borderRadius: theme.borderRadius.md,
+            paddingHorizontal: theme.spacing.md,
+            paddingVertical: theme.spacing.md,
+            color: theme.colors.text.primary[colorScheme],
+        }
+    ];
 
     return (
         <View style={containerStyle}>
             {label && (
                 <Text
-                    style={{
-                        ...theme.typography.captionBold,
-                        color: theme.colors.text.secondary[colorScheme],
-                        marginBottom: theme.spacing.xs,
-                    }}
+                    style={[
+                        styles.label,
+                        {
+                            color: theme.colors.text.secondary[colorScheme],
+                            marginBottom: theme.spacing.xs,
+                        }
+                    ]}
                 >
                     {label}
                 </Text>
@@ -79,21 +83,25 @@ export const TextInput: React.FC<TextInputProps> = ({
                 >
                     {error && (
                         <Text
-                            style={{
-                                ...theme.typography.caption,
-                                color: theme.colors.error,
-                            }}
+                            style={[
+                                styles.errorText,
+                                {
+                                    color: theme.colors.error,
+                                }
+                            ]}
                         >
                             {error}
                         </Text>
                     )}
                     {showCharacterCount && maxLength && (
                         <Text
-                            style={{
-                                ...theme.typography.caption,
-                                color: theme.colors.text.tertiary[colorScheme],
-                                marginLeft: 'auto',
-                            }}
+                            style={[
+                                styles.charCountText,
+                                {
+                                    color: theme.colors.text.tertiary[colorScheme],
+                                    marginLeft: 'auto',
+                                }
+                            ]}
                         >
                             {value?.length || 0}/{maxLength}
                         </Text>
@@ -103,3 +111,27 @@ export const TextInput: React.FC<TextInputProps> = ({
         </View>
     );
 };
+
+const styles = StyleSheet.create({
+    input: {
+        fontSize: moderateScale(14),
+        fontWeight: '400',
+        fontFamily: 'poppins_regular',
+        minHeight: 44,
+    },
+    label: {
+        fontSize: moderateScale(12),
+        fontWeight: '600',
+        fontFamily: 'poppins_semibold',
+    },
+    errorText: {
+        fontSize: moderateScale(12),
+        fontWeight: '400',
+        fontFamily: 'poppins_regular',
+    },
+    charCountText: {
+        fontSize: moderateScale(12),
+        fontWeight: '400',
+        fontFamily: 'poppins_regular',
+    },
+});

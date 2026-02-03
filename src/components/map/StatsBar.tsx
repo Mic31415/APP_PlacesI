@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { useTheme } from '../../theme/ThemeContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { moderateScale } from '../../utils/responsive';
 
 interface StatsBarProps {
     count: number;
@@ -26,7 +27,7 @@ export const StatsBar: React.FC<StatsBarProps> = ({ count, label = 'places' }) =
         >
             <Text
                 style={[
-                    theme.typography.caption,
+                    styles.statsText,
                     { color: theme.colors.text.secondary[colorScheme], textAlign: 'center' },
                 ]}
             >
@@ -45,5 +46,11 @@ const styles = StyleSheet.create({
         right: 0,
         alignItems: 'center',
         justifyContent: 'center',
+    },
+    statsText: {
+        fontSize: moderateScale(12),
+        fontWeight: '400',
+        lineHeight: moderateScale(16),
+        fontFamily: 'poppins_regular',
     },
 });

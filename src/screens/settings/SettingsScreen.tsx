@@ -51,7 +51,7 @@ const SettingsRow: React.FC<SettingsRowProps> = ({
                 </View>
                 <View style={styles.rowRight}>
                     {value && (
-                        <Text style={[theme.typography.body, { color: theme.colors.text.secondary[colorScheme], marginRight: 8 }]}>
+                        <Text style={[styles.valueText, { color: theme.colors.text.secondary[colorScheme], marginRight: 8 }]}>
                             {value}
                         </Text>
                     )}
@@ -376,7 +376,7 @@ export const SettingsScreen: React.FC = () => {
                             onPress={handlePremium}
                             activeOpacity={0.7}
                         >
-                            <View style={[styles.premiumCard, { backgroundColor: '#EAF2FD' }]}>
+                            <View style={[styles.premiumCard, { backgroundColor: '#c1cee1ff' }]}>
                                 <View style={styles.rowLeft}>
                                     <Icon name="crown" size={36} color="#FFD700" style={styles.icon} />
                                     <View>
@@ -435,7 +435,7 @@ export const SettingsScreen: React.FC = () => {
                 <View style={styles.loadingModalOverlay}>
                     <View style={[styles.loadingModalContent, { backgroundColor: theme.colors.card[colorScheme] }]}>
                         <ActivityIndicator size="large" color={theme.colors.primary} />
-                        <Text style={[theme.typography.bodyBold, styles.loadingText, { color: theme.colors.text.primary[colorScheme] }]}>
+                        <Text style={[styles.loadingModalText, { color: theme.colors.text.primary[colorScheme] }]}>
                             Processing Data...
                         </Text>
                     </View>
@@ -467,7 +467,7 @@ export const SettingsScreen: React.FC = () => {
                                         }]}
                                         onPress={() => handleThemeSelect('light')}
                                     >
-                                        <Text style={[theme.typography.body, { color: theme.colors.text.primary[colorScheme] }]}>
+                                        <Text style={[styles.themeOptionLabel, { color: theme.colors.text.primary[colorScheme] }]}>
                                             {getThemeLabel('light')}
                                         </Text>
                                         {themeType === 'light' && (
@@ -485,7 +485,7 @@ export const SettingsScreen: React.FC = () => {
                                         }]}
                                         onPress={() => handleThemeSelect('dark')}
                                     >
-                                        <Text style={[theme.typography.body, { color: theme.colors.text.primary[colorScheme] }]}>
+                                        <Text style={[styles.themeOptionLabel, { color: theme.colors.text.primary[colorScheme] }]}>
                                             {getThemeLabel('dark')}
                                         </Text>
                                         {themeType === 'dark' && (
@@ -502,7 +502,7 @@ export const SettingsScreen: React.FC = () => {
                                         }]}
                                         onPress={() => handleThemeSelect('system')}
                                     >
-                                        <Text style={[theme.typography.body, { color: theme.colors.text.primary[colorScheme] }]}>
+                                        <Text style={[styles.themeOptionLabel, { color: theme.colors.text.primary[colorScheme] }]}>
                                             {getThemeLabel('system')}
                                         </Text>
                                         {themeType === 'system' && (
@@ -526,6 +526,7 @@ const styles = StyleSheet.create({
     headerText: {
         fontSize: moderateScale(20),
         fontWeight: '600',
+        fontFamily: 'poppins_bold',
     },
     scrollContent: {
         paddingHorizontal: 16,
@@ -541,6 +542,7 @@ const styles = StyleSheet.create({
         marginLeft: 16,
         textTransform: 'uppercase',
         opacity: 0.7,
+        fontFamily: 'poppins_semibold',
     },
     sectionContent: {
         // Removed
@@ -588,8 +590,11 @@ const styles = StyleSheet.create({
         borderRadius: 16,
         alignItems: 'center',
     },
-    loadingText: {
+    loadingModalText: {
         marginTop: 16,
+        fontSize: moderateScale(16),
+        fontWeight: '600',
+        fontFamily: 'poppins_semibold',
     },
     themeModalOverlay: {
         flex: 1,
@@ -625,17 +630,31 @@ const styles = StyleSheet.create({
     premiumCardText: {
         fontSize: moderateScale(16),
         fontWeight: '600',
+        fontFamily: 'poppins_semibold',
     },
     premiumCardCaption: {
         fontSize: moderateScale(14),
         fontWeight: '300',
+        fontFamily: 'poppins_light',
     },
     titleText: {
         fontSize: moderateScale(13),
         fontWeight: '400',
+        fontFamily: 'poppins_regular',
+    },
+    valueText: {
+        fontSize: moderateScale(14),
+        fontWeight: '400',
+        fontFamily: 'poppins_regular',
     },
     chooseThemeText: {
         fontSize: moderateScale(18),
         fontWeight: '500',
-    }
+        fontFamily: 'poppins_medium',
+    },
+    themeOptionLabel: {
+        fontSize: moderateScale(16),
+        fontWeight: '400',
+        fontFamily: 'poppins_regular',
+    },
 });

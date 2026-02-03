@@ -462,10 +462,10 @@ export const MapViewScreen: React.FC = () => {
                             >
                                 <Text style={styles.cardEmoji}>📍</Text>
                                 <View style={styles.cardContent}>
-                                    <Text style={[theme.typography.bodyBold, { color: theme.colors.text.primary[colorScheme] }]} numberOfLines={1}>
+                                    <Text style={[styles.pinCardTitle, { color: theme.colors.text.primary[colorScheme] }]} numberOfLines={1}>
                                         {item.title}
                                     </Text>
-                                    <Text style={[theme.typography.caption, { color: theme.colors.text.secondary[colorScheme] }]}>
+                                    <Text style={[styles.pinCardCoordinates, { color: theme.colors.text.secondary[colorScheme] }]}>
                                         {item.latitude.toFixed(4)}, {item.longitude.toFixed(4)}
                                     </Text>
                                 </View>
@@ -627,6 +627,7 @@ const styles = StyleSheet.create({
     headerText: {
         fontSize: moderateScale(20),
         fontWeight: '600',
+        fontFamily: 'poppins_bold',
     },
     // Bottom Sheet Styles
     bottomSheetOverlay: {
@@ -664,11 +665,13 @@ const styles = StyleSheet.create({
     sheetTitle: {
         fontSize: moderateScale(20),
         fontWeight: 'bold',
+        fontFamily: 'poppins_bold',
     },
     label: {
         fontSize: moderateScale(16),
         fontWeight: '500',
         marginBottom: 8,
+        fontFamily: 'poppins_medium',
     },
     inputContainer: {
         borderRadius: 12,
@@ -698,10 +701,22 @@ const styles = StyleSheet.create({
     cancelButtonText: {
         fontSize: moderateScale(16),
         fontWeight: 'bold',
+        fontFamily: 'poppins_bold',
     },
     saveButtonText: {
         color: '#FFFFFF',
         fontSize: moderateScale(16),
         fontWeight: 'bold',
+        fontFamily: 'poppins_bold',
+    },
+    pinCardTitle: {
+        fontSize: moderateScale(16),
+        fontWeight: '600',
+        fontFamily: 'poppins_semibold',
+    },
+    pinCardCoordinates: {
+        fontSize: moderateScale(12),
+        fontWeight: '400',
+        fontFamily: 'poppins_regular',
     },
 });

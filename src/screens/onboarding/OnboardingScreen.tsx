@@ -6,6 +6,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useTheme } from '../../theme/ThemeContext';
 import { RootStackParamList } from '../../types/navigation';
 import { Button } from '../../components/common';
+import { moderateScale } from '../../utils/responsive';
 import { OnboardingSlide } from './OnboardingSlide';
 import ReanimatedAnimated, { useSharedValue, useAnimatedStyle, withSpring, withTiming } from 'react-native-reanimated';
 
@@ -173,7 +174,7 @@ export const OnboardingScreen: React.FC = () => {
                 <ReanimatedAnimated.View style={[styles.textContainer, textAnimatedStyle]}>
                     <Text
                         style={[
-                            theme.typography.h2,
+                            styles.slideTitle,
                             {
                                 color: theme.colors.text.primary[colorScheme],
                                 textAlign: 'center',
@@ -185,7 +186,7 @@ export const OnboardingScreen: React.FC = () => {
                     </Text>
                     <Text
                         style={[
-                            theme.typography.body,
+                            styles.slideDescription,
                             {
                                 color: theme.colors.text.primary[colorScheme],
                                 textAlign: 'center',
@@ -245,5 +246,17 @@ const styles = StyleSheet.create({
     footer: {
         paddingBottom: 40,
         width: '100%',
+    },
+    slideTitle: {
+        fontSize: moderateScale(20),
+        fontWeight: '700',
+        lineHeight: moderateScale(30),
+        fontFamily: 'poppins_bold',
+    },
+    slideDescription: {
+        fontSize: moderateScale(16),
+        fontWeight: '300',
+        lineHeight: moderateScale(20),
+        fontFamily: 'poppins_light',
     },
 });

@@ -211,6 +211,7 @@ const styles = StyleSheet.create({
     headerTitle: {
         fontSize: moderateScale(16),
         fontWeight: '600',
+        fontFamily: 'poppins_bold',
     },
     bottomSheet: {
         position: 'absolute',
@@ -231,6 +232,7 @@ const styles = StyleSheet.create({
         fontWeight: '600',
         marginBottom: 8,
         textTransform: 'uppercase',
+        fontFamily: 'poppins_semibold',
     },
     addressContainer: {
         flexDirection: 'row',
@@ -240,6 +242,7 @@ const styles = StyleSheet.create({
         fontSize: moderateScale(16),
         fontWeight: '500',
         lineHeight: 22,
+        fontFamily: 'poppins_semibold',
     },
     confirmButton: {
         height: 50,
@@ -251,5 +254,6 @@ const styles = StyleSheet.create({
         color: '#FFFFFF',
         fontSize: moderateScale(16),
         fontWeight: '700',
+        fontFamily: 'poppins_bold',
     },
 });

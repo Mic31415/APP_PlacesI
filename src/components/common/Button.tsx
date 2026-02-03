@@ -92,7 +92,7 @@ export const Button: React.FC<ButtonProps> = ({
 
     const getTextStyle = (): TextStyle => {
         const baseTextStyle: TextStyle = {
-            ...theme.typography.button,
+            ...styles.buttonText,
         };
 
         const sizeTextStyles: Record<ButtonSize, TextStyle> = {
@@ -133,3 +133,11 @@ export const Button: React.FC<ButtonProps> = ({
         </TouchableOpacity>
     );
 };
+
+const styles = StyleSheet.create({
+    buttonText: {
+        fontSize: moderateScale(16),
+        fontWeight: '500',
+        fontFamily: 'poppins_medium',
+    },
+});

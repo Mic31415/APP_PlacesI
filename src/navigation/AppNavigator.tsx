@@ -57,7 +57,10 @@ const TabNavigator = () => {
                     paddingTop: 8,
                 },
                 tabBarLabelStyle: {
-                    ...theme.typography.caption,
+                    fontSize: 12,
+                    fontWeight: '400',
+                    lineHeight: 14,
+                    fontFamily: 'poppins_regular',
                     marginBottom: 4,
                 },
             }}
