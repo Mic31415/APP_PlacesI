@@ -11,9 +11,18 @@ const adUnitId = __DEV__
 
 let interstitial: InterstitialAd | null = null;
 let isLoaded = false;
+let isPremiumUser = false;
 
 export const InterstitialAdService = {
+    setPremiumStatus: (status: boolean) => {
+        isPremiumUser = status;
+        // If they just bought premium, maybe clear the ad instance?
+        // But simpler to just gate the show()
+    },
+
     load: () => {
+        if (isPremiumUser) return;
+
         // Create new instance if null
         if (!interstitial) {
             interstitial = InterstitialAd.createForAdRequest(adUnitId, {
@@ -44,6 +53,11 @@ export const InterstitialAdService = {
     },
 
     show: async () => {
+        if (isPremiumUser) {
+            console.log('Skipping ad for premium user');
+            return;
+        }
+
         if (isLoaded && interstitial) {
             await interstitial.show();
             isLoaded = false; // Reset loaded state immediately after show request

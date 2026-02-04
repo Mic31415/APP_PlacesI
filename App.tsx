@@ -5,6 +5,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { Provider as PaperProvider } from 'react-native-paper';
 import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import { ThemeProvider } from './src/theme/ThemeContext';
+import { PremiumProvider } from './src/context/PremiumContext';
 import { AppNavigator } from './src/navigation/AppNavigator';
 import { LogBox } from 'react-native';
 import Toast from 'react-native-toast-message';
@@ -55,18 +56,20 @@ function App() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
-        <ThemeProvider>
-          <PaperProvider>
-            <BottomSheetModalProvider>
-              <StatusBar
-                barStyle={isDarkMode ? 'light-content' : 'dark-content'}
-                backgroundColor="transparent"
-                translucent
-              />
-              <AppNavigator />
-            </BottomSheetModalProvider>
-          </PaperProvider>
-        </ThemeProvider>
+        <PremiumProvider>
+          <ThemeProvider>
+            <PaperProvider>
+              <BottomSheetModalProvider>
+                <StatusBar
+                  barStyle={isDarkMode ? 'light-content' : 'dark-content'}
+                  backgroundColor="transparent"
+                  translucent
+                />
+                <AppNavigator />
+              </BottomSheetModalProvider>
+            </PaperProvider>
+          </ThemeProvider>
+        </PremiumProvider>
       </SafeAreaProvider>
       <Toast />
     </GestureHandlerRootView>

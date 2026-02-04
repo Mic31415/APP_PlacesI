@@ -2,6 +2,10 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TouchableWithoutFeedback, Switch, Alert, Linking, Platform, Modal, ActivityIndicator } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+import { useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { RootStackParamList } from '../../types/navigation';
+import { usePremium } from '../../context/PremiumContext';
 import Share from 'react-native-share';
 import RNFS from 'react-native-fs';
 import DocumentPicker from 'react-native-document-picker';
@@ -90,6 +94,8 @@ export const SettingsScreen: React.FC = () => {
     const [isThemeModalVisible, setIsThemeModalVisible] = useState(false);
     const [notificationsEnabled, setNotificationsEnabled] = useState(true);
     const [isLoading, setIsLoading] = useState(false);
+    const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+    const { isPremium, presentPaywall } = usePremium();
 
     const { top, bottom } = useSafeAreaInsets();
 
@@ -250,7 +256,20 @@ export const SettingsScreen: React.FC = () => {
         setIsThemeModalVisible(false);
     };
 
-    const handlePremium = () => Alert.alert("Go Premium", "Premium flow coming soon!", undefined, { userInterfaceStyle: colorScheme === 'dark' ? 'dark' : 'light' });
+    const handlePremium = async () => {
+        if (isPremium) {
+            // Already premium, manage implementation logic? 
+            // RevenueCat UI doesn't have "Manage" - usually, we open OS settings
+            // But we can check if we want to show the paywall again or not.
+            // Let's stick to OS management for existing subscribers.
+            Alert.alert("Manage Subscription", "Manage your subscription settings?", [
+                { text: "Cancel", style: "cancel" },
+                { text: "Manage", onPress: () => Linking.openURL(Platform.OS === 'ios' ? 'https://apps.apple.com/account/subscriptions' : 'https://play.google.com/store/account/subscriptions') }
+            ]);
+        } else {
+            await presentPaywall();
+        }
+    };
 
     const handleExport = async () => {
         if (isLoading) return;
@@ -297,7 +316,7 @@ export const SettingsScreen: React.FC = () => {
 
                 setIsLoading(true);
                 // Tiny delay to ensure UI updates before heavy work starts
-                await new Promise(resolve => setTimeout(resolve, 100));
+                await new Promise(resolve => setTimeout(() => resolve(true), 100));
 
                 const fileContent = await RNFS.readFile(res.uri, 'utf8');
                 const jsonData = JSON.parse(fileContent);
@@ -380,8 +399,12 @@ export const SettingsScreen: React.FC = () => {
                                 <View style={styles.rowLeft}>
                                     <Icon name="crown" size={36} color="#FFD700" style={styles.icon} />
                                     <View>
-                                        <Text style={[styles.premiumCardText, { color: '000000' }]}>Go Premium</Text>
-                                        <Text style={[styles.premiumCardCaption, { color: '#3C3C43' }]}>Remove ads</Text>
+                                        <Text style={[styles.premiumCardText, { color: '000000' }]}>
+                                            {isPremium ? "You are Premium" : "Go Premium"}
+                                        </Text>
+                                        <Text style={[styles.premiumCardCaption, { color: '#3C3C43' }]}>
+                                            {isPremium ? "Manage Subscription" : "Remove ads"}
+                                        </Text>
                                     </View>
                                 </View>
                                 {/* Chevron Removed */}
