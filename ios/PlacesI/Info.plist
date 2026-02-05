@@ -18,6 +18,8 @@
 	<string>$(PRODUCT_NAME)</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
+	<key>ITSAppUsesNonExemptEncryption</key>
+    <false/>
 	<key>CFBundleShortVersionString</key>
 	<string>$(MARKETING_VERSION)</string>
 	<key>CFBundleSignature</key>
@@ -34,11 +36,13 @@
 		<true/>
 	</dict>
 	<key>GADApplicationIdentifier</key>
-	<string>ca-app-pub-3940256099942544~1458002511</string>
+	<string>ca-app-pub-8800063598896932~7178113712</string>
 	<key>NSUserTrackingUsageDescription</key>
 	<string>This identifier will be used to deliver personalized ads to you.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>This app needs access to your location to pinpoint your current position on the map.</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>This app needs access to your location to pinpoint your current position on the map even when the app is in the background.</string>
 	<key>NSCameraUsageDescription</key>
 	<string>This app needs access to your camera to take photos of your saved places.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
