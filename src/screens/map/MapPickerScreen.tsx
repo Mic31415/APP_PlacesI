@@ -1,6 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, Alert, Platform } from 'react-native';
 import MapView, { Region, PROVIDER_DEFAULT, PROVIDER_GOOGLE } from 'react-native-maps';
+import { GooglePlacesAutocomplete } from 'react-native-google-places-autocomplete';
+import Geolocation from '@react-native-community/geolocation';
+import { check, request, PERMISSIONS, RESULTS } from 'react-native-permissions';
 import Geocoder from 'react-native-geocoding';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
@@ -31,6 +34,8 @@ export const MapPickerScreen: React.FC = () => {
         longitudeDelta: 0.0421,
     });
 
+    const [isLocating, setIsLocating] = useState<boolean>(!initialRegion);
+
     // We track the center coordinate as the user drags
     const [centerCoordinate, setCenterCoordinate] = useState<{ latitude: number, longitude: number }>(
         initialRegion ? { latitude: initialRegion.latitude, longitude: initialRegion.longitude } : { latitude: 37.78825, longitude: -122.4324 }
@@ -40,10 +45,67 @@ export const MapPickerScreen: React.FC = () => {
     const [isLoadingAddress, setIsLoadingAddress] = useState<boolean>(false);
     const debounceTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-    // Initial reverse geocode
+    // Initial reverse geocode & Current Location
     useEffect(() => {
-        reverseGeocode(centerCoordinate.latitude, centerCoordinate.longitude);
+        if (initialRegion) {
+            reverseGeocode(centerCoordinate.latitude, centerCoordinate.longitude);
+        } else {
+            getCurrentLocation();
+        }
     }, []);
+
+    const getCurrentLocation = async () => {
+        setIsLocating(true);
+        try {
+            const permission = Platform.select({
+                ios: PERMISSIONS.IOS.LOCATION_WHEN_IN_USE,
+                android: PERMISSIONS.ANDROID.ACCESS_FINE_LOCATION,
+            });
+
+            if (!permission) {
+                setIsLocating(false);
+                return;
+            }
+
+            const result = await check(permission);
+
+            if (result === RESULTS.DENIED) {
+                await request(permission);
+            }
+
+            Geolocation.getCurrentPosition(
+                (position) => {
+                    const { latitude, longitude } = position.coords;
+                    const newRegion = {
+                        latitude,
+                        longitude,
+                        latitudeDelta: 0.005, // Zoom in closer for current location
+                        longitudeDelta: 0.002,
+                    };
+
+                    setRegion(newRegion);
+                    setCenterCoordinate({ latitude, longitude });
+                    mapRef.current?.animateToRegion(newRegion, 1000);
+
+                    // Fetch address for current location
+                    reverseGeocode(latitude, longitude);
+                    setIsLocating(false);
+                },
+                (error) => {
+                    console.log('Error getting location:', error);
+                    // Fallback to default if failed, already set in state
+                    reverseGeocode(centerCoordinate.latitude, centerCoordinate.longitude);
+                    setIsLocating(false);
+                },
+                { enableHighAccuracy: true, timeout: 15000, maximumAge: 10000 }
+            );
+        } catch (error) {
+            console.error("Location permission error:", error);
+            // Fallback
+            reverseGeocode(centerCoordinate.latitude, centerCoordinate.longitude);
+            setIsLocating(false);
+        }
+    };
 
     const reverseGeocode = async (lat: number, lng: number) => {
         setIsLoadingAddress(true);
@@ -94,41 +156,135 @@ export const MapPickerScreen: React.FC = () => {
     };
 
     const handleCurrentLocation = () => {
-        // Basic current location logic would go here, reusing what we have in CreatePin logic or simply relying on MapView's showUserLocation if enabled
-        // For now let's just use the built-in map button if possible, but custom is better.
-        // Skipping implementation details to keep it simple as requested ("Pick on Map" focus).
+        getCurrentLocation();
     };
 
     return (
         <View style={[styles.container, { backgroundColor: theme.colors.background[colorScheme] }]}>
-            <MapView
-                ref={mapRef}
-                provider={PROVIDER_GOOGLE}
-                style={styles.map}
-                initialRegion={region}
-                onRegionChangeComplete={onRegionChangeComplete}
-                showsUserLocation={true}
-                showsMyLocationButton={true}
-            />
 
-            {/* Center Fixed Pin */}
-            <View style={styles.centerMarkerContainer} pointerEvents="none">
-                <Icon name="map-marker" size={48} color={theme.colors.primary} style={{ marginBottom: 48 }} />
-                {/* marginBottom lifts the pin tip to center roughly */}
-            </View>
-
-            {/* Header Overlay */}
-            <View style={[styles.headerOverlay, { top: insets.top + 16 }]}>
+            {/* Search Bar Overlay */}
+            <View style={{ position: 'absolute', top: insets.top + 10, left: 10, right: 10, zIndex: 1, flexDirection: 'row', alignItems: 'flex-start' }}>
                 <TouchableOpacity
-                    style={[styles.backButton, { backgroundColor: theme.colors.surface[colorScheme] }]}
-                    onPress={handleCancel}
+                    onPress={() => navigation.goBack()}
+                    style={{
+                        width: 44,
+                        height: 44,
+                        backgroundColor: theme.colors.surface[colorScheme],
+                        borderRadius: 8,
+                        justifyContent: 'center',
+                        alignItems: 'center',
+                        marginRight: 10,
+                        shadowColor: "#000",
+                        shadowOffset: { width: 0, height: 2 },
+                        shadowOpacity: 0.1,
+                        shadowRadius: 4,
+                        elevation: 3,
+                    }}
                 >
-                    <Icon name="arrow-left" size={24} color={theme.colors.text.primary[colorScheme]} />
+                    <Icon name="chevron-left" size={30} color={theme.colors.text.primary[colorScheme]} />
                 </TouchableOpacity>
-                <View style={[styles.headerTitleContainer, { backgroundColor: theme.colors.surface[colorScheme] }]}>
-                    <Text style={[styles.headerTitle, { color: theme.colors.text.primary[colorScheme] }]}>Pick Location</Text>
-                </View>
+
+                <GooglePlacesAutocomplete
+                    placeholder='Search for a place'
+                    onPress={(data, details = null) => {
+                        // 'details' is provided when fetchDetails = true
+                        if (details) {
+                            const { lat, lng } = details.geometry.location;
+                            const newRegion = {
+                                latitude: lat,
+                                longitude: lng,
+                                latitudeDelta: 0.005,
+                                longitudeDelta: 0.005,
+                            };
+                            mapRef.current?.animateToRegion(newRegion, 1000);
+                            setRegion(newRegion);
+                            setCenterCoordinate({ latitude: lat, longitude: lng });
+                            reverseGeocode(lat, lng);
+                        }
+                    }}
+                    query={{
+                        key: AppConfig.GOOGLE_MAPS_API_KEY,
+                        language: 'en',
+                    }}
+                    fetchDetails={true}
+                    styles={{
+                        textInputContainer: {
+                            backgroundColor: 'transparent',
+                        },
+                        textInput: {
+                            height: 44,
+                            color: theme.colors.text.primary[colorScheme],
+                            fontSize: 16,
+                            backgroundColor: theme.colors.surface[colorScheme],
+                            borderRadius: 8,
+                            shadowColor: "#000",
+                            shadowOffset: { width: 0, height: 2 },
+                            shadowOpacity: 0.1,
+                            shadowRadius: 4,
+                            elevation: 3,
+                        },
+                        listView: {
+                            backgroundColor: theme.colors.surface[colorScheme],
+                            marginTop: 8,
+                            borderRadius: 8,
+                            elevation: 3,
+                            width: '100%'
+                        },
+                        row: {
+                            backgroundColor: theme.colors.surface[colorScheme],
+                            padding: 13,
+                            paddingRight: 24, // Added more space on the right
+                            height: 44,
+                            flexDirection: 'row',
+                        },
+                        separator: {
+                            height: 0.5,
+                            backgroundColor: theme.colors.border[colorScheme],
+                        },
+                        description: {
+                            color: theme.colors.text.primary[colorScheme],
+                        },
+                        poweredContainer: {
+                            justifyContent: 'flex-end',
+                            alignItems: 'center',
+                            borderBottomRightRadius: 5,
+                            borderBottomLeftRadius: 5,
+                            borderColor: '#c8c7cc',
+                            borderTopWidth: 0.5,
+                            backgroundColor: theme.colors.surface[colorScheme],
+                        },
+                        powered: {
+                            tintColor: theme.colors.text.tertiary[colorScheme],
+                        },
+                    }}
+                    enablePoweredByContainer={false}
+                />
             </View>
+
+            {isLocating ? (
+                <View style={[styles.centerMarkerContainer, { backgroundColor: theme.colors.background[colorScheme], zIndex: 20 }]}>
+                    <ActivityIndicator size="large" color={theme.colors.primary} />
+                    <Text style={{ marginTop: 16, color: theme.colors.text.secondary[colorScheme], fontFamily: 'poppins_medium' }}>Finding your location...</Text>
+                </View>
+            ) : (
+                <>
+                    <MapView
+                        ref={mapRef}
+                        provider={PROVIDER_DEFAULT}
+                        style={styles.map}
+                        initialRegion={region}
+                        onRegionChangeComplete={onRegionChangeComplete}
+                        showsUserLocation={true}
+                        showsMyLocationButton={true}
+                    />
+
+                    {/* Center Fixed Pin */}
+                    <View style={styles.centerMarkerContainer} pointerEvents="none">
+                        <Icon name="map-marker" size={48} color={theme.colors.primary} style={{ marginBottom: 48 }} />
+                        {/* marginBottom lifts the pin tip to center roughly */}
+                    </View>
+                </>
+            )}
 
             {/* Bottom Sheet for Address & Confirm */}
             <View style={[styles.bottomSheet, { backgroundColor: theme.colors.surface[colorScheme], paddingBottom: insets.bottom + 16 }]}>
@@ -157,7 +313,7 @@ export const MapPickerScreen: React.FC = () => {
                     <Text style={styles.confirmButtonText}>Confirm Location</Text>
                 </TouchableOpacity>
             </View>
-        </View>
+        </View >
     );
 };
 

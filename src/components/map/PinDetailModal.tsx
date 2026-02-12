@@ -169,10 +169,10 @@ export const PinDetailModal: React.FC<PinDetailModalProps> = ({ visible, pin, on
                                     ) : null}
 
                                     {/* Info Rows */}
-                                    <View style={styles.infoRow}>
-                                        <Icon name="map-marker" size={20} color={theme.colors.primary} />
-                                        <Text style={[styles.infoText, { color: theme.colors.text.primary[colorScheme] }]}>
-                                            Lat: {pin.latitude?.toFixed(4)}, Lng: {pin.longitude?.toFixed(4)}
+                                    <View style={styles.coordinatesContainer}>
+                                        <Icon name="map-marker" size={16} color={theme.colors.text.secondary[colorScheme]} />
+                                        <Text style={[styles.coordinates, { color: theme.colors.text.secondary[colorScheme] }]}>
+                                            {pin.address || `${pin.latitude.toFixed(6)}, ${pin.longitude.toFixed(6)}`}
                                         </Text>
                                     </View>
                                     <View style={styles.infoRow}>
@@ -265,6 +265,15 @@ const styles = StyleSheet.create({
     },
     infoText: {
         fontSize: moderateScale(15),
+    },
+    coordinatesContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: 8,
+        gap: 8,
+    },
+    coordinates: {
+        fontSize: moderateScale(14),
     },
     actions: {
         flexDirection: 'row',

@@ -48,7 +48,7 @@ export const MapSearchBar: React.FC<MapSearchBarProps> = ({
                         styles.inputText,
                         { color: theme.colors.text.primary[colorScheme] },
                     ]}
-                    placeholder="Search places..."
+                    placeholder="Search by title"
                     placeholderTextColor={theme.colors.text.tertiary[colorScheme]}
                     value={value}
                     onChangeText={onChangeText}

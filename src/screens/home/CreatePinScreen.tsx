@@ -161,6 +161,7 @@ export const CreatePinScreen: React.FC = () => {
                     longitude: coordinates?.longitude,
                     rating: rating,
                     emoji: selectedEmoji,
+                    address: location, // Save address
                     imageUri: imageUri || undefined,
                 });
             } else {
@@ -173,6 +174,7 @@ export const CreatePinScreen: React.FC = () => {
                     longitude: coordinates ? coordinates.longitude : 139.6917 + (Math.random() * 0.01),
                     rating: rating,
                     emoji: selectedEmoji,
+                    address: location, // Save address
                     imageUri: imageUri || undefined,
                 });
             }

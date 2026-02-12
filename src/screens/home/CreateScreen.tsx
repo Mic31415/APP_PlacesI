@@ -158,7 +158,11 @@ export const CreateScreen: React.FC = () => {
         );
 
         try {
-            await databaseService.createMap(mapName.trim(), selectedEmoji, mapType);
+            await databaseService.createMap({
+                name: mapName.trim(),
+                emoji: selectedEmoji,
+                type: mapType
+            });
 
             // Show interstitial ad if not premium
             await InterstitialAdService.show();
@@ -320,11 +324,12 @@ const styles = StyleSheet.create({
     inputContainer: {
         borderRadius: 12,
         paddingHorizontal: 12,
-        paddingVertical: 12,
+        paddingVertical: 5,
     },
     input: {
         fontSize: moderateScale(12),
         fontFamily: 'poppins_regular',
+        paddingVertical: 12,
     },
     emojiSelector: {
         flexDirection: 'column',

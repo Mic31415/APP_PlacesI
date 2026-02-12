@@ -24,133 +24,91 @@ export interface PinData {
     imageUri?: string;
     rating: number;
     emoji?: string;
+    address?: string; // New field
     createdAt: number;
 }
 
-const DATABASE_NAME = 'PlacesI.db';
-
-export class DatabaseService {
+class DatabaseService {
     private db: SQLite.SQLiteDatabase | null = null;
 
-    // Initialize Database and Create Tables
-    public async initDatabase(): Promise<void> {
-        if (this.db) return; // Already initialized
-
-        try {
-            this.db = await SQLite.openDatabase({
-                name: DATABASE_NAME,
-                location: 'default',
-            });
-
-            await this.createTables();
-            console.log('Database initialized successfully');
-        } catch (error) {
-            console.error('Failed to initialize database:', error);
-            throw error;
-        }
+    private generateUUID(): string {
+        return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
+            var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
+            return v.toString(16);
+        });
     }
 
-    private async createTables(): Promise<void> {
-        if (!this.db) return;
-
-        const createMapsTable = `
-            CREATE TABLE IF NOT EXISTS Maps (
-                id TEXT PRIMARY KEY,
-                name TEXT NOT NULL,
-                emoji TEXT NOT NULL,
-                type TEXT DEFAULT 'exact',
-                created_at INTEGER NOT NULL
-            );
-        `;
-
-        const createPinsTable = `
-            CREATE TABLE IF NOT EXISTS Pins (
-                id TEXT PRIMARY KEY,
-                map_id TEXT NOT NULL,
-                title TEXT NOT NULL,
-                description TEXT,
-                latitude REAL NOT NULL,
-                longitude REAL NOT NULL,
-                image_uri TEXT,
-                rating INTEGER DEFAULT 0,
-                emoji TEXT,
-                created_at INTEGER NOT NULL,
-                FOREIGN KEY (map_id) REFERENCES Maps(id) ON DELETE CASCADE
-            );
-        `;
+    public async initDatabase(): Promise<void> {
+        if (this.db) return;
 
         try {
+            this.db = await SQLite.openDatabase({ name: 'PlaceI.db', location: 'default' });
+
+            const createMapsTable = `
+                CREATE TABLE IF NOT EXISTS Maps (
+                    id TEXT PRIMARY KEY,
+                    name TEXT NOT NULL,
+                    emoji TEXT NOT NULL,
+                    type TEXT DEFAULT 'exact',
+                    created_at INTEGER NOT NULL
+                );
+            `;
+
+            const createPinsTable = `
+                CREATE TABLE IF NOT EXISTS Pins (
+                    id TEXT PRIMARY KEY,
+                    map_id TEXT NOT NULL,
+                    title TEXT NOT NULL,
+                    description TEXT,
+                    latitude REAL NOT NULL,
+                    longitude REAL NOT NULL,
+                    image_uri TEXT,
+                    rating INTEGER DEFAULT 0,
+                    emoji TEXT,
+                    address TEXT, -- New column
+                    created_at INTEGER NOT NULL,
+                    FOREIGN KEY (map_id) REFERENCES Maps(id) ON DELETE CASCADE
+                );
+            `;
+
             await this.db.executeSql(createMapsTable);
             await this.db.executeSql(createPinsTable);
 
-            // Create Indices for Performance
-            await this.db.executeSql('CREATE INDEX IF NOT EXISTS idx_pins_map_id ON Pins (map_id);');
-            await this.db.executeSql('CREATE INDEX IF NOT EXISTS idx_maps_created_at ON Maps (created_at);');
-            await this.db.executeSql('CREATE INDEX IF NOT EXISTS idx_pins_created_at ON Pins (created_at);');
+            // Indices
+            await this.db.executeSql('CREATE INDEX IF NOT EXISTS idx_pins_map_id ON Pins(map_id);');
 
             // Migrations
             try {
                 await this.db.executeSql('ALTER TABLE Pins ADD COLUMN emoji TEXT;');
-            } catch (e) {
-                // Ignore error if column already exists
-            }
+            } catch (e) { /* ignore */ }
+            try {
+                await this.db.executeSql('ALTER TABLE Pins ADD COLUMN address TEXT;');
+            } catch (e) { /* ignore */ }
+
         } catch (error) {
-            console.error('Failed to create tables:', error);
-            throw error;
-        }
-    }
-
-    // --- Maps CRUD ---
-
-    public async createMap(name: string, emoji: string, type: 'country' | 'state' | 'exact'): Promise<MapData> {
-        if (!this.db) await this.initDatabase();
-
-        const id = this.generateUUID();
-        const createdAt = Date.now();
-
-        try {
-            // Check if 'type' column exists, if not, we might need a migration in a real app
-            // For now, we'll assume the schema is fresh or we treat 'type' as metadata if schema is rigid
-            // But wait, the schema definition above DID NOT include 'type'. 
-            // I must update the CREATE TABLE schema first if I want to persist it properly.
-
-            // Re-evaluating: The CREATE STATEMENT didn't have 'type'.
-            // I will implement it assuming I fix the table schema too.
-            await this.db!.executeSql(
-                'INSERT INTO Maps (id, name, emoji, type, created_at) VALUES (?, ?, ?, ?, ?)',
-                [id, name, emoji, type, createdAt]
-            );
-            return { id, name, emoji, type, createdAt, pinCount: 0 };
-        } catch (error) {
-            console.error('Failed to create map:', error);
-            throw error;
+            console.error('Database init failed:', error);
         }
     }
 
     public async getMaps(): Promise<MapData[]> {
         if (!this.db) await this.initDatabase();
-
         try {
-            // Get maps with pin count
-            const query = `
-                SELECT m.*, COUNT(p.id) as pinCount 
-                FROM Maps m 
-                LEFT JOIN Pins p ON m.id = p.map_id 
-                GROUP BY m.id 
-                ORDER BY m.created_at DESC
-            `;
-            const [results] = await this.db!.executeSql(query);
-
+            const [results] = await this.db!.executeSql('SELECT * FROM Maps ORDER BY created_at DESC');
             const maps: MapData[] = [];
             for (let i = 0; i < results.rows.length; i++) {
                 const item = results.rows.item(i);
+
+                // Get pin count for this map
+                const [countResult] = await this.db!.executeSql('SELECT COUNT(*) as count FROM Pins WHERE map_id = ?', [item.id]);
+                const count = countResult.rows.item(0).count;
+
                 maps.push({
                     id: item.id,
                     name: item.name,
                     emoji: item.emoji,
-                    type: (item.type === 'country' || item.type === 'state' || item.type === 'exact') ? item.type : undefined,
+                    type: item.type,
                     createdAt: item.created_at,
-                    pinCount: item.pinCount || 0,
+                    pinCount: count
                 });
             }
             return maps;
@@ -160,24 +118,38 @@ export class DatabaseService {
         }
     }
 
-    public async deleteMap(id: string): Promise<void> {
+    public async createMap(map: Omit<MapData, 'id' | 'createdAt' | 'pinCount'>): Promise<MapData> {
         if (!this.db) await this.initDatabase();
-
+        const id = this.generateUUID();
+        const createdAt = Date.now();
         try {
-            await this.db!.executeSql('DELETE FROM Maps WHERE id = ?', [id]);
+            await this.db!.executeSql(
+                'INSERT INTO Maps (id, name, emoji, type, created_at) VALUES (?, ?, ?, ?, ?)',
+                [id, map.name, map.emoji, map.type || 'exact', createdAt]
+            );
+            return { ...map, id, createdAt, pinCount: 0 };
         } catch (error) {
-            console.error('Failed to delete map:', error);
+            console.error('Failed to create map:', error);
             throw error;
         }
     }
 
-    public async updateMap(id: string, name: string, emoji: string): Promise<void> {
+    public async updateMap(id: string, updates: Partial<Omit<MapData, 'id' | 'createdAt' | 'pinCount'>>): Promise<void> {
         if (!this.db) await this.initDatabase();
+
+        const fields: string[] = [];
+        const values: any[] = [];
+
+        if (updates.name !== undefined) { fields.push('name = ?'); values.push(updates.name); }
+        if (updates.emoji !== undefined) { fields.push('emoji = ?'); values.push(updates.emoji); }
+        if (updates.type !== undefined) { fields.push('type = ?'); values.push(updates.type); }
+
+        if (fields.length === 0) return;
 
         try {
             await this.db!.executeSql(
-                'UPDATE Maps SET name = ?, emoji = ? WHERE id = ?',
-                [name, emoji, id]
+                `UPDATE Maps SET ${fields.join(', ')} WHERE id = ?`,
+                [...values, id]
             );
         } catch (error) {
             console.error('Failed to update map:', error);
@@ -185,7 +157,15 @@ export class DatabaseService {
         }
     }
 
-    // --- Pins CRUD ---
+    public async deleteMap(id: string): Promise<void> {
+        if (!this.db) await this.initDatabase();
+        try {
+            await this.db!.executeSql('DELETE FROM Maps WHERE id = ?', [id]);
+        } catch (error) {
+            console.error('Failed to delete map:', error);
+            throw error;
+        }
+    }
 
     public async addPin(pin: Omit<PinData, 'id' | 'createdAt'>): Promise<PinData> {
         if (!this.db) await this.initDatabase();
@@ -195,9 +175,9 @@ export class DatabaseService {
 
         try {
             await this.db!.executeSql(
-                `INSERT INTO Pins (id, map_id, title, description, latitude, longitude, image_uri, rating, created_at) 
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-                [id, pin.mapId, pin.title, pin.description || '', pin.latitude, pin.longitude, pin.imageUri || null, pin.rating, createdAt]
+                `INSERT INTO Pins (id, map_id, title, description, latitude, longitude, image_uri, rating, emoji, address, created_at) 
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                [id, pin.mapId, pin.title, pin.description || '', pin.latitude, pin.longitude, pin.imageUri || null, pin.rating, pin.emoji || '📍', pin.address || '', createdAt]
             );
             return { ...pin, id, createdAt };
         } catch (error) {
@@ -228,6 +208,7 @@ export class DatabaseService {
                     imageUri: item.image_uri,
                     rating: item.rating,
                     emoji: item.emoji || '📍',
+                    address: item.address || '', // Retrieve address
                     createdAt: item.created_at,
                 });
             }
@@ -261,6 +242,7 @@ export class DatabaseService {
         if (updates.longitude !== undefined) { fields.push('longitude = ?'); values.push(updates.longitude); }
         if (updates.rating !== undefined) { fields.push('rating = ?'); values.push(updates.rating); }
         if (updates.emoji !== undefined) { fields.push('emoji = ?'); values.push(updates.emoji); }
+        if (updates.address !== undefined) { fields.push('address = ?'); values.push(updates.address); }
         if (updates.imageUri !== undefined) { fields.push('image_uri = ?'); values.push(updates.imageUri); }
 
         if (fields.length === 0) return;
@@ -366,8 +348,8 @@ export class DatabaseService {
 
                 await this.db!.executeSql(
                     `INSERT OR REPLACE INTO Pins 
-                    (id, map_id, title, description, latitude, longitude, image_uri, rating, emoji, created_at) 
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                    (id, map_id, title, description, latitude, longitude, image_uri, rating, emoji, address, created_at) 
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
                     [
                         pin.id,
                         pin.map_id,
@@ -378,6 +360,7 @@ export class DatabaseService {
                         imageUri,
                         pin.rating,
                         pin.emoji,
+                        pin.address || '',
                         pin.created_at
                     ]
                 );
@@ -427,14 +410,6 @@ export class DatabaseService {
             console.error('Failed to export map:', error);
             throw error;
         }
-    }
-
-    // --- Helpers ---
-    private generateUUID(): string {
-        return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
-            var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
-            return v.toString(16);
-        });
     }
 }
 

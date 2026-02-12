@@ -1,5 +1,6 @@
 import React, { useState, useRef, useMemo, useCallback, useEffect } from 'react';
-import { View, StyleSheet, TouchableOpacity, Text, FlatList, Alert, Modal, TextInput, Share, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, Text, FlatList, Alert, Modal, TextInput, Share, KeyboardAvoidingView, Platform, PermissionsAndroid, ActivityIndicator } from 'react-native';
+import Geolocation from '@react-native-community/geolocation';
 import MapView, { PROVIDER_DEFAULT } from 'react-native-maps';
 import { useNavigation, useRoute, RouteProp, useFocusEffect } from '@react-navigation/native';
 import { useTheme } from '../../theme/ThemeContext';
@@ -25,6 +26,7 @@ import Animated, {
 // ... imports
 import { databaseService, PinData } from '../../services/DatabaseService';
 import { moderateScale } from '../../utils/responsive';
+import { RatingPicker } from '../../components/common/RatingPicker';
 
 // Default Region (Tokyo)
 const INITIAL_REGION = {
@@ -59,14 +61,46 @@ export const MapViewScreen: React.FC = () => {
     const [editEmoji, setEditEmoji] = useState(emoji);
     const [emojiPickerVisible, setEmojiPickerVisible] = useState(false);
 
+    // Filter & Sort State
+    const [filterModalVisible, setFilterModalVisible] = useState(false);
+    const [sortBy, setSortBy] = useState<'newest' | 'oldest' | 'az' | 'rating'>('newest');
+    const [minRating, setMinRating] = useState(0);
+
     const filteredPins = useMemo(() => {
-        if (!searchQuery.trim()) return pins;
-        const query = searchQuery.toLowerCase();
-        return pins.filter(pin =>
-            pin.title.toLowerCase().includes(query) ||
-            (pin.description && pin.description.toLowerCase().includes(query))
-        );
-    }, [pins, searchQuery]);
+        let result = pins;
+
+        // 1. Search Query
+        if (searchQuery.trim()) {
+            const query = searchQuery.toLowerCase();
+            result = result.filter(pin =>
+                pin.title.toLowerCase().includes(query) ||
+                (pin.description && pin.description.toLowerCase().includes(query))
+            );
+        }
+
+        // 2. Filter by Rating
+        if (minRating > 0) {
+            result = result.filter(pin => (pin.rating || 0) >= minRating);
+        }
+
+        // 3. Sort
+        result = [...result].sort((a, b) => {
+            switch (sortBy) {
+                case 'newest':
+                    return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+                case 'oldest':
+                    return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+                case 'az':
+                    return a.title.localeCompare(b.title);
+                case 'rating':
+                    return (b.rating || 0) - (a.rating || 0);
+                default:
+                    return 0;
+            }
+        });
+
+        return result;
+    }, [pins, searchQuery, sortBy, minRating]);
 
     // Animation values for smooth, soft animations
     const searchBarOpacity = useSharedValue(0);
@@ -91,19 +125,102 @@ export const MapViewScreen: React.FC = () => {
     const editButtonsOpacity = useSharedValue(0);
     const editButtonsTranslateY = useSharedValue(20);
 
+    // Filter Modal Animation Values
+    const filterModalBackdropOpacity = useSharedValue(0);
+    const filterModalTranslateY = useSharedValue(500);
+
+    const [initialRegion, setInitialRegion] = useState<any>(null);
+    const [isMapReady, setIsMapReady] = useState(false);
+
     useFocusEffect(
         React.useCallback(() => {
             if (!mapId) return;
 
-            const loadPins = async () => {
+            const prepareMap = async () => {
                 try {
+                    // 1. Fetch Pins
                     const fetchedPins = await databaseService.getPins(mapId);
+                    console.log('[MapView] Fetched pins data:', JSON.stringify(fetchedPins, null, 2));
                     setPins(fetchedPins);
+
+                    if (fetchedPins.length > 0) {
+                        // Option A: Fit to Pins
+                        // Calculate bounding box or center
+                        // For initialRegion, we can just grab the first pin or calculate average
+                        // But MapView needs a region.
+                        // Let's rely on fitToCoordinates AFTER mount, but set a sane initial region
+                        // or just set initialRegion to the first pin.
+
+                        const firstPin = fetchedPins[0];
+                        setInitialRegion({
+                            latitude: firstPin.latitude,
+                            longitude: firstPin.longitude,
+                            latitudeDelta: 0.1,
+                            longitudeDelta: 0.1,
+                        });
+                        setIsMapReady(true);
+
+                        // We will still call fitToCoordinates after mount to be precise
+
+                    } else {
+                        // Option B: No Pins -> User Location
+                        const requestLocation = async () => {
+                            let hasPermission = false;
+                            if (Platform.OS === 'android') {
+                                hasPermission = await PermissionsAndroid.check(PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION);
+                                if (!hasPermission) {
+                                    const granted = await PermissionsAndroid.request(PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION);
+                                    hasPermission = granted === PermissionsAndroid.RESULTS.GRANTED;
+                                }
+                            } else {
+                                Geolocation.requestAuthorization();
+                                hasPermission = true; // Assume optimistically or check status
+                            }
+
+                            if (hasPermission) {
+                                Geolocation.getCurrentPosition(
+                                    (position) => {
+                                        setInitialRegion({
+                                            latitude: position.coords.latitude,
+                                            longitude: position.coords.longitude,
+                                            latitudeDelta: 0.05,
+                                            longitudeDelta: 0.05,
+                                        });
+                                        setIsMapReady(true);
+                                    },
+                                    (error) => {
+                                        console.log('Error getting location', error);
+                                        // Fallback to default if location fails
+                                        setInitialRegion({
+                                            latitude: 35.6895, // Tokyo fallback
+                                            longitude: 139.6917,
+                                            latitudeDelta: 0.1,
+                                            longitudeDelta: 0.1,
+                                        });
+                                        setIsMapReady(true);
+                                    },
+                                    { enableHighAccuracy: false, timeout: 5000, maximumAge: 10000 }
+                                );
+                            } else {
+                                // Fallback if no permission
+                                setInitialRegion({
+                                    latitude: 35.6895,
+                                    longitude: 139.6917,
+                                    latitudeDelta: 0.1,
+                                    longitudeDelta: 0.1,
+                                });
+                                setIsMapReady(true);
+                            }
+                        };
+                        requestLocation();
+                    }
                 } catch (error) {
-                    console.error('Failed to load pins:', error);
+                    console.error('Failed to prepare map:', error);
+                    setIsMapReady(true); // Show map anyway (default)
                 }
             };
-            loadPins();
+
+            prepareMap();
 
             // Trigger smooth entrance animations
             // Reset to initial state
@@ -181,7 +298,7 @@ export const MapViewScreen: React.FC = () => {
         }
 
         try {
-            await databaseService.updateMap(mapId, editName.trim(), editEmoji);
+            await databaseService.updateMap(mapId, { name: editName.trim(), emoji: editEmoji });
             setCurrentMapName(editName.trim());
             setCurrentMapEmoji(editEmoji);
             setEditModalVisible(false);
@@ -400,6 +517,25 @@ export const MapViewScreen: React.FC = () => {
         }
     }, [editModalVisible]);
 
+    // Trigger Filter Modal animations
+    const filterModalBackdropAnimatedStyle = useAnimatedStyle(() => ({
+        opacity: filterModalBackdropOpacity.value,
+    }));
+
+    const filterModalAnimatedStyle = useAnimatedStyle(() => ({
+        transform: [{ translateY: filterModalTranslateY.value }],
+    }));
+
+    useEffect(() => {
+        if (filterModalVisible) {
+            filterModalBackdropOpacity.value = withTiming(1, { duration: 300 });
+            filterModalTranslateY.value = withSpring(0, { damping: 30, stiffness: 150 });
+        } else {
+            filterModalBackdropOpacity.value = withTiming(0, { duration: 300 });
+            filterModalTranslateY.value = withTiming(500, { duration: 300 });
+        }
+    }, [filterModalVisible]);
+
     return (
         <View style={styles.container}>
             <ScreenHeader
@@ -417,67 +553,94 @@ export const MapViewScreen: React.FC = () => {
             />
 
             <View style={styles.mapContainer}>
-                <MapView
-                    ref={mapRef}
-                    provider={PROVIDER_DEFAULT}
-                    style={styles.map}
-                    initialRegion={INITIAL_REGION}
-                >
-                    {filteredPins.map((pin) => (
-                        <CustomMarker
-                            key={pin.id}
-                            coordinate={{ latitude: pin.latitude, longitude: pin.longitude }}
-                            emoji={pin.emoji || '📍'}
-                            onPress={() => handleMarkerPress(pin)}
-                        />
-                    ))}
-                </MapView>
+                {!isMapReady ? (
+                    <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+                        <ActivityIndicator size="large" color={theme.colors.primary} />
+                    </View>
+                ) : (
+                    <MapView
+                        ref={mapRef}
+                        provider={PROVIDER_DEFAULT}
+                        style={styles.map}
+                        initialRegion={initialRegion}
+                        onMapReady={() => {
+                            // Fit to coordinates if pins exist
+                            if (filteredPins.length > 0) {
+                                const coordinates = filteredPins.map(pin => ({
+                                    latitude: pin.latitude,
+                                    longitude: pin.longitude,
+                                }));
+                                mapRef.current?.fitToCoordinates(coordinates, {
+                                    edgePadding: { top: 100, right: 50, bottom: 150, left: 50 },
+                                    animated: true,
+                                });
+                            }
+                        }}
+                    >
+                        {filteredPins.map((pin) => (
+                            <CustomMarker
+                                key={pin.id}
+                                coordinate={{ latitude: pin.latitude, longitude: pin.longitude }}
+                                emoji={pin.emoji || '📍'}
+                                onPress={() => handleMarkerPress(pin)}
+                            />
+                        ))}
+                    </MapView>
+                )}
 
-                <Animated.View style={searchBarAnimatedStyle}>
-                    <MapSearchBar
-                        value={searchQuery}
-                        onChangeText={setSearchQuery}
-                        onFilterPress={() => console.log('Filter')}
-                        style={{ top: 10 }}
-                    />
-                </Animated.View>
+                {/* Overlays (SearchBar, etc) - Keep them visible or hide until map ready?
+                    If we hide map, overlays might look weird floating on white.
+                    Let's only show them when map is ready.
+                 */}
+                {isMapReady && (
+                    <>
+                        <Animated.View style={searchBarAnimatedStyle}>
+                            <MapSearchBar
+                                value={searchQuery}
+                                onChangeText={setSearchQuery}
+                                onFilterPress={() => setFilterModalVisible(true)}
+                                style={{ top: 10 }}
+                            />
+                        </Animated.View>
 
-                <Animated.View style={[fabAnimatedStyle, { position: 'absolute', bottom: pins.length === 0 ? 0 : 100, right: 0 }]}>
-                    <FloatingButton
-                        onPress={handleAddPin}
-                        icon="map-marker-plus-outline"
-                    />
-                </Animated.View>
+                        <Animated.View style={[fabAnimatedStyle, { position: 'absolute', bottom: pins.length === 0 ? 40 : 100, right: 16, zIndex: 100 }]}>
+                            <FloatingButton
+                                onPress={handleAddPin}
+                                icon="map-marker-plus-outline"
+                            />
+                        </Animated.View>
 
-                {/* Horizontal Pin List */}
-                <Animated.View style={[styles.horizontalListContainer, horizontalListAnimatedStyle]}>
-                    <FlatList
-                        horizontal
-                        data={filteredPins}
-                        keyExtractor={(item) => item.id}
-                        showsHorizontalScrollIndicator={false}
-                        snapToInterval={280 + 16} // card width + margin
-                        decelerationRate="fast"
-                        contentContainerStyle={{ paddingHorizontal: 16 }}
-                        renderItem={({ item }) => (
-                            <TouchableOpacity
-                                style={[styles.card, { backgroundColor: theme.colors.card[colorScheme], borderColor: theme.colors.border[colorScheme] }]}
-                                onPress={() => handleMarkerPress(item)}
-                                activeOpacity={0.98}
-                            >
-                                <Text style={styles.cardEmoji}>📍</Text>
-                                <View style={styles.cardContent}>
-                                    <Text style={[styles.pinCardTitle, { color: theme.colors.text.primary[colorScheme] }]} numberOfLines={1}>
-                                        {item.title}
-                                    </Text>
-                                    <Text style={[styles.pinCardCoordinates, { color: theme.colors.text.secondary[colorScheme] }]}>
-                                        {item.latitude.toFixed(4)}, {item.longitude.toFixed(4)}
-                                    </Text>
-                                </View>
-                            </TouchableOpacity>
-                        )}
-                    />
-                </Animated.View>
+                        {/* Horizontal Pin List */}
+                        <Animated.View style={[styles.horizontalListContainer, horizontalListAnimatedStyle]}>
+                            <FlatList
+                                horizontal
+                                data={filteredPins}
+                                keyExtractor={(item) => item.id}
+                                showsHorizontalScrollIndicator={false}
+                                snapToInterval={280 + 16} // card width + margin
+                                decelerationRate="fast"
+                                contentContainerStyle={{ paddingHorizontal: 16 }}
+                                renderItem={({ item }) => (
+                                    <TouchableOpacity
+                                        style={[styles.card, { backgroundColor: theme.colors.card[colorScheme], borderColor: theme.colors.border[colorScheme] }]}
+                                        onPress={() => handleMarkerPress(item)}
+                                        activeOpacity={0.98}
+                                    >
+                                        <Text style={styles.cardEmoji}>{item.emoji || '📍'}</Text>
+                                        <View style={styles.cardContent}>
+                                            <Text style={[styles.pinCardTitle, { color: theme.colors.text.primary[colorScheme] }]} numberOfLines={1}>
+                                                {item.title}
+                                            </Text>
+                                            <Text style={[styles.pinCardCoordinates, { color: theme.colors.text.secondary[colorScheme] }]} numberOfLines={1}>
+                                                {item.address || `${item.latitude.toFixed(4)}, ${item.longitude.toFixed(4)}`}
+                                            </Text>
+                                        </View>
+                                    </TouchableOpacity>
+                                )}
+                            />
+                        </Animated.View>
+                    </>
+                )}
             </View>
 
             <PinDetailModal
@@ -488,6 +651,105 @@ export const MapViewScreen: React.FC = () => {
                 onEdit={() => handleEditPin(selectedPin)}
                 onShare={() => handleSharePin(selectedPin)}
             />
+
+            {/* Filter Modal */}
+            <Modal
+                visible={filterModalVisible}
+                animationType="none"
+                transparent={true}
+                onRequestClose={() => setFilterModalVisible(false)}
+            >
+                <Animated.View style={[styles.bottomSheetOverlay, filterModalBackdropAnimatedStyle]}>
+                    <TouchableOpacity style={StyleSheet.absoluteFill} onPress={() => setFilterModalVisible(false)} />
+                    <KeyboardAvoidingView
+                        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+                        style={{ flex: 1, justifyContent: 'flex-end' }}
+                        pointerEvents="box-none"
+                    >
+                        <Animated.View style={[styles.bottomSheetContent, { backgroundColor: theme.colors.card[colorScheme] }, filterModalAnimatedStyle]}>
+                            {/* Handle */}
+                            <View style={styles.sheetHandleContainer}>
+                                <View style={styles.sheetHandle} />
+                            </View>
+
+                            {/* Header */}
+                            <View style={styles.sheetHeader}>
+                                <Text style={[styles.sheetTitle, { color: theme.colors.text.primary[colorScheme] }]}>Filter & Sort</Text>
+                                <TouchableOpacity onPress={() => setFilterModalVisible(false)}>
+                                    <Icon name="close" size={24} color={theme.colors.text.primary[colorScheme]} />
+                                </TouchableOpacity>
+                            </View>
+
+                            {/* Sort Options */}
+                            <Text style={[styles.label, { color: theme.colors.text.primary[colorScheme], marginTop: 0 }]}>Sort By</Text>
+                            <View style={styles.sortContainer}>
+                                {[
+                                    { label: 'Newest', value: 'newest', icon: 'clock-outline' },
+                                    { label: 'Oldest', value: 'oldest', icon: 'history' },
+                                    { label: 'Name (A-Z)', value: 'az', icon: 'sort-alphabetical-ascending' },
+                                    { label: 'Highest Rated', value: 'rating', icon: 'star-outline' },
+                                ].map((option) => (
+                                    <TouchableOpacity
+                                        key={option.value}
+                                        style={[
+                                            styles.sortOption,
+                                            { borderColor: theme.colors.border[colorScheme] },
+                                            sortBy === option.value && { backgroundColor: theme.colors.primary + '20', borderColor: theme.colors.primary }
+                                        ]}
+                                        onPress={() => setSortBy(option.value as any)}
+                                    >
+                                        <Icon
+                                            name={option.icon}
+                                            size={20}
+                                            color={sortBy === option.value ? theme.colors.primary : theme.colors.text.secondary[colorScheme]}
+                                            style={{ marginRight: 8 }}
+                                        />
+                                        <Text style={[
+                                            styles.sortText,
+                                            { color: sortBy === option.value ? theme.colors.primary : theme.colors.text.secondary[colorScheme] }
+                                        ]}>
+                                            {option.label}
+                                        </Text>
+                                    </TouchableOpacity>
+                                ))}
+                            </View>
+
+                            {/* Rating Filter */}
+                            <Text style={[styles.label, { color: theme.colors.text.primary[colorScheme], marginTop: 16 }]}>Minimum Rating</Text>
+                            <View style={[styles.ratingFilterContainer, { backgroundColor: theme.colors.surface[colorScheme] }]}>
+                                <RatingPicker
+                                    value={minRating}
+                                    onValueChange={(val) => setMinRating(val === minRating ? 0 : val)}
+                                    size={36}
+                                />
+                                <Text style={[styles.ratingHint, { color: theme.colors.text.tertiary[colorScheme] }]}>
+                                    {minRating > 0 ? `${minRating} stars & up` : 'Any rating'}
+                                </Text>
+                            </View>
+
+                            {/* Action Buttons */}
+                            <View style={[styles.buttonRow, { marginTop: 32 }]}>
+                                <TouchableOpacity
+                                    onPress={() => {
+                                        setSortBy('newest');
+                                        setMinRating(0);
+                                    }}
+                                    style={[styles.actionButton, { backgroundColor: theme.colors.surface[colorScheme] }]}
+                                >
+                                    <Text style={[styles.cancelButtonText, { color: theme.colors.text.primary[colorScheme] }]}>Reset</Text>
+                                </TouchableOpacity>
+
+                                <TouchableOpacity
+                                    onPress={() => setFilterModalVisible(false)}
+                                    style={[styles.actionButton, { backgroundColor: theme.colors.primary }]}
+                                >
+                                    <Text style={styles.saveButtonText}>Apply</Text>
+                                </TouchableOpacity>
+                            </View>
+                        </Animated.View>
+                    </KeyboardAvoidingView>
+                </Animated.View>
+            </Modal>
 
             {/* Edit Map Modal */}
             <Modal
@@ -722,6 +984,37 @@ const styles = StyleSheet.create({
     pinCardCoordinates: {
         fontSize: moderateScale(12),
         fontWeight: '400',
+        fontFamily: 'poppins_regular',
+    },
+    sortContainer: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        gap: 12,
+        marginBottom: 8,
+    },
+    sortOption: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingHorizontal: 16,
+        paddingVertical: 10,
+        borderRadius: 20,
+        borderWidth: 1,
+        borderColor: 'rgba(0,0,0,0.1)',
+    },
+    sortText: {
+        fontSize: moderateScale(14),
+        fontWeight: '500',
+        fontFamily: 'poppins_medium',
+    },
+    ratingFilterContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        padding: 16,
+        borderRadius: 12,
+    },
+    ratingHint: {
+        fontSize: moderateScale(14),
         fontFamily: 'poppins_regular',
     },
 });
