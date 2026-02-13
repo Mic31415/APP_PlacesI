@@ -1,7 +1,8 @@
 import React, { useState, useRef, useMemo, useCallback, useEffect } from 'react';
 import { View, StyleSheet, TouchableOpacity, Text, FlatList, Alert, Modal, TextInput, Share, KeyboardAvoidingView, Platform, PermissionsAndroid, ActivityIndicator } from 'react-native';
 import Geolocation from '@react-native-community/geolocation';
-import MapView, { PROVIDER_DEFAULT } from 'react-native-maps';
+import MapView from 'react-native-map-clustering';
+import { PROVIDER_DEFAULT } from 'react-native-maps';
 import { useNavigation, useRoute, RouteProp, useFocusEffect } from '@react-navigation/native';
 import { useTheme } from '../../theme/ThemeContext';
 import { ScreenHeader } from '../../components/common/ScreenHeader';
@@ -138,19 +139,19 @@ export const MapViewScreen: React.FC = () => {
 
             const prepareMap = async () => {
                 try {
-                    // 1. Fetch Pins
-                    const fetchedPins = await databaseService.getPins(mapId);
-                    console.log('[MapView] Fetched pins data:', JSON.stringify(fetchedPins, null, 2));
+                    // 1. Fetch Map Details & Pins
+                    // We use exportMapData as a convenient way to get both, or we could add getMap
+                    const { map, pins: fetchedPins } = await databaseService.exportMapData(mapId);
+
+                    console.log('[MapView] Fetched data:', { map, pinCount: fetchedPins.length });
                     setPins(fetchedPins);
+
+                    // Sync local state if changed from outside
+                    if (map.name !== currentMapName) setCurrentMapName(map.name);
+                    if (map.emoji !== currentMapEmoji) setCurrentMapEmoji(map.emoji);
 
                     if (fetchedPins.length > 0) {
                         // Option A: Fit to Pins
-                        // Calculate bounding box or center
-                        // For initialRegion, we can just grab the first pin or calculate average
-                        // But MapView needs a region.
-                        // Let's rely on fitToCoordinates AFTER mount, but set a sane initial region
-                        // or just set initialRegion to the first pin.
-
                         const firstPin = fetchedPins[0];
                         setInitialRegion({
                             latitude: firstPin.latitude,
@@ -159,50 +160,55 @@ export const MapViewScreen: React.FC = () => {
                             longitudeDelta: 0.1,
                         });
                         setIsMapReady(true);
-
-                        // We will still call fitToCoordinates after mount to be precise
-
+                    } else if (map.initialRegion) {
+                        // Option B: Use Map's Initial Region (Country/State)
+                        try {
+                            const region = JSON.parse(map.initialRegion);
+                            console.log('[MapView] Using initial region:', region);
+                            setInitialRegion(region);
+                            setIsMapReady(true);
+                        } catch (e) {
+                            console.error('Failed to parse initial region:', e);
+                            // Fallback
+                            triggerUserLocationFallback();
+                        }
                     } else {
-                        // Option B: No Pins -> User Location
-                        const requestLocation = async () => {
-                            let hasPermission = false;
-                            if (Platform.OS === 'android') {
-                                hasPermission = await PermissionsAndroid.check(PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION);
-                                if (!hasPermission) {
-                                    const granted = await PermissionsAndroid.request(PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION);
-                                    hasPermission = granted === PermissionsAndroid.RESULTS.GRANTED;
-                                }
-                            } else {
-                                Geolocation.requestAuthorization();
-                                hasPermission = true; // Assume optimistically or check status
-                            }
+                        // Option C: No Pins & No Region -> User Location
+                        triggerUserLocationFallback();
+                    }
+                } catch (error) {
+                    console.error('Failed to prepare map:', error);
+                    setIsMapReady(true);
+                }
+            };
 
-                            if (hasPermission) {
-                                Geolocation.getCurrentPosition(
-                                    (position) => {
-                                        setInitialRegion({
-                                            latitude: position.coords.latitude,
-                                            longitude: position.coords.longitude,
-                                            latitudeDelta: 0.05,
-                                            longitudeDelta: 0.05,
-                                        });
-                                        setIsMapReady(true);
-                                    },
-                                    (error) => {
-                                        console.log('Error getting location', error);
-                                        // Fallback to default if location fails
-                                        setInitialRegion({
-                                            latitude: 35.6895, // Tokyo fallback
-                                            longitude: 139.6917,
-                                            latitudeDelta: 0.1,
-                                            longitudeDelta: 0.1,
-                                        });
-                                        setIsMapReady(true);
-                                    },
-                                    { enableHighAccuracy: false, timeout: 5000, maximumAge: 10000 }
-                                );
-                            } else {
-                                // Fallback if no permission
+            const triggerUserLocationFallback = async () => {
+                const requestLocation = async () => {
+                    let hasPermission = false;
+                    if (Platform.OS === 'android') {
+                        hasPermission = await PermissionsAndroid.check(PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION);
+                        if (!hasPermission) {
+                            const granted = await PermissionsAndroid.request(PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION);
+                            hasPermission = granted === PermissionsAndroid.RESULTS.GRANTED;
+                        }
+                    } else {
+                        Geolocation.requestAuthorization();
+                        hasPermission = true;
+                    }
+
+                    if (hasPermission) {
+                        Geolocation.getCurrentPosition(
+                            (position) => {
+                                setInitialRegion({
+                                    latitude: position.coords.latitude,
+                                    longitude: position.coords.longitude,
+                                    latitudeDelta: 0.05,
+                                    longitudeDelta: 0.05,
+                                });
+                                setIsMapReady(true);
+                            },
+                            (error) => {
+                                console.log('Error getting location', error);
                                 setInitialRegion({
                                     latitude: 35.6895,
                                     longitude: 139.6917,
@@ -210,14 +216,20 @@ export const MapViewScreen: React.FC = () => {
                                     longitudeDelta: 0.1,
                                 });
                                 setIsMapReady(true);
-                            }
-                        };
-                        requestLocation();
+                            },
+                            { enableHighAccuracy: false, timeout: 5000, maximumAge: 10000 }
+                        );
+                    } else {
+                        setInitialRegion({
+                            latitude: 35.6895,
+                            longitude: 139.6917,
+                            latitudeDelta: 0.1,
+                            longitudeDelta: 0.1,
+                        });
+                        setIsMapReady(true);
                     }
-                } catch (error) {
-                    console.error('Failed to prepare map:', error);
-                    setIsMapReady(true); // Show map anyway (default)
-                }
+                };
+                requestLocation();
             };
 
             prepareMap();
@@ -559,10 +571,14 @@ export const MapViewScreen: React.FC = () => {
                     </View>
                 ) : (
                     <MapView
-                        ref={mapRef}
+                        ref={mapRef as any}
                         provider={PROVIDER_DEFAULT}
                         style={styles.map}
                         initialRegion={initialRegion}
+                        clusterColor={theme.colors.primary}
+                        clusterTextColor="#ffffff"
+                        spiderLineColor={theme.colors.primary}
+                        radius={100}
                         onMapReady={() => {
                             // Fit to coordinates if pins exist
                             if (filteredPins.length > 0) {
@@ -570,7 +586,7 @@ export const MapViewScreen: React.FC = () => {
                                     latitude: pin.latitude,
                                     longitude: pin.longitude,
                                 }));
-                                mapRef.current?.fitToCoordinates(coordinates, {
+                                (mapRef.current as any)?.fitToCoordinates(coordinates, {
                                     edgePadding: { top: 100, right: 50, bottom: 150, left: 50 },
                                     animated: true,
                                 });
@@ -579,7 +595,7 @@ export const MapViewScreen: React.FC = () => {
                     >
                         {filteredPins.map((pin) => (
                             <CustomMarker
-                                key={pin.id}
+                                key={pin.id || `${pin.latitude}-${pin.longitude}`}
                                 coordinate={{ latitude: pin.latitude, longitude: pin.longitude }}
                                 emoji={pin.emoji || '📍'}
                                 onPress={() => handleMarkerPress(pin)}

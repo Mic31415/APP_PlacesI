@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, Alert, Pressable } from 'react-native';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, Alert, Pressable, KeyboardAvoidingView, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
@@ -9,6 +9,8 @@ import { MainTabParamList } from '../../types/navigation';
 import { databaseService } from '../../services/DatabaseService';
 import { EmojiPickerModal } from '../../components/common/EmojiPickerModal';
 import { InterstitialAdService } from '../../services/InterstitialAdService';
+import { GooglePlacesAutocomplete } from 'react-native-google-places-autocomplete';
+import { AppConfig } from '../../config';
 import { moderateScale } from '../../utils/responsive';
 import { ScreenHeader } from '../../components/common/ScreenHeader';
 import Animated, {
@@ -17,7 +19,9 @@ import Animated, {
     withSpring,
     withTiming,
     withDelay,
-    withSequence
+    withSequence,
+    FadeIn,
+    FadeOut
 } from 'react-native-reanimated';
 
 type CreateScreenNavigationProp = BottomTabNavigationProp<MainTabParamList, 'Create'>;
@@ -30,6 +34,7 @@ export const CreateScreen: React.FC = () => {
     const [mapName, setMapName] = useState('');
     const [selectedEmoji, setSelectedEmoji] = useState('🗺️');
     const [mapType, setMapType] = useState<'country' | 'state' | 'exact'>('exact');
+    const [initialRegion, setInitialRegion] = useState<string | undefined>(undefined);
     const [emojiModalVisible, setEmojiModalVisible] = useState(false);
     const [previousEmoji, setPreviousEmoji] = useState('🗺️');
 
@@ -142,11 +147,17 @@ export const CreateScreen: React.FC = () => {
         setMapName('');
         setSelectedEmoji('🗺️');
         setMapType('exact');
+        setInitialRegion(undefined);
     };
 
     const handleCreate = async () => {
         if (!mapName.trim()) {
             Alert.alert('Required', 'Please enter a map name', undefined, { userInterfaceStyle: colorScheme === 'dark' ? 'dark' : 'light' });
+            return;
+        }
+
+        if ((mapType === 'country' || mapType === 'state') && !initialRegion) {
+            Alert.alert('Required', 'Please select a location for this map type', undefined, { userInterfaceStyle: colorScheme === 'dark' ? 'dark' : 'light' });
             return;
         }
 
@@ -161,7 +172,8 @@ export const CreateScreen: React.FC = () => {
             await databaseService.createMap({
                 name: mapName.trim(),
                 emoji: selectedEmoji,
-                type: mapType
+                type: mapType,
+                initialRegion: initialRegion
             });
 
             // Show interstitial ad if not premium
@@ -171,6 +183,7 @@ export const CreateScreen: React.FC = () => {
             setMapName('');
             setSelectedEmoji('🗺️');
             setMapType('exact');
+            setInitialRegion(undefined);
             navigation.navigate('Home');
         } catch (error) {
             console.error('Error creating map:', error);
@@ -224,62 +237,161 @@ export const CreateScreen: React.FC = () => {
                 }
             />
 
-            <ScrollView contentContainerStyle={styles.content}>
+            <KeyboardAvoidingView
+                behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+                style={{ flex: 1 }}
+            >
+                <ScrollView
+                    contentContainerStyle={styles.content}
+                    keyboardShouldPersistTaps="handled"
+                    showsVerticalScrollIndicator={false}
+                >
 
-                {/* Map Name */}
-                <Animated.View style={mapNameAnimatedStyle}>
-                    <Text style={[styles.label, { color: theme.colors.text.secondary[colorScheme] }]}>Map Name</Text>
-                    <View style={[styles.inputContainer, { backgroundColor: theme.colors.surface[colorScheme] }]}>
-                        <TextInput
-                            style={[styles.input, { color: theme.colors.text.primary[colorScheme] }]}
-                            placeholder="e.g. Places I've Visited"
-                            placeholderTextColor={theme.colors.text.tertiary[colorScheme]}
-                            value={mapName}
-                            onChangeText={setMapName}
-                        />
-                    </View>
-                </Animated.View>
-
-                {/* Emoji Selector */}
-                <Animated.View style={emojiSectionAnimatedStyle}>
-                    <Text style={[styles.label, { color: theme.colors.text.secondary[colorScheme] }]}>Choose Emoji</Text>
-                    <TouchableOpacity
-                        style={[
-                            styles.emojiSelector,
-                            { backgroundColor: theme.colors.surface[colorScheme] }
-                        ]}
-                        onPress={() => setEmojiModalVisible(true)}
-                    >
-                        <View style={[styles.emojiInnerContainer, { backgroundColor: theme.colors.innerSurface[colorScheme] }]}>
-                            <Animated.View style={emojiPulseAnimatedStyle}>
-                                <Text style={styles.emojiPreview}>{selectedEmoji}</Text>
-                            </Animated.View>
+                    {/* Map Name */}
+                    <Animated.View style={mapNameAnimatedStyle}>
+                        <Text style={[styles.label, { color: theme.colors.text.secondary[colorScheme] }]}>Map Name</Text>
+                        <View style={[styles.inputContainer, { backgroundColor: theme.colors.surface[colorScheme] }]}>
+                            <TextInput
+                                style={[styles.input, { color: theme.colors.text.primary[colorScheme] }]}
+                                placeholder="e.g. Places I've Visited"
+                                placeholderTextColor={theme.colors.text.tertiary[colorScheme]}
+                                value={mapName}
+                                onChangeText={setMapName}
+                            />
                         </View>
-                        <Text style={[styles.caption, { color: theme.colors.text.tertiary[colorScheme], marginTop: 12 }]}>
-                            Tap to change
-                        </Text>
-                    </TouchableOpacity>
-                </Animated.View>
+                    </Animated.View>
 
-                {/* Map Type */}
-                <Animated.View style={mapTypeAnimatedStyle}>
-                    <Text style={[styles.label, { color: theme.colors.text.secondary[colorScheme] }]}>Map Type</Text>
-                    {renderMapTypeOption('country', 'Country Level', 0)}
-                    {renderMapTypeOption('state', 'State Level', 1)}
-                    {renderMapTypeOption('exact', 'Exact Location', 2)}
-                </Animated.View>
+                    {/* Emoji Selector */}
+                    <Animated.View style={emojiSectionAnimatedStyle}>
+                        <Text style={[styles.label, { color: theme.colors.text.secondary[colorScheme] }]}>Choose Emoji</Text>
+                        <TouchableOpacity
+                            style={[
+                                styles.emojiSelector,
+                                { backgroundColor: theme.colors.surface[colorScheme] }
+                            ]}
+                            onPress={() => setEmojiModalVisible(true)}
+                        >
+                            <View style={[styles.emojiInnerContainer, { backgroundColor: theme.colors.innerSurface[colorScheme] }]}>
+                                <Animated.View style={emojiPulseAnimatedStyle}>
+                                    <Text style={styles.emojiPreview}>{selectedEmoji}</Text>
+                                </Animated.View>
+                            </View>
+                            <Text style={[styles.caption, { color: theme.colors.text.tertiary[colorScheme], marginTop: 12 }]}>
+                                Tap to change
+                            </Text>
+                        </TouchableOpacity>
+                    </Animated.View>
 
-                {/* Create Button */}
-                <Animated.View style={buttonAnimatedStyle}>
-                    <TouchableOpacity
-                        style={[styles.createButton, { backgroundColor: theme.colors.primary }]}
-                        onPress={handleCreate}
-                    >
-                        <Text style={styles.createButtonText}>Create Map</Text>
-                    </TouchableOpacity>
-                </Animated.View>
+                    {/* Map Type */}
+                    <Animated.View style={mapTypeAnimatedStyle}>
+                        <Text style={[styles.label, { color: theme.colors.text.secondary[colorScheme] }]}>Map Type</Text>
+                        {renderMapTypeOption('country', 'Country Level (e.g. Japan Trip)', 0)}
+                        {renderMapTypeOption('state', 'State Level (e.g. California)', 1)}
+                        {renderMapTypeOption('exact', 'Exact Location (Standard)', 2)}
 
-            </ScrollView>
+                        {/* Location Search for Country/State */}
+                        {(mapType === 'country' || mapType === 'state') && (
+                            <Animated.View
+                                style={{
+                                    marginTop: 16,
+                                    minHeight: 300, // Give enough space for dropdown
+                                    zIndex: 1000 // Ensure dropdown is on top 
+                                }}
+                                entering={FadeIn.duration(300)}
+                                exiting={FadeOut.duration(200)}
+                            >
+                                <Text style={[styles.label, { color: theme.colors.text.secondary[colorScheme], marginTop: 0 }]}>
+                                    Search Location
+                                </Text>
+                                <View style={{ flex: 1 }}>
+                                    <GooglePlacesAutocomplete
+                                        placeholder='Search (e.g. "Japan")'
+                                        fetchDetails={true}
+                                        onPress={(data, details = null) => {
+                                            if (details) {
+                                                const { lat, lng } = details.geometry.location;
+                                                // Heuristic for deltas based on type could be improved, 
+                                                // but viewport from Google is best if available.
+                                                let region = {
+                                                    latitude: lat,
+                                                    longitude: lng,
+                                                    latitudeDelta: mapType === 'country' ? 10 : 2,
+                                                    longitudeDelta: mapType === 'country' ? 10 : 2,
+                                                };
+
+                                                if (details.geometry.viewport) {
+                                                    const northeast = details.geometry.viewport.northeast;
+                                                    const southwest = details.geometry.viewport.southwest;
+                                                    region = {
+                                                        latitude: (northeast.lat + southwest.lat) / 2,
+                                                        longitude: (northeast.lng + southwest.lng) / 2,
+                                                        latitudeDelta: Math.abs(northeast.lat - southwest.lat) * 1.1, // Add some padding
+                                                        longitudeDelta: Math.abs(northeast.lng - southwest.lng) * 1.1,
+                                                    };
+                                                }
+
+                                                setInitialRegion(JSON.stringify(region));
+                                            }
+                                        }}
+                                        query={{
+                                            key: AppConfig.GOOGLE_PLACES_API_KEY,
+                                            language: 'en',
+                                            types: mapType === 'country' ? '(regions)' : '(regions)', // Filter for regions
+                                        }}
+                                        styles={{
+                                            textInputContainer: {
+                                                backgroundColor: theme.colors.surface[colorScheme],
+                                                borderRadius: 12,
+                                                borderTopWidth: 0,
+                                                borderBottomWidth: 0,
+                                            },
+                                            textInput: {
+                                                backgroundColor: theme.colors.surface[colorScheme],
+                                                color: theme.colors.text.primary[colorScheme],
+                                                borderRadius: 12,
+                                                height: 44,
+                                                paddingVertical: 0,
+                                                fontSize: moderateScale(14),
+                                                fontFamily: 'poppins_regular',
+                                            },
+                                            listView: {
+                                                backgroundColor: theme.colors.card[colorScheme],
+                                                borderRadius: 12,
+                                                marginTop: 8,
+                                                zIndex: 2000,
+                                                elevation: 5,
+                                            },
+                                            row: {
+                                                backgroundColor: 'transparent',
+                                                padding: 12,
+                                            },
+                                            description: {
+                                                color: theme.colors.text.primary[colorScheme],
+                                                fontFamily: 'poppins_regular',
+                                            },
+                                            separator: {
+                                                backgroundColor: theme.colors.border[colorScheme],
+                                            }
+                                        }}
+                                        enablePoweredByContainer={false}
+                                    />
+                                </View>
+                            </Animated.View>
+                        )}
+                    </Animated.View>
+
+                    {/* Create Button */}
+                    <Animated.View style={buttonAnimatedStyle}>
+                        <TouchableOpacity
+                            style={[styles.createButton, { backgroundColor: theme.colors.primary }]}
+                            onPress={handleCreate}
+                        >
+                            <Text style={styles.createButtonText}>Create Map</Text>
+                        </TouchableOpacity>
+                    </Animated.View>
+
+                </ScrollView>
+            </KeyboardAvoidingView>
 
             {/* Emoji Modal */}
             <EmojiPickerModal

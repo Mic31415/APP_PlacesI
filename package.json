@@ -27,6 +27,7 @@
     "react-native-google-mobile-ads": "^16.0.1",
     "react-native-google-places-autocomplete": "^2.6.4",
     "react-native-image-picker": "^8.2.1",
+    "react-native-map-clustering": "^4.0.0",
     "react-native-maps": "^1.26.20",
     "react-native-paper": "^5.14.5",
     "react-native-permissions": "^5.4.4",

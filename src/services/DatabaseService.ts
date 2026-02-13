@@ -10,6 +10,7 @@ export interface MapData {
     name: string;
     emoji: string;
     type?: string;
+    initialRegion?: string; // JSON string of Region
     createdAt: number;
     pinCount?: number; // Calculated field
 }
@@ -50,6 +51,7 @@ class DatabaseService {
                     name TEXT NOT NULL,
                     emoji TEXT NOT NULL,
                     type TEXT DEFAULT 'exact',
+                    initial_region TEXT,
                     created_at INTEGER NOT NULL
                 );
             `;
@@ -84,6 +86,9 @@ class DatabaseService {
             try {
                 await this.db.executeSql('ALTER TABLE Pins ADD COLUMN address TEXT;');
             } catch (e) { /* ignore */ }
+            try {
+                await this.db.executeSql('ALTER TABLE Maps ADD COLUMN initial_region TEXT;');
+            } catch (e) { /* ignore */ }
 
         } catch (error) {
             console.error('Database init failed:', error);
@@ -107,6 +112,7 @@ class DatabaseService {
                     name: item.name,
                     emoji: item.emoji,
                     type: item.type,
+                    initialRegion: item.initial_region,
                     createdAt: item.created_at,
                     pinCount: count
                 });
@@ -124,8 +130,8 @@ class DatabaseService {
         const createdAt = Date.now();
         try {
             await this.db!.executeSql(
-                'INSERT INTO Maps (id, name, emoji, type, created_at) VALUES (?, ?, ?, ?, ?)',
-                [id, map.name, map.emoji, map.type || 'exact', createdAt]
+                'INSERT INTO Maps (id, name, emoji, type, initial_region, created_at) VALUES (?, ?, ?, ?, ?, ?)',
+                [id, map.name, map.emoji, map.type || 'exact', map.initialRegion || null, createdAt]
             );
             return { ...map, id, createdAt, pinCount: 0 };
         } catch (error) {
@@ -143,6 +149,7 @@ class DatabaseService {
         if (updates.name !== undefined) { fields.push('name = ?'); values.push(updates.name); }
         if (updates.emoji !== undefined) { fields.push('emoji = ?'); values.push(updates.emoji); }
         if (updates.type !== undefined) { fields.push('type = ?'); values.push(updates.type); }
+        if (updates.initialRegion !== undefined) { fields.push('initial_region = ?'); values.push(updates.initialRegion); }
 
         if (fields.length === 0) return;
 
@@ -324,8 +331,8 @@ class DatabaseService {
             // 1. Import Maps
             for (const map of data.maps) {
                 await this.db!.executeSql(
-                    `INSERT OR REPLACE INTO Maps (id, name, emoji, type, created_at) VALUES (?, ?, ?, ?, ?)`,
-                    [map.id, map.name, map.emoji, map.type || 'exact', map.created_at]
+                    `INSERT OR REPLACE INTO Maps (id, name, emoji, type, initial_region, created_at) VALUES (?, ?, ?, ?, ?, ?)`,
+                    [map.id, map.name, map.emoji, map.type || 'exact', map.initial_region || null, map.created_at]
                 );
             }
 
@@ -398,6 +405,7 @@ class DatabaseService {
                 name: mapItem.name,
                 emoji: mapItem.emoji,
                 type: mapItem.type,
+                initialRegion: mapItem.initial_region,
                 createdAt: mapItem.created_at,
                 pinCount: 0 // Will be ignored on import or recalculated
             };

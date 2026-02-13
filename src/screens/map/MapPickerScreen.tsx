@@ -14,7 +14,7 @@ import AppConfig from '../../config';
 import { moderateScale } from '../../utils/responsive';
 
 // Initialize Geocoder if not already initialized
-Geocoder.init(AppConfig.GOOGLE_MAPS_API_KEY);
+Geocoder.init(AppConfig.GOOGLE_PLACES_API_KEY);
 
 type MapPickerScreenRouteProp = RouteProp<HomeStackParamList, 'MapPicker'>;
 
@@ -203,7 +203,7 @@ export const MapPickerScreen: React.FC = () => {
                         }
                     }}
                     query={{
-                        key: AppConfig.GOOGLE_MAPS_API_KEY,
+                        key: AppConfig.GOOGLE_PLACES_API_KEY,
                         language: 'en',
                     }}
                     fetchDetails={true}
