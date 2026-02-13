@@ -11,15 +11,9 @@ let nonPersonalizedAdsOnly = true;
  */
 export const initAdsConsent = async () => {
     try {
-        console.log("🔐 Starting UMP consent initialization...");
-
         let consentInfo;
         try {
             consentInfo = await AdsConsent.requestInfoUpdate();
-            console.log("✅ Consent info update successful:", {
-                status: consentInfo?.status ?? consentInfo,
-                isConsentFormAvailable: consentInfo?.isConsentFormAvailable,
-            });
         } catch (requestError: any) {
             const errorMessage = requestError?.message || String(requestError);
             console.error("❌ Consent info update error:", errorMessage);
@@ -52,13 +46,9 @@ export const initAdsConsent = async () => {
             consentInfo?.isConsentFormAvailable
         ) {
             try {
-                console.log("📋 Loading and showing consent form...");
                 const updatedConsentInfo =
                     await AdsConsent.loadAndShowConsentFormIfRequired();
-                console.log("✅ Consent form shown and user made a choice");
-
                 status = typeof updatedConsentInfo === "object" ? updatedConsentInfo.status : updatedConsentInfo;
-                console.log("📊 Updated consent status:", status);
             } catch (formError) {
                 console.error("❌ Error showing consent form:", formError);
                 try {
@@ -84,14 +74,8 @@ export const initAdsConsent = async () => {
             status === AdsConsentStatus.NOT_REQUIRED
         ) {
             nonPersonalizedAdsOnly = false;
-            console.log("✅ Personalized ads allowed (consent status:", status, ")");
         } else {
             nonPersonalizedAdsOnly = true;
-            console.log(
-                "🔒 Using non-personalized ads (consent status:",
-                status,
-                ")"
-            );
         }
 
         if (Platform.OS === "ios") {
@@ -104,11 +88,6 @@ export const initAdsConsent = async () => {
         console.error("❌ Error in consent initialization:", e);
         nonPersonalizedAdsOnly = true;
     }
-
-    console.log(
-        "🔐 Consent initialization complete. Non-personalized only:",
-        nonPersonalizedAdsOnly
-    );
 };
 
 const requestATTIfNeeded = async () => {

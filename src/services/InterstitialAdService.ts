@@ -31,7 +31,6 @@ export const InterstitialAdService = {
 
             interstitial.addAdEventListener(AdEventType.LOADED, () => {
                 isLoaded = true;
-                console.log('Interstitial Ad Loaded');
             });
 
             interstitial.addAdEventListener(AdEventType.CLOSED, () => {
@@ -54,7 +53,6 @@ export const InterstitialAdService = {
 
     show: async () => {
         if (isPremiumUser) {
-            console.log('Skipping ad for premium user');
             return;
         }
 
@@ -62,7 +60,6 @@ export const InterstitialAdService = {
             await interstitial.show();
             isLoaded = false; // Reset loaded state immediately after show request
         } else {
-            console.log('Interstitial Ad not ready, reloading...');
             InterstitialAdService.load();
         }
     },

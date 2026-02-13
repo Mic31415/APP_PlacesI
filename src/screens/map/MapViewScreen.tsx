@@ -143,7 +143,6 @@ export const MapViewScreen: React.FC = () => {
                     // We use exportMapData as a convenient way to get both, or we could add getMap
                     const { map, pins: fetchedPins } = await databaseService.exportMapData(mapId);
 
-                    console.log('[MapView] Fetched data:', { map, pinCount: fetchedPins.length });
                     setPins(fetchedPins);
 
                     // Sync local state if changed from outside
@@ -164,11 +163,9 @@ export const MapViewScreen: React.FC = () => {
                         // Option B: Use Map's Initial Region (Country/State)
                         try {
                             const region = JSON.parse(map.initialRegion);
-                            console.log('[MapView] Using initial region:', region);
                             setInitialRegion(region);
                             setIsMapReady(true);
                         } catch (e) {
-                            console.error('Failed to parse initial region:', e);
                             // Fallback
                             triggerUserLocationFallback();
                         }
@@ -208,7 +205,6 @@ export const MapViewScreen: React.FC = () => {
                                 setIsMapReady(true);
                             },
                             (error) => {
-                                console.log('Error getting location', error);
                                 setInitialRegion({
                                     latitude: 35.6895,
                                     longitude: 139.6917,

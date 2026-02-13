@@ -92,8 +92,6 @@ export const MapPickerScreen: React.FC = () => {
                     setIsLocating(false);
                 },
                 (error) => {
-                    console.log('Error getting location:', error);
-                    // Fallback to default if failed, already set in state
                     reverseGeocode(centerCoordinate.latitude, centerCoordinate.longitude);
                     setIsLocating(false);
                 },

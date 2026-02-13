@@ -205,15 +205,12 @@ export const CreatePinScreen: React.FC = () => {
             });
 
             if (result.didCancel) {
-                console.log('User cancelled image picker');
             } else if (result.errorCode) {
-                console.log('ImagePicker Error: ', result.errorMessage);
                 Alert.alert('Error', result.errorMessage || 'Failed to open camera', undefined, { userInterfaceStyle: colorScheme === 'dark' ? 'dark' : 'light' });
             } else if (result.assets && result.assets.length > 0) {
                 setImageUri(result.assets[0].uri || null);
             }
         } catch (error) {
-            console.error('Camera Launch Error:', error);
             Alert.alert('Error', 'An unexpected error occurred opening current camera.', undefined, { userInterfaceStyle: colorScheme === 'dark' ? 'dark' : 'light' });
         }
     };

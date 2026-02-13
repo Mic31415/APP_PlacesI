@@ -40,7 +40,6 @@ function App() {
     MobileAds()
       .initialize()
       .then(adapterStatuses => {
-        console.log('Ads initialized:', adapterStatuses);
         initAdsConsent();
         InterstitialAdService.load();
       });
