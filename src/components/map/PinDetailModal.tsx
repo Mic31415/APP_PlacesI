@@ -172,7 +172,7 @@ export const PinDetailModal: React.FC<PinDetailModalProps> = ({ visible, pin, on
                                     <View style={styles.coordinatesContainer}>
                                         <Icon name="map-marker" size={16} color={theme.colors.text.secondary[colorScheme]} />
                                         <Text style={[styles.coordinates, { color: theme.colors.text.secondary[colorScheme] }]}>
-                                            {pin.address || `${pin.latitude.toFixed(6)}, ${pin.longitude.toFixed(6)}`}
+                                            {pin.address || 'No address available'}
                                         </Text>
                                     </View>
                                     <View style={styles.infoRow}>

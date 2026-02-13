@@ -22,6 +22,7 @@ import Animated, {
     withSpring,
     Easing
 } from 'react-native-reanimated';
+import DeviceInfo from 'react-native-device-info';
 
 interface SettingsRowProps {
     icon: string;
@@ -444,7 +445,12 @@ export const SettingsScreen: React.FC = () => {
                 {/* ABOUT */}
                 <Animated.View style={aboutAnimatedStyle}>
                     <SettingsSection title="About">
-                        <SettingsRow icon="information" title="Version" value="1.0.0" onPress={() => { }} />
+                        <SettingsRow
+                            icon="information"
+                            title="Version"
+                            value={`v${DeviceInfo.getVersion()} (${DeviceInfo.getBuildNumber()})`}
+                            onPress={() => { }}
+                        />
                         <SettingsRow icon="shield-check" title="Privacy Policy" onPress={() => Linking.openURL('https://upriseix.com/PrivacyPolicy.html')} />
                         <SettingsRow icon="file-document" title="Terms of Service" onPress={() => Linking.openURL('https://upriseix.com/TC.html')} />
                     </SettingsSection>

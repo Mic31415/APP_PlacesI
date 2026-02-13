@@ -644,7 +644,7 @@ export const MapViewScreen: React.FC = () => {
                                                 {item.title}
                                             </Text>
                                             <Text style={[styles.pinCardCoordinates, { color: theme.colors.text.secondary[colorScheme] }]} numberOfLines={1}>
-                                                {item.address || `${item.latitude.toFixed(4)}, ${item.longitude.toFixed(4)}`}
+                                                {item.address || 'No address'}
                                             </Text>
                                         </View>
                                     </TouchableOpacity>
