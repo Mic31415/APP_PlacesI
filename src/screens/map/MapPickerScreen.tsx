@@ -174,7 +174,6 @@ export const MapPickerScreen: React.FC = () => {
                         place_id: p.place_id
                     })));
                 } else {
-                    console.log("Autocomplete status:", data.status);
                     setPredictions([]);
                 }
             } catch (error) {
