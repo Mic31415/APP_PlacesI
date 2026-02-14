@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, Alert, Pressable, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, Alert, Pressable, KeyboardAvoidingView, Platform, FlatList, ActivityIndicator } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
@@ -9,7 +9,7 @@ import { MainTabParamList } from '../../types/navigation';
 import { databaseService } from '../../services/DatabaseService';
 import { EmojiPickerModal } from '../../components/common/EmojiPickerModal';
 import { InterstitialAdService } from '../../services/InterstitialAdService';
-import { GooglePlacesAutocomplete } from 'react-native-google-places-autocomplete';
+// Removed GooglePlacesAutocomplete
 import { AppConfig } from '../../config';
 import { moderateScale } from '../../utils/responsive';
 import { ScreenHeader } from '../../components/common/ScreenHeader';
@@ -26,6 +26,11 @@ import Animated, {
 
 type CreateScreenNavigationProp = BottomTabNavigationProp<MainTabParamList, 'Create'>;
 
+interface PlacePrediction {
+    description: string;
+    place_id: string;
+}
+
 export const CreateScreen: React.FC = () => {
     const { theme, colorScheme } = useTheme();
     const navigation = useNavigation<CreateScreenNavigationProp>();
@@ -37,6 +42,80 @@ export const CreateScreen: React.FC = () => {
     const [initialRegion, setInitialRegion] = useState<string | undefined>(undefined);
     const [emojiModalVisible, setEmojiModalVisible] = useState(false);
     const [previousEmoji, setPreviousEmoji] = useState('🗺️');
+
+    // Manual Autocomplete State
+    const [query, setQuery] = useState<string>('');
+    const [predictions, setPredictions] = useState<PlacePrediction[]>([]);
+    const searchDebounce = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+
+    const handleSearch = (text: string) => {
+        setQuery(text);
+
+        if (searchDebounce.current) {
+            clearTimeout(searchDebounce.current);
+        }
+
+        if (text.length < 3) {
+            setPredictions([]);
+            return;
+        }
+
+        searchDebounce.current = setTimeout(async () => {
+            try {
+                const url = `https://maps.googleapis.com/maps/api/place/autocomplete/json?input=${encodeURIComponent(text)}&key=${AppConfig.GOOGLE_PLACES_API_KEY}&language=en&types=(regions)`;
+                const response = await fetch(url);
+                const data = await response.json();
+
+                if (data.status === 'OK') {
+                    setPredictions(data.predictions.map((p: any) => ({
+                        description: p.description,
+                        place_id: p.place_id
+                    })));
+                } else {
+                    setPredictions([]);
+                }
+            } catch (error) {
+                console.error("Autocomplete error:", error);
+                setPredictions([]);
+            }
+        }, 500);
+    };
+
+    const onPlaceSelected = async (placeId: string, description: string) => {
+        setQuery(description);
+        setPredictions([]);
+
+        try {
+            const url = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${placeId}&fields=geometry&key=${AppConfig.GOOGLE_PLACES_API_KEY}`;
+            const response = await fetch(url);
+            const data = await response.json();
+
+            if (data.status === 'OK') {
+                const { lat, lng } = data.result.geometry.location;
+                let region = {
+                    latitude: lat,
+                    longitude: lng,
+                    latitudeDelta: mapType === 'country' ? 10 : 2,
+                    longitudeDelta: mapType === 'country' ? 10 : 2,
+                };
+
+                if (data.result.geometry.viewport) {
+                    const { northeast, southwest } = data.result.geometry.viewport;
+                    region = {
+                        latitude: (northeast.lat + southwest.lat) / 2,
+                        longitude: (northeast.lng + southwest.lng) / 2,
+                        latitudeDelta: Math.abs(northeast.lat - southwest.lat) * 1.1,
+                        longitudeDelta: Math.abs(northeast.lng - southwest.lng) * 1.1,
+                    };
+                }
+
+                setInitialRegion(JSON.stringify(region));
+            }
+        } catch (error) {
+            console.error("Details error:", error);
+            Alert.alert("Error", "Could not fetch location details.");
+        }
+    };
 
     // Animation values for form fields (sequential entrance)
     const mapNameOpacity = useSharedValue(0);
@@ -238,7 +317,7 @@ export const CreateScreen: React.FC = () => {
             />
 
             <KeyboardAvoidingView
-                behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+                behavior={Platform.OS === 'ios' ? 'padding' : 'padding'}
                 style={{ flex: 1 }}
             >
                 <ScrollView
@@ -304,77 +383,84 @@ export const CreateScreen: React.FC = () => {
                                     Search Location
                                 </Text>
                                 <View style={{ flex: 1 }}>
-                                    <GooglePlacesAutocomplete
-                                        placeholder='Search (e.g. "Japan")'
-                                        fetchDetails={true}
-                                        onPress={(data, details = null) => {
-                                            if (details) {
-                                                const { lat, lng } = details.geometry.location;
-                                                // Heuristic for deltas based on type could be improved, 
-                                                // but viewport from Google is best if available.
-                                                let region = {
-                                                    latitude: lat,
-                                                    longitude: lng,
-                                                    latitudeDelta: mapType === 'country' ? 10 : 2,
-                                                    longitudeDelta: mapType === 'country' ? 10 : 2,
-                                                };
+                                    <View style={{ flex: 1, zIndex: 1000 }}>
+                                        <View style={{
+                                            flexDirection: 'row',
+                                            alignItems: 'center',
+                                            backgroundColor: theme.colors.surface[colorScheme],
+                                            borderRadius: 12,
+                                            borderWidth: 0, // Matched original style which had no border on container, but input had styles. Let's keep it clean.
+                                            height: 44,
+                                            paddingHorizontal: 12
+                                        }}>
+                                            <Icon name="magnify" size={20} color={theme.colors.text.tertiary[colorScheme]} />
+                                            <TextInput
+                                                style={{
+                                                    flex: 1,
+                                                    height: 44,
+                                                    color: theme.colors.text.primary[colorScheme],
+                                                    fontSize: moderateScale(14),
+                                                    marginLeft: 8,
+                                                    fontFamily: 'poppins_regular',
+                                                    paddingVertical: 0, // crucial for android text centering
+                                                }}
+                                                placeholder='Search (e.g. "Japan")'
+                                                placeholderTextColor={theme.colors.text.tertiary[colorScheme]}
+                                                value={query}
+                                                onChangeText={handleSearch}
+                                                autoCorrect={false}
+                                            />
+                                            {query.length > 0 && (
+                                                <TouchableOpacity onPress={() => { setQuery(''); setPredictions([]); }}>
+                                                    <Icon name="close-circle" size={18} color={theme.colors.text.tertiary[colorScheme]} />
+                                                </TouchableOpacity>
+                                            )}
+                                        </View>
 
-                                                if (details.geometry.viewport) {
-                                                    const northeast = details.geometry.viewport.northeast;
-                                                    const southwest = details.geometry.viewport.southwest;
-                                                    region = {
-                                                        latitude: (northeast.lat + southwest.lat) / 2,
-                                                        longitude: (northeast.lng + southwest.lng) / 2,
-                                                        latitudeDelta: Math.abs(northeast.lat - southwest.lat) * 1.1, // Add some padding
-                                                        longitudeDelta: Math.abs(northeast.lng - southwest.lng) * 1.1,
-                                                    };
-                                                }
-
-                                                setInitialRegion(JSON.stringify(region));
-                                            }
-                                        }}
-                                        query={{
-                                            key: AppConfig.GOOGLE_PLACES_API_KEY,
-                                            language: 'en',
-                                            types: mapType === 'country' ? '(regions)' : '(regions)', // Filter for regions
-                                        }}
-                                        styles={{
-                                            textInputContainer: {
-                                                backgroundColor: theme.colors.surface[colorScheme],
-                                                borderRadius: 12,
-                                                borderTopWidth: 0,
-                                                borderBottomWidth: 0,
-                                            },
-                                            textInput: {
-                                                backgroundColor: theme.colors.surface[colorScheme],
-                                                color: theme.colors.text.primary[colorScheme],
-                                                borderRadius: 12,
-                                                height: 44,
-                                                paddingVertical: 0,
-                                                fontSize: moderateScale(14),
-                                                fontFamily: 'poppins_regular',
-                                            },
-                                            listView: {
+                                        {/* Predictions List */}
+                                        {predictions.length > 0 && (
+                                            <View style={{
+                                                position: 'absolute',
+                                                top: 50,
+                                                left: 0,
+                                                right: 0,
                                                 backgroundColor: theme.colors.card[colorScheme],
                                                 borderRadius: 12,
-                                                marginTop: 8,
-                                                zIndex: 2000,
                                                 elevation: 5,
-                                            },
-                                            row: {
-                                                backgroundColor: 'transparent',
-                                                padding: 12,
-                                            },
-                                            description: {
-                                                color: theme.colors.text.primary[colorScheme],
-                                                fontFamily: 'poppins_regular',
-                                            },
-                                            separator: {
-                                                backgroundColor: theme.colors.border[colorScheme],
-                                            }
-                                        }}
-                                        enablePoweredByContainer={false}
-                                    />
+                                                shadowColor: "#000",
+                                                shadowOffset: { width: 0, height: 2 },
+                                                shadowOpacity: 0.1,
+                                                shadowRadius: 4,
+                                                zIndex: 2000,
+                                                maxHeight: 200,
+                                            }}>
+                                                <FlatList
+                                                    data={predictions}
+                                                    keyExtractor={(item) => item.place_id}
+                                                    keyboardShouldPersistTaps="always"
+                                                    nestedScrollEnabled={true}
+                                                    renderItem={({ item }) => (
+                                                        <TouchableOpacity
+                                                            style={{
+                                                                padding: 12,
+                                                                borderBottomWidth: 0.5,
+                                                                borderBottomColor: theme.colors.border[colorScheme],
+                                                            }}
+                                                            onPress={() => onPlaceSelected(item.place_id, item.description)}
+                                                        >
+                                                            <Text style={{
+                                                                color: theme.colors.text.primary[colorScheme],
+                                                                fontSize: moderateScale(14),
+                                                                fontFamily: 'poppins_regular'
+                                                            }}>
+                                                                {item.description}
+                                                            </Text>
+                                                        </TouchableOpacity>
+                                                    )}
+                                                />
+                                            </View>
+                                        )}
+                                    </View>
                                 </View>
                             </Animated.View>
                         )}

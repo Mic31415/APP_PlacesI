@@ -5,7 +5,7 @@ import Geocoder from 'react-native-geocoding';
 import { launchCamera, launchImageLibrary } from 'react-native-image-picker';
 
 // Initialize Geocoder with your Google Maps API Key
-Geocoder.init(AppConfig.GOOGLE_MAPS_API_KEY);
+Geocoder.init(AppConfig.GOOGLE_PLACES_API_KEY);
 
 import { useNavigation, useRoute } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
@@ -399,7 +399,7 @@ export const CreatePinScreen: React.FC = () => {
             />
 
             <KeyboardAvoidingView
-                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                behavior={Platform.OS === 'ios' ? 'padding' : 'padding'}
                 style={{ flex: 1 }}
             >
                 <ScrollView contentContainerStyle={styles.content}>

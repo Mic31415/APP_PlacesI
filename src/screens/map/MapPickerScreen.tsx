@@ -1,7 +1,7 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, Alert, Platform } from 'react-native';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, Alert, Platform, TextInput, FlatList } from 'react-native';
 import MapView, { Region, PROVIDER_DEFAULT, PROVIDER_GOOGLE } from 'react-native-maps';
-import { GooglePlacesAutocomplete } from 'react-native-google-places-autocomplete';
+// Removed GooglePlacesAutocomplete
 import Geolocation from '@react-native-community/geolocation';
 import { check, request, PERMISSIONS, RESULTS } from 'react-native-permissions';
 import Geocoder from 'react-native-geocoding';
@@ -17,6 +17,11 @@ import { moderateScale } from '../../utils/responsive';
 Geocoder.init(AppConfig.GOOGLE_PLACES_API_KEY);
 
 type MapPickerScreenRouteProp = RouteProp<HomeStackParamList, 'MapPicker'>;
+
+interface PlacePrediction {
+    description: string;
+    place_id: string;
+}
 
 export const MapPickerScreen: React.FC = () => {
     const { theme, colorScheme } = useTheme();
@@ -44,6 +49,11 @@ export const MapPickerScreen: React.FC = () => {
     const [address, setAddress] = useState<string>('');
     const [isLoadingAddress, setIsLoadingAddress] = useState<boolean>(false);
     const debounceTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+    // Manual Autocomplete State
+    const [query, setQuery] = useState<string>('');
+    const [predictions, setPredictions] = useState<PlacePrediction[]>([]);
+    const searchDebounce = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     // Initial reverse geocode & Current Location
     useEffect(() => {
@@ -140,6 +150,69 @@ export const MapPickerScreen: React.FC = () => {
         }, 800);
     };
 
+    const handleSearch = (text: string) => {
+        setQuery(text);
+
+        if (searchDebounce.current) {
+            clearTimeout(searchDebounce.current);
+        }
+
+        if (text.length < 3) {
+            setPredictions([]);
+            return;
+        }
+
+        searchDebounce.current = setTimeout(async () => {
+            try {
+                const url = `https://maps.googleapis.com/maps/api/place/autocomplete/json?input=${encodeURIComponent(text)}&key=${AppConfig.GOOGLE_PLACES_API_KEY}&language=en`;
+                const response = await fetch(url);
+                const data = await response.json();
+
+                if (data.status === 'OK') {
+                    setPredictions(data.predictions.map((p: any) => ({
+                        description: p.description,
+                        place_id: p.place_id
+                    })));
+                } else {
+                    console.log("Autocomplete status:", data.status);
+                    setPredictions([]);
+                }
+            } catch (error) {
+                console.error("Autocomplete error:", error);
+                setPredictions([]);
+            }
+        }, 500);
+    };
+
+    const onPlaceSelected = async (placeId: string) => {
+        setPredictions([]);
+        // Clear query or keep selected name? Keeping logic simple for now.
+
+        try {
+            const url = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${placeId}&fields=geometry&key=${AppConfig.GOOGLE_PLACES_API_KEY}`;
+            const response = await fetch(url);
+            const data = await response.json();
+
+            if (data.status === 'OK') {
+                const { lat, lng } = data.result.geometry.location;
+                const newRegion = {
+                    latitude: lat,
+                    longitude: lng,
+                    latitudeDelta: 0.005,
+                    longitudeDelta: 0.005,
+                };
+                mapRef.current?.animateToRegion(newRegion, 1000);
+                setRegion(newRegion);
+                setCenterCoordinate({ latitude: lat, longitude: lng });
+                reverseGeocode(lat, lng);
+            } else {
+                Alert.alert("Error", "Could not fetch location details.");
+            }
+        } catch (error) {
+            Alert.alert("Error", "Network error fetching details.");
+        }
+    };
+
     const handleConfirm = () => {
         onSelectLocation({
             latitude: centerCoordinate.latitude,
@@ -160,8 +233,9 @@ export const MapPickerScreen: React.FC = () => {
     return (
         <View style={[styles.container, { backgroundColor: theme.colors.background[colorScheme] }]}>
 
+
             {/* Search Bar Overlay */}
-            <View style={{ position: 'absolute', top: insets.top + 10, left: 10, right: 10, zIndex: 1, flexDirection: 'row', alignItems: 'flex-start' }}>
+            <View style={{ position: 'absolute', top: insets.top + 10, left: 10, right: 10, zIndex: 100, elevation: 10, flexDirection: 'row', alignItems: 'flex-start' }}>
                 <TouchableOpacity
                     onPress={() => navigation.goBack()}
                     style={{
@@ -182,81 +256,84 @@ export const MapPickerScreen: React.FC = () => {
                     <Icon name="chevron-left" size={30} color={theme.colors.text.primary[colorScheme]} />
                 </TouchableOpacity>
 
-                <GooglePlacesAutocomplete
-                    placeholder='Search for a place'
-                    onPress={(data, details = null) => {
-                        // 'details' is provided when fetchDetails = true
-                        if (details) {
-                            const { lat, lng } = details.geometry.location;
-                            const newRegion = {
-                                latitude: lat,
-                                longitude: lng,
-                                latitudeDelta: 0.005,
-                                longitudeDelta: 0.005,
-                            };
-                            mapRef.current?.animateToRegion(newRegion, 1000);
-                            setRegion(newRegion);
-                            setCenterCoordinate({ latitude: lat, longitude: lng });
-                            reverseGeocode(lat, lng);
-                        }
-                    }}
-                    query={{
-                        key: AppConfig.GOOGLE_PLACES_API_KEY,
-                        language: 'en',
-                    }}
-                    fetchDetails={true}
-                    styles={{
-                        textInputContainer: {
-                            backgroundColor: 'transparent',
-                        },
-                        textInput: {
-                            height: 44,
-                            color: theme.colors.text.primary[colorScheme],
-                            fontSize: 16,
+                <View style={{ flex: 1, zIndex: 1000 }}>
+                    <View style={{
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        backgroundColor: theme.colors.surface[colorScheme],
+                        borderRadius: 8,
+                        shadowColor: "#000",
+                        shadowOffset: { width: 0, height: 2 },
+                        shadowOpacity: 0.1,
+                        shadowRadius: 4,
+                        elevation: 4,
+                        paddingHorizontal: 10,
+                        height: 44,
+                    }}>
+                        <Icon name="magnify" size={20} color={theme.colors.text.tertiary[colorScheme]} />
+                        <TextInput
+                            style={{
+                                flex: 1,
+                                height: 44,
+                                color: theme.colors.text.primary[colorScheme],
+                                fontSize: 16,
+                                marginLeft: 8,
+                                fontFamily: 'poppins_regular',
+                            }}
+                            placeholder="Search for a place"
+                            placeholderTextColor={theme.colors.text.tertiary[colorScheme]}
+                            value={query}
+                            onChangeText={handleSearch}
+                            autoCorrect={false}
+                        />
+                        {query.length > 0 && (
+                            <TouchableOpacity onPress={() => { setQuery(''); setPredictions([]); }}>
+                                <Icon name="close-circle" size={18} color={theme.colors.text.tertiary[colorScheme]} />
+                            </TouchableOpacity>
+                        )}
+                    </View>
+
+                    {/* Predictions List */}
+                    {predictions.length > 0 && (
+                        <View style={{
+                            marginTop: 8,
                             backgroundColor: theme.colors.surface[colorScheme],
                             borderRadius: 8,
+                            elevation: 4,
                             shadowColor: "#000",
                             shadowOffset: { width: 0, height: 2 },
                             shadowOpacity: 0.1,
                             shadowRadius: 4,
-                            elevation: 3,
-                        },
-                        listView: {
-                            backgroundColor: theme.colors.surface[colorScheme],
-                            marginTop: 8,
-                            borderRadius: 8,
-                            elevation: 3,
-                            width: '100%'
-                        },
-                        row: {
-                            backgroundColor: theme.colors.surface[colorScheme],
-                            padding: 13,
-                            paddingRight: 24, // Added more space on the right
-                            height: 44,
-                            flexDirection: 'row',
-                        },
-                        separator: {
-                            height: 0.5,
-                            backgroundColor: theme.colors.border[colorScheme],
-                        },
-                        description: {
-                            color: theme.colors.text.primary[colorScheme],
-                        },
-                        poweredContainer: {
-                            justifyContent: 'flex-end',
-                            alignItems: 'center',
-                            borderBottomRightRadius: 5,
-                            borderBottomLeftRadius: 5,
-                            borderColor: '#c8c7cc',
-                            borderTopWidth: 0.5,
-                            backgroundColor: theme.colors.surface[colorScheme],
-                        },
-                        powered: {
-                            tintColor: theme.colors.text.tertiary[colorScheme],
-                        },
-                    }}
-                    enablePoweredByContainer={false}
-                />
+                            maxHeight: 200,
+                        }}>
+                            <FlatList
+                                data={predictions}
+                                keyExtractor={(item) => item.place_id}
+                                keyboardShouldPersistTaps="handled"
+                                renderItem={({ item }) => (
+                                    <TouchableOpacity
+                                        style={{
+                                            padding: 13,
+                                            borderBottomWidth: 0.5,
+                                            borderBottomColor: theme.colors.border[colorScheme],
+                                            flexDirection: 'row',
+                                            alignItems: 'center'
+                                        }}
+                                        onPress={() => onPlaceSelected(item.place_id)}
+                                    >
+                                        <Text style={{
+                                            color: theme.colors.text.primary[colorScheme],
+                                            fontSize: 14,
+                                            fontFamily: 'poppins_regular'
+                                        }}>
+                                            {item.description}
+                                        </Text>
+                                    </TouchableOpacity>
+                                )}
+                            />
+                        </View>
+                    )}
+                </View>
             </View>
 
             {isLocating ? (

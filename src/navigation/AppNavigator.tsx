@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, View, Text } from 'react-native';
+import { ActivityIndicator, View, StatusBar } from 'react-native';
 import { NavigationContainer, getFocusedRouteNameFromRoute } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
@@ -7,25 +7,18 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTheme } from '../theme/ThemeContext';
 import { MainTabParamList, RootStackParamList, HomeStackParamList } from '../types/navigation';
 import { HomeScreen } from '../screens/home/HomeScreen';
-import { CreateScreen } from '../screens/home/CreateScreen';
+import { CreateScreen } from '../screens/home/CreateScreen'; // Corrected import path
 import { SettingsScreen } from '../screens/settings/SettingsScreen';
 import { OnboardingScreen } from '../screens/onboarding/OnboardingScreen';
 import { MapViewScreen } from '../screens/map/MapViewScreen';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+import { CreatePinScreen } from '../screens/home/CreatePinScreen';
+import { MapPickerScreen } from '../screens/map/MapPickerScreen';
 
 const Tab = createBottomTabNavigator<MainTabParamList>();
 const Stack = createNativeStackNavigator<RootStackParamList>();
 const HomeStack = createNativeStackNavigator<HomeStackParamList>();
-
-import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
-
-// ...
-
-import { CreatePinScreen } from '../screens/home/CreatePinScreen';
-
-// ...
-
-import { MapPickerScreen } from '../screens/map/MapPickerScreen';
 
 const HomeStackNavigator = () => {
     return (
@@ -115,6 +108,7 @@ const TabNavigator = () => {
 };
 
 export const AppNavigator: React.FC = () => {
+    const { theme, colorScheme } = useTheme();
     const [loading, setLoading] = useState(true);
     const [viewedOnboarding, setViewedOnboarding] = useState(false);
 
@@ -144,11 +138,18 @@ export const AppNavigator: React.FC = () => {
     }
 
     return (
-        <NavigationContainer>
-            <Stack.Navigator screenOptions={{ headerShown: false }} initialRouteName={viewedOnboarding ? 'Main' : 'Onboarding'}>
-                <Stack.Screen name="Onboarding" component={OnboardingScreen} />
-                <Stack.Screen name="Main" component={TabNavigator} />
-            </Stack.Navigator>
-        </NavigationContainer>
+        <>
+            <StatusBar
+                barStyle={colorScheme === 'dark' ? 'light-content' : 'dark-content'}
+                backgroundColor={theme.colors.background[colorScheme]}
+                translucent={false}
+            />
+            <NavigationContainer>
+                <Stack.Navigator screenOptions={{ headerShown: false }} initialRouteName={viewedOnboarding ? 'Main' : 'Onboarding'}>
+                    <Stack.Screen name="Onboarding" component={OnboardingScreen} />
+                    <Stack.Screen name="Main" component={TabNavigator} />
+                </Stack.Navigator>
+            </NavigationContainer>
+        </>
     );
 };

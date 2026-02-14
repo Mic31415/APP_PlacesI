@@ -674,7 +674,7 @@ export const MapViewScreen: React.FC = () => {
                 <Animated.View style={[styles.bottomSheetOverlay, filterModalBackdropAnimatedStyle]}>
                     <TouchableOpacity style={StyleSheet.absoluteFill} onPress={() => setFilterModalVisible(false)} />
                     <KeyboardAvoidingView
-                        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+                        behavior={Platform.OS === 'ios' ? 'padding' : 'padding'}
                         style={{ flex: 1, justifyContent: 'flex-end' }}
                         pointerEvents="box-none"
                     >
@@ -772,7 +772,7 @@ export const MapViewScreen: React.FC = () => {
             >
                 <Animated.View style={[styles.bottomSheetOverlay, editModalBackdropAnimatedStyle]}>
                     <KeyboardAvoidingView
-                        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+                        behavior={Platform.OS === 'ios' ? 'padding' : 'padding'}
                         style={{ flex: 1, justifyContent: 'flex-end' }}
                     >
                         <Animated.View style={[styles.bottomSheetContent, { backgroundColor: theme.colors.card[colorScheme] }, editModalAnimatedStyle]}>

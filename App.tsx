@@ -1,6 +1,5 @@
 import React from 'react';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { StatusBar, useColorScheme } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { Provider as PaperProvider } from 'react-native-paper';
 import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
@@ -18,8 +17,7 @@ import SplashScreen from 'react-native-splash-screen';
 LogBox.ignoreAllLogs(true); // Ignore all log notifications
 
 function App() {
-  const colorScheme = useColorScheme();
-  const isDarkMode = colorScheme === 'dark';
+
 
   React.useEffect(() => {
     let splashTimeout: ReturnType<typeof setTimeout>;
@@ -59,11 +57,6 @@ function App() {
           <ThemeProvider>
             <PaperProvider>
               <BottomSheetModalProvider>
-                <StatusBar
-                  barStyle={isDarkMode ? 'light-content' : 'dark-content'}
-                  backgroundColor="transparent"
-                  translucent
-                />
                 <AppNavigator />
               </BottomSheetModalProvider>
             </PaperProvider>
