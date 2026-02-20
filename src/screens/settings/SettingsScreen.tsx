@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TouchableWithoutFeedback, Switch, Alert, Linking, Platform, Modal, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TouchableWithoutFeedback, Switch, Alert, Linking, Platform, Modal, ActivityIndicator, PermissionsAndroid } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useNavigation } from '@react-navigation/native';
@@ -275,22 +275,99 @@ export const SettingsScreen: React.FC = () => {
     const handleExport = async () => {
         if (isLoading) return;
         setIsLoading(true);
+
         try {
             const data = await databaseService.getAllData();
-            const filePath = RNFS.DocumentDirectoryPath + '/places_backup.json';
+            const jsonString = JSON.stringify(data, null, 2);
+            const fileName = `places_backup_${Date.now()}.json`;
 
-            await RNFS.writeFile(filePath, JSON.stringify(data, null, 2), 'utf8');
+            // Function to handle sharing
+            const shareFile = async () => {
+                const tempPath = `${RNFS.CachesDirectoryPath}/${fileName}`;
+                await RNFS.writeFile(tempPath, jsonString, 'utf8');
 
-            await Share.open({
-                url: 'file://' + filePath,
-                type: 'application/json',
-                message: 'Here is my Places I... backup!',
-                title: 'Export Data'
-            });
+                const shareOptions = {
+                    title: 'Export Data',
+                    message: 'Here is my Places I... backup!',
+                    url: `file://${tempPath}`,
+                    type: 'application/json',
+                    properties: {
+                        subject: 'Places I... Backup'
+                    }
+                };
+                await Share.open(shareOptions);
+            };
+
+            // Function to save to downloads (Android only)
+            const saveToDownloads = async () => {
+                try {
+                    if (Platform.OS === 'android') {
+                        // Check permissions for older Android versions
+                        if (Platform.Version < 30) {
+                            const granted = await PermissionsAndroid.request(
+                                PermissionsAndroid.PERMISSIONS.WRITE_EXTERNAL_STORAGE,
+                                {
+                                    title: "Storage Permission",
+                                    message: "App needs access to save file to Downloads",
+                                    buttonNeutral: "Ask Me Later",
+                                    buttonNegative: "Cancel",
+                                    buttonPositive: "OK"
+                                }
+                            );
+                            if (granted !== PermissionsAndroid.RESULTS.GRANTED) {
+                                Alert.alert("Permission Denied", "Cannot save file without storage permission.");
+                                return;
+                            }
+                        }
+
+                        const downloadPath = `${RNFS.DownloadDirectoryPath}/${fileName}`;
+                        await RNFS.writeFile(downloadPath, jsonString, 'utf8');
+                        Alert.alert("Saved!", `Backup saved to Downloads folder:\n${fileName}`, undefined, { userInterfaceStyle: colorScheme === 'dark' ? 'dark' : 'light' });
+                    }
+                } catch (err: any) {
+                    console.error(err);
+                    Alert.alert("Save Failed", err.message || "Could not save file.", undefined, { userInterfaceStyle: colorScheme === 'dark' ? 'dark' : 'light' });
+                }
+            };
+
+            if (Platform.OS === 'android') {
+                Alert.alert(
+                    "Export Data",
+                    "Choose how you want to export your data:",
+                    [
+                        { text: "Cancel", style: "cancel", onPress: () => setIsLoading(false) },
+                        {
+                            text: "Save to Downloads",
+                            onPress: async () => {
+                                await saveToDownloads();
+                                setIsLoading(false);
+                            }
+                        },
+                        {
+                            text: "Share",
+                            onPress: async () => {
+                                try {
+                                    await shareFile();
+                                } catch (error) {
+                                    // Ignore user cancel
+                                    console.log('Share cancelled');
+                                } finally {
+                                    setIsLoading(false);
+                                }
+                            }
+                        }
+                    ],
+                    { cancelable: true, onDismiss: () => setIsLoading(false), userInterfaceStyle: colorScheme === 'dark' ? 'dark' : 'light' }
+                );
+            } else {
+                // iOS - straight to share sheet
+                await shareFile();
+                setIsLoading(false);
+            }
+
         } catch (error) {
             console.error(error);
             Alert.alert("Export Failed", "Could not export data.", undefined, { userInterfaceStyle: colorScheme === 'dark' ? 'dark' : 'light' });
-        } finally {
             setIsLoading(false);
         }
     };

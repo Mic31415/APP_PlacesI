@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, KeyboardAvoidingView, Platform, Image, Alert, PermissionsAndroid, ActivityIndicator } from 'react-native';
+import React, { useState, useRef } from 'react';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, KeyboardAvoidingView, Platform, Image, Alert, PermissionsAndroid, ActivityIndicator, FlatList } from 'react-native';
 import Geolocation from '@react-native-community/geolocation';
 import Geocoder from 'react-native-geocoding';
 import { launchCamera, launchImageLibrary } from 'react-native-image-picker';
@@ -24,6 +24,11 @@ import Animated, {
     Easing
 } from 'react-native-reanimated';
 
+interface PlacePrediction {
+    description: string;
+    place_id: string;
+}
+
 export const CreatePinScreen: React.FC = () => {
     const { theme, colorScheme } = useTheme();
     const navigation = useNavigation();
@@ -33,7 +38,7 @@ export const CreatePinScreen: React.FC = () => {
 
     const [title, setTitle] = useState(pin?.title || '');
     const [description, setDescription] = useState(pin?.description || '');
-    const [location, setLocation] = useState(''); // Would need reverse geocoding if editing, but skipping for now
+    const [location, setLocation] = useState(''); // Display text (Name or Address)
     const [rating, setRating] = useState(pin?.rating || 0);
     const [selectedEmoji, setSelectedEmoji] = useState(pin?.emoji || mapEmoji || '🗺️');
     const [emojiModalVisible, setEmojiModalVisible] = useState(false);
@@ -44,6 +49,10 @@ export const CreatePinScreen: React.FC = () => {
         pin ? { latitude: pin.latitude, longitude: pin.longitude } : null
     );
     const [isLoadingLocation, setIsLoadingLocation] = useState(false);
+
+    // Manual Autocomplete State
+    const [predictions, setPredictions] = useState<PlacePrediction[]>([]);
+    const searchDebounce = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     // Animation values for smooth, soft sequential entrance
     const locationOpacity = useSharedValue(0);
@@ -142,8 +151,62 @@ export const CreatePinScreen: React.FC = () => {
             setSelectedEmoji(pin.emoji || mapEmoji || '🗺️');
             setImageUri(pin.imageUri || null);
             setCoordinates({ latitude: pin.latitude, longitude: pin.longitude });
+            setLocation(pin.address || '');
         }
     }, [pin, mapEmoji]);
+
+    const handleSearch = (text: string) => {
+        setLocation(text);
+
+        if (searchDebounce.current) {
+            clearTimeout(searchDebounce.current);
+        }
+
+        if (text.length < 3) {
+            setPredictions([]);
+            return;
+        }
+
+        searchDebounce.current = setTimeout(async () => {
+            try {
+                const url = `https://maps.googleapis.com/maps/api/place/autocomplete/json?input=${encodeURIComponent(text)}&key=${AppConfig.GOOGLE_PLACES_API_KEY}&language=en`;
+                const response = await fetch(url);
+                const data = await response.json();
+
+                if (data.status === 'OK') {
+                    setPredictions(data.predictions.map((p: any) => ({
+                        description: p.description,
+                        place_id: p.place_id
+                    })));
+                } else {
+                    setPredictions([]);
+                }
+            } catch (error) {
+                console.error("Autocomplete error:", error);
+                setPredictions([]);
+            }
+        }, 500);
+    };
+
+    const onPlaceSelected = async (placeId: string, description: string) => {
+        setLocation(description);
+        setPredictions([]);
+
+        try {
+            const url = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${placeId}&fields=geometry&key=${AppConfig.GOOGLE_PLACES_API_KEY}`;
+            const response = await fetch(url);
+            const data = await response.json();
+
+            if (data.status === 'OK') {
+                const { lat, lng } = data.result.geometry.location;
+                setCoordinates({ latitude: lat, longitude: lng });
+            } else {
+                Alert.alert("Error", "Could not fetch location details.");
+            }
+        } catch (error) {
+            Alert.alert("Error", "Network error fetching details.");
+        }
+    };
 
     const handleSave = async () => {
         if (!title.trim()) {
@@ -253,12 +316,7 @@ export const CreatePinScreen: React.FC = () => {
         const hasPermission = await requestLocationPermission();
         try {
             if (!hasPermission) {
-                // On Android, if we didn't get permission, accessing Geolocation might throw or silently fail. 
-                // However, for better UX we alert. 
-                // But wait, user might have denied!
-                // Alert.alert("Permission Denied", "Location permission is required.");
-                // Let's just return.
-                // Actually the previous code had an alert, reusing that logic but carefully.
+                // Return silently
             }
         } catch (e) { }
 
@@ -402,21 +460,79 @@ export const CreatePinScreen: React.FC = () => {
                 behavior={Platform.OS === 'ios' ? 'padding' : 'padding'}
                 style={{ flex: 1 }}
             >
-                <ScrollView contentContainerStyle={styles.content}>
+                <ScrollView
+                    contentContainerStyle={styles.content}
+                    keyboardShouldPersistTaps="handled"
+                >
 
                     {/* Location (Simplified Search) */}
-                    <Animated.View style={[styles.inputGroup, locationAnimatedStyle]}>
+                    <Animated.View style={[styles.inputGroup, locationAnimatedStyle, { zIndex: 1000 }]}>
                         <Text style={[styles.label, { color: theme.colors.text.secondary[colorScheme] }]}>Location</Text>
-                        <View style={[styles.inputContainer, { backgroundColor: theme.colors.surface[colorScheme], flexDirection: 'row', alignItems: 'center' }]}>
+                        <View style={[styles.inputContainer, { backgroundColor: theme.colors.surface[colorScheme], flexDirection: 'row', alignItems: 'center', zIndex: 1000 }]}>
                             <Icon name="magnify" size={24} color={theme.colors.text.tertiary[colorScheme]} style={{ marginRight: 8 }} />
                             <TextInput
                                 style={[styles.input, { flex: 1, color: theme.colors.text.primary[colorScheme] }]}
                                 placeholder="Search location"
                                 placeholderTextColor={theme.colors.text.tertiary[colorScheme]}
                                 value={location}
-                                onChangeText={setLocation}
+                                onChangeText={handleSearch}
                             />
+                            {location.length > 0 && (
+                                <TouchableOpacity onPress={() => { setLocation(''); setPredictions([]); }}>
+                                    <Icon name="close-circle" size={18} color={theme.colors.text.tertiary[colorScheme]} />
+                                </TouchableOpacity>
+                            )}
                         </View>
+
+                        {/* Predictions List - Absolute Positioning */}
+                        {predictions.length > 0 && (
+                            <View style={{
+                                position: 'absolute',
+                                top: 100, // Adjust based on input height + label
+                                left: 0,
+                                right: 0,
+                                backgroundColor: theme.colors.surface[colorScheme],
+                                borderRadius: 8,
+                                elevation: 5,
+                                shadowColor: "#000",
+                                shadowOffset: { width: 0, height: 2 },
+                                shadowOpacity: 0.1,
+                                shadowRadius: 4,
+                                zIndex: 2000,
+                                maxHeight: 200,
+                                borderWidth: 1,
+                                borderColor: theme.colors.border[colorScheme]
+                            }}>
+                                <FlatList
+                                    data={predictions}
+                                    keyExtractor={(item) => item.place_id}
+                                    keyboardShouldPersistTaps="handled"
+                                    nestedScrollEnabled={true}
+                                    renderItem={({ item }) => (
+                                        <TouchableOpacity
+                                            style={{
+                                                padding: 13,
+                                                borderBottomWidth: 0.5,
+                                                borderBottomColor: theme.colors.border[colorScheme],
+                                                flexDirection: 'row',
+                                                alignItems: 'center'
+                                            }}
+                                            onPress={() => onPlaceSelected(item.place_id, item.description)}
+                                        >
+                                            <Icon name="map-marker-outline" size={16} color={theme.colors.text.tertiary[colorScheme]} style={{ marginRight: 8 }} />
+                                            <Text style={{
+                                                color: theme.colors.text.primary[colorScheme],
+                                                fontSize: 14,
+                                                fontFamily: 'poppins_regular'
+                                            }} numberOfLines={1}>
+                                                {item.description}
+                                            </Text>
+                                        </TouchableOpacity>
+                                    )}
+                                />
+                            </View>
+                        )}
+
                         <View style={styles.locationActions}>
                             <TouchableOpacity
                                 style={[

@@ -335,6 +335,8 @@ export const MapPickerScreen: React.FC = () => {
                 </View>
             </View>
 
+
+
             {isLocating ? (
                 <View style={[styles.centerMarkerContainer, { backgroundColor: theme.colors.background[colorScheme], zIndex: 20 }]}>
                     <ActivityIndicator size="large" color={theme.colors.primary} />
@@ -350,6 +352,7 @@ export const MapPickerScreen: React.FC = () => {
                         onRegionChangeComplete={onRegionChangeComplete}
                         showsUserLocation={true}
                         showsMyLocationButton={true}
+                        mapPadding={{ top: insets.top + 60, right: 0, bottom: 0, left: 0 }}
                     />
 
                     {/* Center Fixed Pin */}
