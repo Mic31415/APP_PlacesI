@@ -258,7 +258,7 @@ export const CreateScreen: React.FC = () => {
             });
 
             // Show interstitial ad if not premium
-            await InterstitialAdService.show();
+            await InterstitialAdService.showInterstitial();
 
             haptics.success();
             setMapName('');

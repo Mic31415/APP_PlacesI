@@ -1,54 +1,54 @@
-import React from 'react';
-import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import React, { useState } from 'react';
+import { LogBox } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { Provider as PaperProvider } from 'react-native-paper';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
+import { PaperProvider } from 'react-native-paper';
+import mobileAds from 'react-native-google-mobile-ads';
+import Toast from 'react-native-toast-message';
+import { AppNavigator } from './src/navigation/AppNavigator';
 import { ThemeProvider } from './src/theme/ThemeContext';
 import { PremiumProvider } from './src/context/PremiumContext';
-import { AppNavigator } from './src/navigation/AppNavigator';
-import { LogBox } from 'react-native';
-import Toast from 'react-native-toast-message';
 import { databaseService } from './src/services/DatabaseService';
-import { MobileAds } from 'react-native-google-mobile-ads';
 import { initAdsConsent } from './src/helpers/adConsent';
-import { InterstitialAdService } from './src/services/InterstitialAdService';
+import { PurchaseService } from './src/services/PurchaseService';
 import SplashScreen from 'react-native-splash-screen';
 
 LogBox.ignoreAllLogs(true); // Ignore all log notifications
 
 function App() {
-
+  const [isAppReady, setIsAppReady] = useState(false);
 
   React.useEffect(() => {
-    let splashTimeout: ReturnType<typeof setTimeout>;
-
     const init = async () => {
       try {
+        // 1. Initialize Database
         await databaseService.initDatabase();
+
+        // 2. Initialize RevenueCat (MUST be before Ads to check premium status)
+        await PurchaseService.init();
+
+        // 3. Run UMP Consent flow BEFORE MobileAds.initialize()
+        const { canRequestAds } = await initAdsConsent();
+
+        // 4. Initialize Google Mobile Ads SDK if allowed
+        if (canRequestAds) {
+          await mobileAds().initialize();
+        }
       } catch (e) {
-        console.error('Failed to init DB', e);
-      }
-      // Hide splash screen after initialization with a delay
-      splashTimeout = setTimeout(() => {
+        console.error('❌ [App] Initialization Failed:', e);
+      } finally {
+        setIsAppReady(true);
         SplashScreen.hide();
-      }, 2000); // 2 seconds delay
-    };
-    init();
-
-    MobileAds()
-      .initialize()
-      .then(adapterStatuses => {
-        initAdsConsent();
-        InterstitialAdService.load();
-      });
-
-    // Cleanup timeout on unmount
-    return () => {
-      if (splashTimeout) {
-        clearTimeout(splashTimeout);
       }
     };
+
+    init();
   }, []);
+
+  if (!isAppReady) {
+    return null; // Keep Splash Screen visible via native layer
+  }
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
@@ -69,3 +69,4 @@ function App() {
 }
 
 export default App;
+

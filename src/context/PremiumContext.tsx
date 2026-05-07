@@ -34,9 +34,8 @@ export const PremiumProvider: React.FC<{ children: React.ReactNode }> = ({ child
     useEffect(() => {
         const init = async () => {
             try {
-                await PurchaseService.init();
+                // Initial check (Service is already initialized by App.tsx)
 
-                // Initial check
                 const status = await PurchaseService.getValidEntitlements();
                 setIsPremium(status);
 
@@ -61,7 +60,7 @@ export const PremiumProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
     // Sync with AdService
     useEffect(() => {
-        InterstitialAdService.setPremiumStatus(isPremium);
+        InterstitialAdService.updatePremiumStatus(isPremium);
     }, [isPremium]);
 
     const purchase = async (pack: PurchasesPackage) => {

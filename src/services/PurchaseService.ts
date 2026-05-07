@@ -5,8 +5,13 @@ import { AppConfig } from '../config';
 // Entitlement Identifier from RevenueCat Dashboard
 const ENTITLEMENT_ID = 'Auto Renewable subscriptions';
 
+let isInitialized = false;
+
 export const PurchaseService = {
     init: async () => {
+        if (isInitialized) return;
+        isInitialized = true; // Mark as initialized immediately to prevent race conditions
+
         const apiKey = Platform.select({
             ios: AppConfig.REVENUECAT_API_KEY_IOS,
             android: AppConfig.REVENUECAT_API_KEY_ANDROID,
@@ -21,8 +26,14 @@ export const PurchaseService = {
             Purchases.setLogLevel(LOG_LEVEL.DEBUG);
         }
 
-        await Purchases.configure({ apiKey });
+        try {
+            await Purchases.configure({ apiKey });
+            isInitialized = true;
+        } catch (e) {
+            console.error('❌ [PurchaseService] Configuration failed:', e);
+        }
     },
+
 
     getOfferings: async (): Promise<PurchasesPackage[]> => {
         try {

@@ -1,67 +1,139 @@
 import { Platform } from 'react-native';
 import { InterstitialAd, AdEventType, TestIds } from 'react-native-google-mobile-ads';
 import { AppConfig } from '../config';
-
-const adUnitId = __DEV__
-    ? TestIds.INTERSTITIAL
-    : Platform.select({
-        ios: AppConfig.admob.interstitialIOS,
-        android: AppConfig.admob.interstitialAndroid,
-    }) || TestIds.INTERSTITIAL;
+import { canShowAds } from '../helpers/adConsent';
+import { PurchaseService } from './PurchaseService';
 
 let interstitial: InterstitialAd | null = null;
-let isLoaded = false;
-let isPremiumUser = false;
+let interstitialListeners: (() => void)[] = [];
+
+const clearInterstitialListeners = () => {
+    interstitialListeners.forEach(removeListener => {
+        try {
+            removeListener?.();
+        } catch (error) {
+            console.log('⚠️ Error removing interstitial listener:', error);
+        }
+    });
+    interstitialListeners = [];
+};
+
+const disposeInterstitialAd = () => {
+    clearInterstitialListeners();
+    interstitial = null;
+};
+
+const waitForLoad = (ad: InterstitialAd) => new Promise((resolve, reject) => {
+    const offLoaded = ad.addAdEventListener(AdEventType.LOADED, () => {
+        offLoaded();
+        offError();
+        resolve(true);
+    });
+    const offError = ad.addAdEventListener(AdEventType.ERROR, (error) => {
+        offLoaded();
+        offError();
+        reject(error);
+    });
+});
+
+const getAdUnitId = () => {
+    if (__DEV__) {
+        return TestIds.INTERSTITIAL;
+    }
+    return Platform.OS === 'ios' ? AppConfig.admob.interstitialIOS : AppConfig.admob.interstitialAndroid;
+};
 
 export const InterstitialAdService = {
-    setPremiumStatus: (status: boolean) => {
-        isPremiumUser = status;
-        // If they just bought premium, maybe clear the ad instance?
-        // But simpler to just gate the show()
+    updatePremiumStatus: (status: boolean) => {
+        // Kept for compatibility with PremiumContext, but we check live status in load/show
     },
 
-    load: () => {
-        if (isPremiumUser) return;
+    loadInterstitial: async () => {
+        if (!canShowAds()) return null;
 
-        // Create new instance if null
-        if (!interstitial) {
-            interstitial = InterstitialAd.createForAdRequest(adUnitId, {
-                requestNonPersonalizedAdsOnly: true,
-            });
+        if (__DEV__) return null;
 
-            interstitial.addAdEventListener(AdEventType.LOADED, () => {
-                isLoaded = true;
-            });
+        // Check for subscription first
+        const isPremium = await PurchaseService.getValidEntitlements();
+        if (isPremium) return null;
 
-            interstitial.addAdEventListener(AdEventType.CLOSED, () => {
-                isLoaded = false;
-                interstitial = null;
-                // Reload for next time
-                InterstitialAdService.load();
-            });
+        try {
+            const adUnitId = getAdUnitId();
+            
+            clearInterstitialListeners();
+            interstitial = InterstitialAd.createForAdRequest(adUnitId || TestIds.INTERSTITIAL);
 
-            interstitial.addAdEventListener(AdEventType.ERROR, (error) => {
-                console.error('Interstitial Ad Failed', error);
-                isLoaded = false;
-            });
-        }
+            interstitialListeners = [
+                interstitial.addAdEventListener(AdEventType.LOADED, () => {
+                }),
+                interstitial.addAdEventListener(AdEventType.ERROR, (error) => {
+                }),
+                interstitial.addAdEventListener(AdEventType.PAID, (event) => {
+                }),
+            ];
 
-        if (!isLoaded) {
             interstitial.load();
+            return interstitial;
+        } catch (error) {
+            console.error('❌ [Interstitial] Error in load process:', error);
+            disposeInterstitialAd();
+            return null;
         }
     },
 
-    show: async () => {
-        if (isPremiumUser) {
-            return;
-        }
+    showInterstitial: async () => {
+        if (!canShowAds()) return false;
 
-        if (isLoaded && interstitial) {
-            await interstitial.show();
-            isLoaded = false; // Reset loaded state immediately after show request
-        } else {
-            InterstitialAdService.load();
+        if (__DEV__) return true;
+
+        const isPremium = await PurchaseService.getValidEntitlements();
+        if (isPremium) return true;
+
+        try {
+            if (!interstitial) {
+                await InterstitialAdService.loadInterstitial();
+            }
+
+            if (!interstitial) {
+                return false;
+            }
+
+            if (!interstitial.loaded) {
+                try {
+                    await waitForLoad(interstitial);
+                } catch (e) {
+                    return false;
+                }
+            }
+
+            return new Promise((resolve) => {
+                const removeErrorListener = interstitial!.addAdEventListener(
+                    AdEventType.ERROR,
+                    (error) => {
+                        removeErrorListener();
+                        removeClosedListener();
+                        disposeInterstitialAd();
+                        resolve(false);
+                    }
+                );
+
+                const removeClosedListener = interstitial!.addAdEventListener(
+                    AdEventType.CLOSED,
+                    () => {
+                        removeErrorListener();
+                        removeClosedListener();
+                        disposeInterstitialAd();
+                        // Preload removed to match reference app
+                        resolve(true);
+                    }
+                );
+
+                interstitial!.show();
+            });
+        } catch (error) {
+            console.error('❌ [Interstitial] Error in show process:', error);
+            disposeInterstitialAd();
+            return false;
         }
     },
-
 };
