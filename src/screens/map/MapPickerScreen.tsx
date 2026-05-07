@@ -12,6 +12,7 @@ import { useTheme } from '../../theme/ThemeContext';
 import { HomeStackParamList } from '../../types/navigation';
 import AppConfig from '../../config';
 import { moderateScale } from '../../utils/responsive';
+import { haptics } from '../../utils/haptics';
 
 // Initialize Geocoder if not already initialized
 Geocoder.init(AppConfig.GOOGLE_PLACES_API_KEY);
@@ -184,6 +185,7 @@ export const MapPickerScreen: React.FC = () => {
     };
 
     const onPlaceSelected = async (placeId: string) => {
+        haptics.selection();
         setPredictions([]);
         // Clear query or keep selected name? Keeping logic simple for now.
 
@@ -213,6 +215,7 @@ export const MapPickerScreen: React.FC = () => {
     };
 
     const handleConfirm = () => {
+        haptics.success();
         onSelectLocation({
             latitude: centerCoordinate.latitude,
             longitude: centerCoordinate.longitude,
@@ -222,10 +225,12 @@ export const MapPickerScreen: React.FC = () => {
     };
 
     const handleCancel = () => {
+        haptics.selection();
         navigation.goBack();
     };
 
     const handleCurrentLocation = () => {
+        haptics.impactLight();
         getCurrentLocation();
     };
 
@@ -236,7 +241,7 @@ export const MapPickerScreen: React.FC = () => {
             {/* Search Bar Overlay */}
             <View style={{ position: 'absolute', top: insets.top + 10, left: 10, right: 10, zIndex: 100, elevation: 10, flexDirection: 'row', alignItems: 'flex-start' }}>
                 <TouchableOpacity
-                    onPress={() => navigation.goBack()}
+                    onPress={handleCancel}
                     style={{
                         width: 44,
                         height: 44,
@@ -286,7 +291,7 @@ export const MapPickerScreen: React.FC = () => {
                             autoCorrect={false}
                         />
                         {query.length > 0 && (
-                            <TouchableOpacity onPress={() => { setQuery(''); setPredictions([]); }}>
+                            <TouchableOpacity onPress={() => { haptics.selection(); setQuery(''); setPredictions([]); }}>
                                 <Icon name="close-circle" size={18} color={theme.colors.text.tertiary[colorScheme]} />
                             </TouchableOpacity>
                         )}

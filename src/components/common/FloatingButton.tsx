@@ -12,6 +12,7 @@ import Animated, {
     withDelay,
     withSequence
 } from 'react-native-reanimated';
+import { haptics } from '../../utils/haptics';
 
 interface FloatingButtonProps {
     onPress: () => void;
@@ -65,6 +66,7 @@ export const FloatingButton: React.FC<FloatingButtonProps> = ({ onPress, icon = 
     };
 
     const handlePress = () => {
+        haptics.impactMedium();
         onPress();
     };
 

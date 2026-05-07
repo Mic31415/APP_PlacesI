@@ -17,6 +17,7 @@ import { EmojiPickerModal } from '../../components/common/EmojiPickerModal';
 import AppConfig from '../../config';
 import { moderateScale } from '../../utils/responsive';
 import { Button } from '../../components/common';
+import { haptics } from '../../utils/haptics';
 import Animated, {
     useSharedValue,
     useAnimatedStyle,
@@ -241,6 +242,7 @@ export const CreatePinScreen: React.FC = () => {
                     imageUri: imageUri || undefined,
                 });
             }
+            haptics.success();
             navigation.goBack();
         } catch (error) {
             console.error('Failed to save pin:', error);
@@ -248,10 +250,12 @@ export const CreatePinScreen: React.FC = () => {
     };
 
     const handleBack = () => {
+        haptics.selection();
         navigation.goBack();
     };
 
     const handleTakePhoto = async () => {
+        haptics.selection();
         try {
             if (Platform.OS === 'android') {
                 const hasPermission = await PermissionsAndroid.request(PermissionsAndroid.PERMISSIONS.CAMERA);
@@ -279,6 +283,7 @@ export const CreatePinScreen: React.FC = () => {
     };
 
     const handlePickPhoto = async () => {
+        haptics.selection();
         const result = await launchImageLibrary({
             mediaType: 'photo',
             quality: 0.7,
@@ -313,6 +318,7 @@ export const CreatePinScreen: React.FC = () => {
     };
 
     const handleUseCurrentLocation = async () => {
+        haptics.impactLight();
         const hasPermission = await requestLocationPermission();
         try {
             if (!hasPermission) {
@@ -355,6 +361,7 @@ export const CreatePinScreen: React.FC = () => {
     };
 
     const handlePickOnMap = () => {
+        haptics.selection();
         // @ts-ignore - Ignoring strict navigation type check for now or cast navigation
         navigation.navigate('MapPicker', {
             initialRegion: coordinates ? {
@@ -478,7 +485,7 @@ export const CreatePinScreen: React.FC = () => {
                                 onChangeText={handleSearch}
                             />
                             {location.length > 0 && (
-                                <TouchableOpacity onPress={() => { setLocation(''); setPredictions([]); }}>
+                                <TouchableOpacity onPress={() => { haptics.selection(); setLocation(''); setPredictions([]); }}>
                                     <Icon name="close-circle" size={18} color={theme.colors.text.tertiary[colorScheme]} />
                                 </TouchableOpacity>
                             )}
@@ -517,7 +524,10 @@ export const CreatePinScreen: React.FC = () => {
                                                 flexDirection: 'row',
                                                 alignItems: 'center'
                                             }}
-                                            onPress={() => onPlaceSelected(item.place_id, item.description)}
+                                            onPress={() => {
+                                                haptics.selection();
+                                                onPlaceSelected(item.place_id, item.description);
+                                            }}
                                         >
                                             <Icon name="map-marker-outline" size={16} color={theme.colors.text.tertiary[colorScheme]} style={{ marginRight: 8 }} />
                                             <Text style={{
@@ -580,7 +590,10 @@ export const CreatePinScreen: React.FC = () => {
                                 styles.emojiSelector,
                                 { backgroundColor: theme.colors.surface[colorScheme] }
                             ]}
-                            onPress={() => setEmojiModalVisible(true)}
+                            onPress={() => {
+                                haptics.selection();
+                                setEmojiModalVisible(true);
+                            }}
                         >
                             <View style={[styles.emojiInnerContainer, { backgroundColor: theme.colors.innerSurface[colorScheme] }]}>
                                 <Text style={styles.emojiPreview}>{selectedEmoji}</Text>
@@ -616,7 +629,10 @@ export const CreatePinScreen: React.FC = () => {
                                 <Image source={{ uri: imageUri }} style={{ width: '100%', height: '100%', borderRadius: 12 }} resizeMode="cover" />
                                 <TouchableOpacity
                                     style={{ position: 'absolute', top: 8, right: 8, backgroundColor: 'rgba(0,0,0,0.5)', borderRadius: 12, padding: 4 }}
-                                    onPress={() => setImageUri(null)}
+                                    onPress={() => {
+                                        haptics.selection();
+                                        setImageUri(null);
+                                    }}
                                 >
                                     <Icon name="close" size={20} color="#fff" />
                                 </TouchableOpacity>

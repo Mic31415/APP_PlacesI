@@ -4,6 +4,7 @@ import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useTheme } from '../../theme/ThemeContext';
 import { MAP_EMOJIS } from '../../constants/emojis';
 import { moderateScale } from '../../utils/responsive';
+import { haptics } from '../../utils/haptics';
 
 interface EmojiPickerModalProps {
     visible: boolean;
@@ -31,7 +32,7 @@ export const EmojiPickerModal: React.FC<EmojiPickerModalProps> = ({ visible, onC
                 <View style={[styles.modalContent, { backgroundColor: theme.colors.card[colorScheme] }]}>
                     <View style={styles.modalHeader}>
                         <Text style={[styles.selectedEmojiText, { color: theme.colors.text.primary[colorScheme] }]}>Select Emoji</Text>
-                        <TouchableOpacity onPress={onClose}>
+                        <TouchableOpacity onPress={() => { haptics.selection(); onClose(); }}>
                             <Icon name="close" size={24} color={theme.colors.text.secondary[colorScheme]} />
                         </TouchableOpacity>
                     </View>
@@ -52,6 +53,7 @@ export const EmojiPickerModal: React.FC<EmojiPickerModalProps> = ({ visible, onC
                                         alignItems: 'center'
                                     }}
                                     onPress={() => {
+                                        haptics.selection();
                                         onSelectEmoji(emoji);
                                         onClose();
                                     }}

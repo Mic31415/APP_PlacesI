@@ -12,6 +12,7 @@ import Animated, {
     withTiming,
     Easing
 } from 'react-native-reanimated';
+import { haptics } from '../../utils/haptics';
 
 interface PinDetailModalProps {
     visible: boolean;
@@ -70,6 +71,7 @@ export const PinDetailModal: React.FC<PinDetailModalProps> = ({ visible, pin, on
     if (!pin) return null;
 
     const handleDelete = () => {
+        haptics.warning();
         Alert.alert(
             "Delete Pin",
             "Are you sure you want to delete this pin?",
@@ -91,6 +93,7 @@ export const PinDetailModal: React.FC<PinDetailModalProps> = ({ visible, pin, on
     };
 
     const handleShare = async () => {
+        haptics.selection();
         try {
             const uri = await captureRef(viewShotRef, {
                 format: 'png',
@@ -117,9 +120,12 @@ export const PinDetailModal: React.FC<PinDetailModalProps> = ({ visible, pin, on
             visible={visible}
             animationType="none"
             transparent={true}
-            onRequestClose={onClose}
+            onRequestClose={() => {
+                haptics.selection();
+                onClose();
+            }}
         >
-            <TouchableWithoutFeedback onPress={onClose}>
+            <TouchableWithoutFeedback onPress={() => { haptics.selection(); onClose(); }}>
                 <Animated.View style={[styles.overlay, backdropAnimatedStyle]}>
                     <TouchableWithoutFeedback>
                         <Animated.View style={[{ width: '100%', borderTopLeftRadius: 24, borderTopRightRadius: 24, overflow: 'hidden' }, modalAnimatedStyle]}>
@@ -189,6 +195,7 @@ export const PinDetailModal: React.FC<PinDetailModalProps> = ({ visible, pin, on
                                 <TouchableOpacity
                                     style={styles.actionBtn}
                                     onPress={() => {
+                                        haptics.impactLight();
                                         if (onEdit) onEdit();
                                     }}
                                 >

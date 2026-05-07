@@ -15,6 +15,7 @@ import { Card } from '../../components/common/Card';
 import { databaseService } from '../../services/DatabaseService';
 import { moderateScale } from '../../utils/responsive';
 import { ScreenHeader } from '../../components/common/ScreenHeader';
+import { haptics } from '../../utils/haptics';
 import Animated, {
     useSharedValue,
     useAnimatedStyle,
@@ -45,7 +46,10 @@ const SettingsRow: React.FC<SettingsRowProps> = ({
 
     return (
         <TouchableOpacity
-            onPress={onPress}
+            onPress={() => {
+                haptics.selection();
+                onPress?.();
+            }}
             disabled={hasToggle}
             activeOpacity={0.7}
         >
@@ -253,6 +257,7 @@ export const SettingsScreen: React.FC = () => {
     };
 
     const handleThemeSelect = (selectedTheme: any) => {
+        haptics.selection();
         setAppTheme(selectedTheme);
         setIsThemeModalVisible(false);
     };
@@ -470,7 +475,10 @@ export const SettingsScreen: React.FC = () => {
                 <Animated.View style={premiumAnimatedStyle}>
                     <SettingsSection title="">
                         <TouchableOpacity
-                            onPress={handlePremium}
+                            onPress={() => {
+                                haptics.impactLight();
+                                handlePremium();
+                            }}
                             activeOpacity={0.7}
                         >
                             <View style={[styles.premiumCard, { backgroundColor: '#c1cee1ff' }]}>

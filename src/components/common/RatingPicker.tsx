@@ -2,6 +2,7 @@ import React from 'react';
 import { View, TouchableOpacity, StyleSheet } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useTheme } from '../../theme/ThemeContext';
+import { haptics } from '../../utils/haptics';
 
 interface RatingPickerProps {
     value: number;
@@ -17,7 +18,10 @@ export const RatingPicker: React.FC<RatingPickerProps> = ({ value, onValueChange
             {[1, 2, 3, 4, 5].map((star) => (
                 <TouchableOpacity
                     key={star}
-                    onPress={() => onValueChange(star)}
+                    onPress={() => {
+                        haptics.selection();
+                        onValueChange(star);
+                    }}
                     activeOpacity={0.7}
                     style={styles.star}
                 >

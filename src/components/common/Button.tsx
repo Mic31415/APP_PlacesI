@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import { useTheme } from '../../theme/ThemeContext';
 import { moderateScale } from '../../utils/responsive';
+import { haptics } from '../../utils/haptics';
 
 export type ButtonVariant = 'primary' | 'secondary' | 'outline' | 'text';
 export type ButtonSize = 'small' | 'medium' | 'large';
@@ -22,6 +23,7 @@ interface ButtonProps {
     loading?: boolean;
     fullWidth?: boolean;
     style?: ViewStyle;
+    hapticType?: 'selection' | 'impactLight' | 'impactMedium' | 'impactHeavy';
 }
 
 export const Button: React.FC<ButtonProps> = ({
@@ -33,6 +35,7 @@ export const Button: React.FC<ButtonProps> = ({
     loading = false,
     fullWidth = false,
     style,
+    hapticType = 'impactLight',
 }) => {
     const { theme, colorScheme } = useTheme();
 
@@ -115,10 +118,15 @@ export const Button: React.FC<ButtonProps> = ({
         };
     };
 
+    const handlePress = () => {
+        haptics[hapticType]();
+        onPress();
+    };
+
     return (
         <TouchableOpacity
             style={[getButtonStyle(), style]}
-            onPress={onPress}
+            onPress={handlePress}
             disabled={disabled || loading}
             activeOpacity={0.7}
         >

@@ -4,6 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import FilterIcon from '../../assets/Icon/Filter.png';
 import { moderateScale } from '../../utils/responsive';
+import { haptics } from '../../utils/haptics';
 
 interface MapSearchBarProps {
     value: string;
@@ -56,7 +57,10 @@ export const MapSearchBar: React.FC<MapSearchBarProps> = ({
             </View>
             {onFilterPress && (
                 <TouchableOpacity
-                    onPress={onFilterPress}
+                    onPress={() => {
+                        haptics.selection();
+                        onFilterPress();
+                    }}
                     style={[
                         styles.filterButton,
                         {

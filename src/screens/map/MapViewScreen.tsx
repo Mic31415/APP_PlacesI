@@ -28,6 +28,7 @@ import Animated, {
 import { databaseService, PinData } from '../../services/DatabaseService';
 import { moderateScale } from '../../utils/responsive';
 import { RatingPicker } from '../../components/common/RatingPicker';
+import { haptics } from '../../utils/haptics';
 
 // Default Region (Tokyo)
 const INITIAL_REGION = {
@@ -294,6 +295,7 @@ export const MapViewScreen: React.FC = () => {
     const [selectedPin, setSelectedPin] = useState<PinData | null>(null);
 
     const handleEditMap = () => {
+        haptics.selection();
         setEditName(currentMapName);
         setEditEmoji(currentMapEmoji);
         setEditModalVisible(true);
@@ -309,6 +311,7 @@ export const MapViewScreen: React.FC = () => {
             await databaseService.updateMap(mapId, { name: editName.trim(), emoji: editEmoji });
             setCurrentMapName(editName.trim());
             setCurrentMapEmoji(editEmoji);
+            haptics.success();
             setEditModalVisible(false);
         } catch (error) {
             console.error(error);
@@ -317,6 +320,7 @@ export const MapViewScreen: React.FC = () => {
     };
 
     const handleAddPin = () => {
+        haptics.impactLight();
         if (!mapId) {
             console.error('Missing mapId in MapViewScreen');
             Alert.alert('Error', 'Map ID is missing. Cannot create pin.');
@@ -326,11 +330,13 @@ export const MapViewScreen: React.FC = () => {
     };
 
     const handleEditPin = (pin: any) => {
+        haptics.selection();
         setModalVisible(false); // Close modal first
         navigation.navigate('CreatePin', { mapId, mapEmoji: emoji, pin });
     };
 
     const handleSharePin = async (pin: any) => {
+        haptics.selection();
         try {
             let message = `${pin.emoji || '📍'} *${pin.title}*\n`;
             if (pin.rating) message += `⭐ ${pin.rating}/5\n`;
@@ -350,11 +356,13 @@ export const MapViewScreen: React.FC = () => {
     };
 
     const handleMarkerPress = useCallback((pin: any) => {
+        haptics.selection();
         setSelectedPin(pin);
         setModalVisible(true);
     }, []);
 
     const handleClosePinDetail = useCallback(() => {
+        haptics.selection();
         setModalVisible(false);
         setSelectedPin(null);
     }, []);
@@ -411,6 +419,7 @@ export const MapViewScreen: React.FC = () => {
     };
 
     const handleDeleteMap = () => {
+        haptics.warning();
         Alert.alert(
             "Delete Map",
             `Are you sure you want to delete "${currentMapName}"?\nAll ${pins.length} pins will serve no purpose and be removed.`,
@@ -422,6 +431,7 @@ export const MapViewScreen: React.FC = () => {
                     onPress: async () => {
                         try {
                             await databaseService.deleteMap(mapId);
+                            haptics.success();
                             navigation.goBack();
                         } catch (error) {
                             console.error('Failed to delete map:', error);
@@ -548,7 +558,7 @@ export const MapViewScreen: React.FC = () => {
         <View style={styles.container}>
             <ScreenHeader
                 leftComponent={
-                    <TouchableOpacity onPress={() => navigation.goBack()}>
+                    <TouchableOpacity onPress={() => { haptics.selection(); navigation.goBack(); }}>
                         <Icon name="chevron-left" size={32} color={theme.colors.text.primary[colorScheme]} />
                     </TouchableOpacity>
                 }
@@ -610,7 +620,10 @@ export const MapViewScreen: React.FC = () => {
                             <MapSearchBar
                                 value={searchQuery}
                                 onChangeText={setSearchQuery}
-                                onFilterPress={() => setFilterModalVisible(true)}
+                                onFilterPress={() => {
+                                    haptics.selection();
+                                    setFilterModalVisible(true);
+                                }}
                                 style={{ top: 10 }}
                             />
                         </Animated.View>
@@ -669,10 +682,13 @@ export const MapViewScreen: React.FC = () => {
                 visible={filterModalVisible}
                 animationType="none"
                 transparent={true}
-                onRequestClose={() => setFilterModalVisible(false)}
+                onRequestClose={() => {
+                    haptics.selection();
+                    setFilterModalVisible(false);
+                }}
             >
                 <Animated.View style={[styles.bottomSheetOverlay, filterModalBackdropAnimatedStyle]}>
-                    <TouchableOpacity style={StyleSheet.absoluteFill} onPress={() => setFilterModalVisible(false)} />
+                    <TouchableOpacity style={StyleSheet.absoluteFill} onPress={() => { haptics.selection(); setFilterModalVisible(false); }} />
                     <KeyboardAvoidingView
                         behavior={Platform.OS === 'ios' ? 'padding' : 'padding'}
                         style={{ flex: 1, justifyContent: 'flex-end' }}
@@ -687,7 +703,7 @@ export const MapViewScreen: React.FC = () => {
                             {/* Header */}
                             <View style={styles.sheetHeader}>
                                 <Text style={[styles.sheetTitle, { color: theme.colors.text.primary[colorScheme] }]}>Filter & Sort</Text>
-                                <TouchableOpacity onPress={() => setFilterModalVisible(false)}>
+                                <TouchableOpacity onPress={() => { haptics.selection(); setFilterModalVisible(false); }}>
                                     <Icon name="close" size={24} color={theme.colors.text.primary[colorScheme]} />
                                 </TouchableOpacity>
                             </View>
@@ -708,7 +724,10 @@ export const MapViewScreen: React.FC = () => {
                                             { borderColor: theme.colors.border[colorScheme] },
                                             sortBy === option.value && { backgroundColor: theme.colors.primary + '20', borderColor: theme.colors.primary }
                                         ]}
-                                        onPress={() => setSortBy(option.value as any)}
+                                        onPress={() => {
+                                            haptics.selection();
+                                            setSortBy(option.value as any);
+                                        }}
                                     >
                                         <Icon
                                             name={option.icon}
@@ -743,6 +762,7 @@ export const MapViewScreen: React.FC = () => {
                             <View style={[styles.buttonRow, { marginTop: 32 }]}>
                                 <TouchableOpacity
                                     onPress={() => {
+                                        haptics.selection();
                                         setSortBy('newest');
                                         setMinRating(0);
                                     }}
@@ -752,7 +772,10 @@ export const MapViewScreen: React.FC = () => {
                                 </TouchableOpacity>
 
                                 <TouchableOpacity
-                                    onPress={() => setFilterModalVisible(false)}
+                                    onPress={() => {
+                                        haptics.impactLight();
+                                        setFilterModalVisible(false);
+                                    }}
                                     style={[styles.actionButton, { backgroundColor: theme.colors.primary }]}
                                 >
                                     <Text style={styles.saveButtonText}>Apply</Text>
@@ -768,7 +791,10 @@ export const MapViewScreen: React.FC = () => {
                 visible={editModalVisible}
                 animationType="none"
                 transparent={true}
-                onRequestClose={() => setEditModalVisible(false)}
+                onRequestClose={() => {
+                    haptics.selection();
+                    setEditModalVisible(false);
+                }}
             >
                 <Animated.View style={[styles.bottomSheetOverlay, editModalBackdropAnimatedStyle]}>
                     <KeyboardAvoidingView
@@ -784,7 +810,7 @@ export const MapViewScreen: React.FC = () => {
                             {/* Header */}
                             <View style={styles.sheetHeader}>
                                 <Text style={[styles.sheetTitle, { color: theme.colors.text.primary[colorScheme] }]}>Edit Map</Text>
-                                <TouchableOpacity onPress={() => setEditModalVisible(false)}>
+                                <TouchableOpacity onPress={() => { haptics.selection(); setEditModalVisible(false); }}>
                                     <Icon name="close" size={24} color={theme.colors.text.primary[colorScheme]} />
                                 </TouchableOpacity>
                             </View>
@@ -819,6 +845,7 @@ export const MapViewScreen: React.FC = () => {
                                         }
                                     ]}
                                     onPress={() => {
+                                        haptics.selection();
                                         setEditModalVisible(false);
                                         setTimeout(() => setEmojiPickerVisible(true), 300);
                                     }}
@@ -833,7 +860,10 @@ export const MapViewScreen: React.FC = () => {
                             {/* Action Buttons */}
                             <Animated.View style={[styles.buttonRow, editButtonsAnimatedStyle]}>
                                 <TouchableOpacity
-                                    onPress={() => setEditModalVisible(false)}
+                                    onPress={() => {
+                                        haptics.selection();
+                                        setEditModalVisible(false);
+                                    }}
                                     style={[styles.actionButton, { backgroundColor: theme.colors.surface[colorScheme] }]}
                                 >
                                     <Text style={[styles.cancelButtonText, { color: theme.colors.text.primary[colorScheme] }]}>Cancel</Text>
@@ -854,6 +884,7 @@ export const MapViewScreen: React.FC = () => {
             <EmojiPickerModal
                 visible={emojiPickerVisible}
                 onClose={() => {
+                    haptics.selection();
                     setEmojiPickerVisible(false);
                     setTimeout(() => setEditModalVisible(true), 300);
                 }}

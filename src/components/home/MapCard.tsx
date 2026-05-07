@@ -4,6 +4,7 @@ import { useTheme } from '../../theme/ThemeContext';
 import { Card } from '../common/Card';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { moderateScale } from '../../utils/responsive';
+import { haptics } from '../../utils/haptics';
 import Animated, {
     useSharedValue,
     useAnimatedStyle,
@@ -72,8 +73,14 @@ export const MapCard: React.FC<MapCardProps> = React.memo(({ map, onPress, onLon
     return (
         <Animated.View style={[style, animatedStyle]}>
             <Pressable
-                onPress={onPress}
-                onLongPress={onLongPress}
+                onPress={() => {
+                    haptics.selection();
+                    onPress();
+                }}
+                onLongPress={() => {
+                    haptics.impactMedium();
+                    onLongPress?.();
+                }}
                 onPressIn={handlePressIn}
                 onPressOut={handlePressOut}
             >

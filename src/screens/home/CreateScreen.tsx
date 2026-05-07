@@ -13,6 +13,7 @@ import { InterstitialAdService } from '../../services/InterstitialAdService';
 import { AppConfig } from '../../config';
 import { moderateScale } from '../../utils/responsive';
 import { ScreenHeader } from '../../components/common/ScreenHeader';
+import { haptics } from '../../utils/haptics';
 import Animated, {
     useSharedValue,
     useAnimatedStyle,
@@ -220,6 +221,7 @@ export const CreateScreen: React.FC = () => {
     }));
 
     const handleCancel = () => {
+        haptics.selection();
         // Find 'Home' tab and navigate
         navigation.navigate('Home');
         // Or reset form
@@ -258,7 +260,7 @@ export const CreateScreen: React.FC = () => {
             // Show interstitial ad if not premium
             await InterstitialAdService.show();
 
-            // Optional: Haptic feedback here
+            haptics.success();
             setMapName('');
             setSelectedEmoji('🗺️');
             setMapType('exact');
@@ -289,7 +291,10 @@ export const CreateScreen: React.FC = () => {
             <TouchableOpacity
                 key={type}
                 style={styles.radioButtonContainer}
-                onPress={() => setMapType(type)}
+                onPress={() => {
+                    haptics.selection();
+                    setMapType(type);
+                }}
                 activeOpacity={0.7}
             >
                 <Animated.View style={iconAnimatedStyle}>
@@ -348,7 +353,10 @@ export const CreateScreen: React.FC = () => {
                                 styles.emojiSelector,
                                 { backgroundColor: theme.colors.surface[colorScheme] }
                             ]}
-                            onPress={() => setEmojiModalVisible(true)}
+                            onPress={() => {
+                                haptics.selection();
+                                setEmojiModalVisible(true);
+                            }}
                         >
                             <View style={[styles.emojiInnerContainer, { backgroundColor: theme.colors.innerSurface[colorScheme] }]}>
                                 <Animated.View style={emojiPulseAnimatedStyle}>
@@ -411,7 +419,7 @@ export const CreateScreen: React.FC = () => {
                                                 autoCorrect={false}
                                             />
                                             {query.length > 0 && (
-                                                <TouchableOpacity onPress={() => { setQuery(''); setPredictions([]); }}>
+                                                <TouchableOpacity onPress={() => { haptics.selection(); setQuery(''); setPredictions([]); }}>
                                                     <Icon name="close-circle" size={18} color={theme.colors.text.tertiary[colorScheme]} />
                                                 </TouchableOpacity>
                                             )}
@@ -446,7 +454,10 @@ export const CreateScreen: React.FC = () => {
                                                                 borderBottomWidth: 0.5,
                                                                 borderBottomColor: theme.colors.border[colorScheme],
                                                             }}
-                                                            onPress={() => onPlaceSelected(item.place_id, item.description)}
+                                                            onPress={() => {
+                                                                haptics.selection();
+                                                                onPlaceSelected(item.place_id, item.description);
+                                                            }}
                                                         >
                                                             <Text style={{
                                                                 color: theme.colors.text.primary[colorScheme],

@@ -10,6 +10,7 @@ import Animated, {
     withSpring,
     Easing
 } from 'react-native-reanimated';
+import { haptics } from '../../utils/haptics';
 
 interface MapHeaderMenuProps {
     onEdit: () => void;
@@ -102,10 +103,14 @@ export const MapHeaderMenu: React.FC<MapHeaderMenuProps> = ({ onEdit, onShare, o
         transform: [{ translateX: menuItem3TranslateX.value }],
     }));
 
-    const openMenu = () => setVisible(true);
+    const openMenu = () => {
+        haptics.selection();
+        setVisible(true);
+    };
     const closeMenu = () => setVisible(false);
 
     const handleOption = (action: () => void) => {
+        haptics.impactLight();
         closeMenu();
         // slight delay to allow modal to close smoothly before action
         setTimeout(action, 200);
@@ -135,7 +140,7 @@ export const MapHeaderMenu: React.FC<MapHeaderMenuProps> = ({ onEdit, onShare, o
                                     <View style={styles.headerCenter}>
                                         <View style={[styles.handle, { backgroundColor: theme.colors.border[colorScheme] }]} />
                                     </View>
-                                    <TouchableOpacity onPress={closeMenu} style={styles.closeButton}>
+                                    <TouchableOpacity onPress={() => { haptics.selection(); closeMenu(); }} style={styles.closeButton}>
                                         <Icon name="close" size={24} color={theme.colors.text.primary[colorScheme]} />
                                     </TouchableOpacity>
                                 </View>
