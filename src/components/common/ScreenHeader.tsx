@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { useTheme } from '../../theme/ThemeContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { moderateScale } from '../../utils/responsive';
+import { getResponsiveValue, moderateScale } from '../../utils/responsive';
 
 interface ScreenHeaderProps {
     leftComponent?: React.ReactNode;
@@ -34,19 +34,28 @@ export const ScreenHeader: React.FC<ScreenHeaderProps> = ({
         borderBottomWidth: 1,
         borderBottomColor: theme.colors.border[colorScheme],
     };
+    const sideWidth = getResponsiveValue(40, 40, 44, 56);
+    const normalizedCenterComponent = React.isValidElement(centerComponent)
+        ? React.cloneElement(centerComponent as React.ReactElement<any>, {
+            style: [
+                (centerComponent as React.ReactElement<any>).props.style,
+                styles.headerTitle,
+            ],
+        })
+        : centerComponent;
 
     return (
         <View style={[styles.container, containerStyle]}>
             <View style={styles.content}>
-                <View style={[styles.leftComponent, { minWidth: 40 }]}>
+                <View style={[styles.leftComponent, { minWidth: sideWidth }]}>
                     {leftComponent}
                 </View>
 
                 <View style={[styles.centerComponent, { flex: 1, alignItems: 'center' }]}>
-                    {centerComponent}
+                    {normalizedCenterComponent}
                 </View>
 
-                <View style={[styles.rightComponent, { minWidth: 40, alignItems: 'flex-end' }]}>
+                <View style={[styles.rightComponent, { minWidth: sideWidth, alignItems: 'flex-end' }]}>
                     {rightComponent}
                 </View>
             </View>
@@ -75,5 +84,19 @@ const styles = StyleSheet.create({
     rightComponent: {
         justifyContent: 'center',
         zIndex: 1,
+    },
+    headerTitle: {
+        fontSize: getResponsiveValue(
+            moderateScale(20),
+            moderateScale(20),
+            moderateScale(20),
+            30,
+        ),
+        lineHeight: getResponsiveValue(
+            moderateScale(26),
+            moderateScale(26),
+            moderateScale(26),
+            38,
+        ),
     },
 });

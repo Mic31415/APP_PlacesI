@@ -15,6 +15,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { CreatePinScreen } from '../screens/home/CreatePinScreen';
 import { MapPickerScreen } from '../screens/map/MapPickerScreen';
+import { isTablet } from '../utils/responsive';
 
 const Tab = createBottomTabNavigator<MainTabParamList>();
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -34,6 +35,20 @@ const HomeStackNavigator = () => {
 const TabNavigator = () => {
     const { theme, colorScheme } = useTheme();
     const insets = useSafeAreaInsets();
+    const tablet = isTablet();
+    const tabBarHeight = (tablet ? 108 : 60) + insets.bottom;
+    const tabBarPaddingTop = tablet ? 12 : 8;
+    const tabBarPaddingBottom = insets.bottom + (tablet ? 10 : 0);
+    const tabLabelSize = tablet ? 18 : 12;
+    const tabLabelLineHeight = tablet ? 24 : 14;
+    const tabLabelMarginBottom = tablet ? 8 : 4;
+    const tabIconSize = tablet ? 34 : 24;
+    const tabIconStyle = tablet ? {
+        width: 48,
+        height: 42,
+        lineHeight: 42,
+        textAlign: 'center' as const,
+    } : undefined;
 
     return (
         <Tab.Navigator
@@ -41,20 +56,25 @@ const TabNavigator = () => {
                 headerShown: false,
                 tabBarActiveTintColor: theme.colors.primary,
                 tabBarInactiveTintColor: theme.colors.text.tertiary[colorScheme],
+                tabBarLabelPosition: 'below-icon',
                 tabBarStyle: {
                     backgroundColor: theme.colors.card[colorScheme],
                     borderTopColor: theme.colors.border[colorScheme],
                     borderTopWidth: 0.5,
-                    height: 60 + insets.bottom,
-                    paddingBottom: insets.bottom,
-                    paddingTop: 8,
+                    height: tabBarHeight,
+                    paddingBottom: tabBarPaddingBottom,
+                    paddingTop: tabBarPaddingTop,
+                },
+                tabBarItemStyle: {
+                    paddingTop: tablet ? 6 : 0,
+                    paddingBottom: tablet ? 4 : 0,
                 },
                 tabBarLabelStyle: {
-                    fontSize: 12,
+                    fontSize: tabLabelSize,
                     fontWeight: '400',
-                    lineHeight: 14,
+                    lineHeight: tabLabelLineHeight,
                     fontFamily: 'poppins_regular',
-                    marginBottom: 4,
+                    marginBottom: tabLabelMarginBottom,
                 },
             }}
         >
@@ -68,16 +88,16 @@ const TabNavigator = () => {
 
                     return {
                         tabBarLabel: 'Maps',
-                        tabBarIcon: ({ color, size }) => (
-                            <Icon name="map-marker-multiple" color={color} size={size} />
+                        tabBarIcon: ({ color }) => (
+                            <Icon name="map-marker-multiple" color={color} size={tabIconSize} style={tabIconStyle} />
                         ),
                         tabBarStyle: {
                             backgroundColor: theme.colors.card[colorScheme],
                             borderTopColor: theme.colors.border[colorScheme],
                             borderTopWidth: 0.5,
-                            height: 60 + insets.bottom,
-                            paddingBottom: insets.bottom,
-                            paddingTop: 8,
+                            height: tabBarHeight,
+                            paddingBottom: tabBarPaddingBottom,
+                            paddingTop: tabBarPaddingTop,
                             display: isHidden ? 'none' : 'flex',
                         },
                     };
@@ -88,8 +108,8 @@ const TabNavigator = () => {
                 component={CreateScreen}
                 options={{
                     tabBarLabel: 'Create',
-                    tabBarIcon: ({ color, size }) => (
-                        <Icon name="plus-box" color={color} size={size} />
+                    tabBarIcon: ({ color }) => (
+                        <Icon name="plus-box" color={color} size={tabIconSize} style={tabIconStyle} />
                     ),
                 }}
             />
@@ -98,8 +118,8 @@ const TabNavigator = () => {
                 component={SettingsScreen}
                 options={{
                     tabBarLabel: 'Settings',
-                    tabBarIcon: ({ color, size }) => (
-                        <Icon name="cog" color={color} size={size} />
+                    tabBarIcon: ({ color }) => (
+                        <Icon name="cog" color={color} size={tabIconSize} style={tabIconStyle} />
                     ),
                 }}
             />

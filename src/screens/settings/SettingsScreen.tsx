@@ -638,7 +638,6 @@ const styles = StyleSheet.create({
         flex: 1,
     },
     headerText: {
-        fontSize: moderateScale(20),
         fontWeight: '600',
         fontFamily: 'poppins_bold',
     },
