@@ -58,7 +58,7 @@ export const HomeScreen: React.FC = () => {
   );
 
   // Responsive Layout: 1 column on mobile, 2 on tablet
-  const numColumns = getResponsiveValue(1, 1, 2, 2);
+  const numColumns = getResponsiveValue(1, 1, 1, 2);
 
   const handleCreateMap = () => {
     // Navigate to Create Tab
