@@ -16,10 +16,14 @@ import {
   TextInput,
   Share,
   KeyboardAvoidingView,
+  Keyboard,
+  Animated as RNAnimated,
+  Easing as RNEasing,
   Platform,
   PermissionsAndroid,
   ActivityIndicator,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Geolocation from "@react-native-community/geolocation";
 import MapView from "react-native-map-clustering";
 import { PROVIDER_DEFAULT } from "react-native-maps";
@@ -73,6 +77,7 @@ export const MapViewScreen: React.FC = () => {
   const { theme, colorScheme } = useTheme();
   const navigation = useNavigation<MapViewScreenNavigationProp>();
   const route = useRoute<MapViewScreenRouteProp>();
+  const insets = useSafeAreaInsets();
   const { mapId, mapName, emoji } = route.params || {};
 
   const mapRef = useRef<MapView>(null);
@@ -95,6 +100,45 @@ export const MapViewScreen: React.FC = () => {
     "newest",
   );
   const [minRating, setMinRating] = useState(0);
+  const bannerTranslateY = useRef(new RNAnimated.Value(0)).current;
+
+  useEffect(() => {
+    const showEvent =
+      Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow";
+    const hideEvent =
+      Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide";
+
+    const showSub = Keyboard.addListener(showEvent, (e) => {
+      const keyboardHeight = e.endCoordinates?.height || 0;
+      const adjustedHeight = Math.max(0, keyboardHeight - insets.bottom);
+      const bannerOffset = Math.max(0, adjustedHeight);
+
+      RNAnimated.timing(bannerTranslateY, {
+        toValue: -bannerOffset,
+        duration: Platform.OS === "ios" ? e.duration || 250 : 250,
+        easing: RNEasing.out(RNEasing.quad),
+        useNativeDriver: true,
+      }).start();
+    });
+
+    const hideSub = Keyboard.addListener(hideEvent, (e) => {
+      RNAnimated.timing(bannerTranslateY, {
+        toValue: 0,
+        duration: Platform.OS === "ios" ? e.duration || 250 : 250,
+        easing: RNEasing.out(RNEasing.quad),
+        useNativeDriver: true,
+      }).start();
+    });
+
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, [bannerTranslateY, insets.bottom]);
+
+  const bannerAnimatedStyle = {
+    transform: [{ translateY: bannerTranslateY }],
+  };
 
   const filteredPins = useMemo(() => {
     let result = pins;
@@ -734,7 +778,10 @@ export const MapViewScreen: React.FC = () => {
                 fabAnimatedStyle,
                 {
                   position: "absolute",
-                  bottom: pins.length === 0 ? 40 : getResponsiveValue(100, 100, 108, 130),
+                  bottom:
+                    pins.length === 0
+                      ? 40
+                      : getResponsiveValue(100, 100, 108, 130),
                   right: 16,
                   zIndex: 100,
                 },
@@ -1193,7 +1240,18 @@ export const MapViewScreen: React.FC = () => {
         }}
         onSelectEmoji={setEditEmoji}
       />
-      <BannerAdView />
+      <RNAnimated.View
+        style={[
+          styles.bannerContainer,
+          {
+            backgroundColor: theme.colors.background[colorScheme],
+            paddingBottom: insets.bottom,
+          },
+          bannerAnimatedStyle,
+        ]}
+      >
+        <BannerAdView />
+      </RNAnimated.View>
     </View>
   );
 };
@@ -1208,6 +1266,10 @@ const styles = StyleSheet.create({
   },
   map: {
     ...StyleSheet.absoluteFillObject,
+  },
+  bannerContainer: {
+    paddingTop: 8,
+    paddingHorizontal: 0,
   },
   horizontalListContainer: {
     position: "absolute",

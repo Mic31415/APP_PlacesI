@@ -1,4 +1,8 @@
 {
   "name": "PlacesI",
-  "displayName": "Places I..."
+  "displayName": "Places I...",
+  "react-native-google-mobile-ads": {
+    "android_app_id": "ca-app-pub-8800063598896932~5537728983",
+    "ios_app_id": "ca-app-pub-8800063598896932~7178113712"
+  }
 }

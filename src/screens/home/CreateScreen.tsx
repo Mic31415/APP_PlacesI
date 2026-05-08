@@ -12,6 +12,9 @@ import {
   Platform,
   FlatList,
   ActivityIndicator,
+  Keyboard,
+  Animated as RNAnimated,
+  Easing,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useNavigation, useFocusEffect } from "@react-navigation/native";
@@ -27,6 +30,7 @@ import { AppConfig } from "../../config";
 import { getResponsiveValue, moderateScale } from "../../utils/responsive";
 import { ScreenHeader } from "../../components/common/ScreenHeader";
 import { haptics } from "../../utils/haptics";
+import { BannerAdView } from "../../components/ads/BannerAdView";
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -51,7 +55,7 @@ interface PlacePrediction {
 export const CreateScreen: React.FC = () => {
   const { theme, colorScheme } = useTheme();
   const navigation = useNavigation<CreateScreenNavigationProp>();
-  const { top, bottom } = useSafeAreaInsets();
+  const insets = useSafeAreaInsets();
 
   const [mapName, setMapName] = useState("");
   const [selectedEmoji, setSelectedEmoji] = useState("🗺️");
@@ -70,6 +74,46 @@ export const CreateScreen: React.FC = () => {
   const searchDebounce = React.useRef<ReturnType<typeof setTimeout> | null>(
     null,
   );
+  const bannerTranslateY = React.useRef(new RNAnimated.Value(0)).current;
+
+  useEffect(() => {
+    const showEvent =
+      Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow";
+    const hideEvent =
+      Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide";
+
+    const showSub = Keyboard.addListener(showEvent, (e) => {
+      const keyboardHeight = e.endCoordinates?.height || 0;
+      const adjustedHeight = Math.max(0, keyboardHeight - insets.bottom);
+      const tabBarOffset = 60;
+      const bannerOffset = Math.max(0, adjustedHeight - tabBarOffset);
+
+      RNAnimated.timing(bannerTranslateY, {
+        toValue: -bannerOffset,
+        duration: Platform.OS === "ios" ? e.duration || 250 : 250,
+        easing: Easing.out(Easing.quad),
+        useNativeDriver: true,
+      }).start();
+    });
+
+    const hideSub = Keyboard.addListener(hideEvent, (e) => {
+      RNAnimated.timing(bannerTranslateY, {
+        toValue: 0,
+        duration: Platform.OS === "ios" ? e.duration || 250 : 250,
+        easing: Easing.out(Easing.quad),
+        useNativeDriver: true,
+      }).start();
+    });
+
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, [bannerTranslateY, insets.bottom]);
+
+  const bannerAnimatedStyle = {
+    transform: [{ translateY: bannerTranslateY }],
+  };
 
   const handleSearch = (text: string) => {
     setQuery(text);
@@ -630,6 +674,10 @@ export const CreateScreen: React.FC = () => {
         </ScrollView>
       </KeyboardAvoidingView>
 
+      <RNAnimated.View style={[bannerAnimatedStyle]}>
+        <BannerAdView />
+      </RNAnimated.View>
+
       {/* Emoji Modal */}
       <EmojiPickerModal
         visible={emojiModalVisible}
@@ -661,6 +709,7 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: 24,
+    paddingBottom: 104,
   },
   label: {
     fontSize: moderateScale(14),

@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import {
   View,
   Text,
@@ -7,6 +7,9 @@ import {
   TouchableOpacity,
   ScrollView,
   KeyboardAvoidingView,
+  Keyboard,
+  Animated as RNAnimated,
+  Easing as RNEasing,
   Platform,
   Image,
   Alert,
@@ -14,6 +17,7 @@ import {
   ActivityIndicator,
   FlatList,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Geolocation from "@react-native-community/geolocation";
 import Geocoder from "react-native-geocoding";
 import { launchCamera, launchImageLibrary } from "react-native-image-picker";
@@ -32,6 +36,7 @@ import AppConfig from "../../config";
 import { getResponsiveValue, moderateScale } from "../../utils/responsive";
 import { Button } from "../../components/common";
 import { haptics } from "../../utils/haptics";
+import { BannerAdView } from "../../components/ads/BannerAdView";
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -47,6 +52,7 @@ interface PlacePrediction {
 export const CreatePinScreen: React.FC = () => {
   const { theme, colorScheme } = useTheme();
   const navigation = useNavigation();
+  const insets = useSafeAreaInsets();
 
   const route = useRoute();
   const { mapId, mapEmoji, pin } = route.params as {
@@ -76,6 +82,45 @@ export const CreatePinScreen: React.FC = () => {
   // Manual Autocomplete State
   const [predictions, setPredictions] = useState<PlacePrediction[]>([]);
   const searchDebounce = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const bannerTranslateY = useRef(new RNAnimated.Value(0)).current;
+
+  useEffect(() => {
+    const showEvent =
+      Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow";
+    const hideEvent =
+      Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide";
+
+    const showSub = Keyboard.addListener(showEvent, (e) => {
+      const keyboardHeight = e.endCoordinates?.height || 0;
+      const adjustedHeight = Math.max(0, keyboardHeight - insets.bottom);
+      const bannerOffset = Math.max(0, adjustedHeight);
+
+      RNAnimated.timing(bannerTranslateY, {
+        toValue: -bannerOffset,
+        duration: Platform.OS === "ios" ? e.duration || 250 : 250,
+        easing: RNEasing.out(RNEasing.quad),
+        useNativeDriver: true,
+      }).start();
+    });
+
+    const hideSub = Keyboard.addListener(hideEvent, (e) => {
+      RNAnimated.timing(bannerTranslateY, {
+        toValue: 0,
+        duration: Platform.OS === "ios" ? e.duration || 250 : 250,
+        easing: RNEasing.out(RNEasing.quad),
+        useNativeDriver: true,
+      }).start();
+    });
+
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, [bannerTranslateY, insets.bottom]);
+
+  const bannerAnimatedStyle = {
+    transform: [{ translateY: bannerTranslateY }],
+  };
 
   // Animation values for smooth, soft sequential entrance
   const locationOpacity = useSharedValue(0);
@@ -846,7 +891,11 @@ export const CreatePinScreen: React.FC = () => {
                 ]}
                 onPress={handlePickPhoto}
               >
-                <Icon name="image" size={getResponsiveValue(24, 24, 26, 32)} color={theme.colors.primary} />
+                <Icon
+                  name="image"
+                  size={getResponsiveValue(24, 24, 26, 32)}
+                  color={theme.colors.primary}
+                />
                 <Text
                   style={[
                     styles.photoBtnText,
@@ -892,9 +941,21 @@ export const CreatePinScreen: React.FC = () => {
               fullWidth
             />
           </Animated.View>
-          <View style={{ height: 40 }} />
         </ScrollView>
       </KeyboardAvoidingView>
+
+      <RNAnimated.View
+        style={[
+          styles.bannerContainer,
+          {
+            backgroundColor: theme.colors.background[colorScheme],
+            paddingBottom: insets.bottom,
+          },
+          bannerAnimatedStyle,
+        ]}
+      >
+        <BannerAdView />
+      </RNAnimated.View>
 
       {/* Emoji Modal */}
       <EmojiPickerModal
@@ -927,6 +988,7 @@ const styles = StyleSheet.create({
   content: {
     padding: 24,
   },
+  bannerContainer: { paddingTop: 8 },
   inputGroup: {
     marginBottom: 24,
   },
