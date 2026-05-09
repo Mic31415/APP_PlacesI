@@ -18,10 +18,16 @@ import { usePremium } from "../../context/PremiumContext";
 
 interface BannerAdProps {
   size?: BannerAdSize;
+  onAdLoaded?: (loaded: boolean, height: number) => void;
+  onHeightChange?: (height: number) => void;
+  onPaid?: React.ComponentProps<typeof BannerAd>["onPaid"];
 }
 
 export const BannerAdView: React.FC<BannerAdProps> = ({
   size = BannerAdSize.BANNER,
+  onAdLoaded,
+  onHeightChange,
+  onPaid,
 }) => {
   const bannerRef = useRef<any>(null);
   const { isPremium } = usePremium();
@@ -63,15 +69,31 @@ export const BannerAdView: React.FC<BannerAdProps> = ({
     };
   }, []);
 
+  useEffect(() => {
+    setAdLoaded(false);
+    setAdDimensions({ width: 0, height: 0 });
+    onAdLoaded?.(false, 0);
+    onHeightChange?.(0);
+  }, [bannerKey, onAdLoaded, onHeightChange]);
+
+  useEffect(() => {
+    if (isPremium || !isConsentObtained) {
+      setAdLoaded(false);
+      setAdDimensions({ width: 0, height: 0 });
+      onAdLoaded?.(false, 0);
+      onHeightChange?.(0);
+    }
+  }, [isConsentObtained, isPremium, onAdLoaded, onHeightChange]);
+
   // Reload ad on iOS foreground to maximize revenue
   useForeground(() => {
     if (Platform.OS === "ios" && bannerRef.current?.load) {
       bannerRef.current.load();
     }
   });
-  if (__DEV__) {
-    return;
-  }
+  // if (__DEV__) {
+  //   return;
+  // }
   return (
     <>
       {!isPremium && isConsentObtained && (
@@ -89,16 +111,28 @@ export const BannerAdView: React.FC<BannerAdProps> = ({
             ref={bannerRef}
             unitId={adUnitId}
             size={size}
+            width={adaptiveWidth}
             onSizeChange={(dimensions) => {
               setAdDimensions(dimensions);
+              onHeightChange?.(dimensions.height);
             }}
             onAdLoaded={(dimensions) => {
+              const height = dimensions?.height || adDimensions.height || 60;
+
               setAdLoaded(true);
-              setAdDimensions(dimensions);
+              setAdDimensions(dimensions || { width: adaptiveWidth, height });
+              onAdLoaded?.(true, height);
+              onHeightChange?.(height);
             }}
             onAdFailedToLoad={(error) => {
               console.error("❌ [BannerAd] Ad failed to load:", error);
               setAdLoaded(false);
+              setAdDimensions({ width: 0, height: 0 });
+              onAdLoaded?.(false, 0);
+              onHeightChange?.(0);
+            }}
+            onPaid={(event) => {
+              onPaid?.(event);
             }}
           />
         </View>

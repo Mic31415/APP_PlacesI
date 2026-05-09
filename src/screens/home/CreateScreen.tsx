@@ -332,8 +332,8 @@ export const CreateScreen: React.FC = () => {
         initialRegion: initialRegion,
       });
 
-      // Show interstitial ad if not premium
-      await InterstitialAdService.showInterstitial();
+      // Show interstitial ad after every 3 completed create actions.
+      await InterstitialAdService.showEveryThirdAction();
 
       haptics.success();
       setMapName("");

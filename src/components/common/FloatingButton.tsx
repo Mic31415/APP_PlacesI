@@ -18,12 +18,14 @@ interface FloatingButtonProps {
   onPress: () => void;
   icon?: string;
   style?: ViewStyle;
+  bottomOffset?: number;
 }
 
 export const FloatingButton: React.FC<FloatingButtonProps> = ({
   onPress,
   icon = "plus",
   style,
+  bottomOffset = 0,
 }) => {
   const { theme, colorScheme } = useTheme();
   const insets = useSafeAreaInsets();
@@ -80,7 +82,7 @@ export const FloatingButton: React.FC<FloatingButtonProps> = ({
         styles.container,
         {
           backgroundColor: theme.colors.primary,
-          marginBottom: insets.bottom + theme.spacing.md,
+          marginBottom: insets.bottom + theme.spacing.md + bottomOffset,
           marginRight: theme.spacing.md,
           ...theme.shadows.lg,
         },

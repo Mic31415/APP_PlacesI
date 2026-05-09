@@ -1,4 +1,5 @@
 import { Platform } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { InterstitialAd, AdEventType, TestIds } from 'react-native-google-mobile-ads';
 import { AppConfig } from '../config';
 import { canShowAds } from '../helpers/adConsent';
@@ -6,6 +7,8 @@ import { PurchaseService } from './PurchaseService';
 
 let interstitial: InterstitialAd | null = null;
 let interstitialListeners: (() => void)[] = [];
+const INTERSTITIAL_ACTION_COUNT_KEY = '@placesi_interstitial_action_count';
+const INTERSTITIAL_FREQUENCY = 3;
 
 const clearInterstitialListeners = () => {
     interstitialListeners.forEach(removeListener => {
@@ -51,7 +54,7 @@ export const InterstitialAdService = {
     loadInterstitial: async () => {
         if (!canShowAds()) return null;
 
-        if (__DEV__) return null;
+        // if (__DEV__) return null;
 
         // Check for subscription first
         const isPremium = await PurchaseService.getValidEntitlements();
@@ -84,7 +87,7 @@ export const InterstitialAdService = {
     showInterstitial: async () => {
         if (!canShowAds()) return false;
 
-        if (__DEV__) return true;
+        // if (__DEV__) return true;
 
         const isPremium = await PurchaseService.getValidEntitlements();
         if (isPremium) return true;
@@ -133,6 +136,24 @@ export const InterstitialAdService = {
         } catch (error) {
             console.error('❌ [Interstitial] Error in show process:', error);
             disposeInterstitialAd();
+            return false;
+        }
+    },
+
+    showEveryThirdAction: async () => {
+        try {
+            const storedCount = await AsyncStorage.getItem(INTERSTITIAL_ACTION_COUNT_KEY);
+            const nextCount = (Number(storedCount) || 0) + 1;
+
+            if (nextCount < INTERSTITIAL_FREQUENCY) {
+                await AsyncStorage.setItem(INTERSTITIAL_ACTION_COUNT_KEY, String(nextCount));
+                return false;
+            }
+
+            await AsyncStorage.setItem(INTERSTITIAL_ACTION_COUNT_KEY, '0');
+            return InterstitialAdService.showInterstitial();
+        } catch (error) {
+            console.error('❌ [Interstitial] Error updating action count:', error);
             return false;
         }
     },

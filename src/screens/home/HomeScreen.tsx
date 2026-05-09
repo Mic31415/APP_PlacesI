@@ -29,6 +29,7 @@ export const HomeScreen: React.FC = () => {
   // Initialize with empty array
   const [maps, setMaps] = useState<MapData[]>([]);
   const [shouldAnimate, setShouldAnimate] = useState(false);
+  const [bannerHeight, setBannerHeight] = useState(0);
 
   useFocusEffect(
     React.useCallback(() => {
@@ -152,8 +153,8 @@ export const HomeScreen: React.FC = () => {
         }
       />
 
-      <FloatingButton onPress={handleCreateMap} />
-      <BannerAdView />
+      <FloatingButton onPress={handleCreateMap} bottomOffset={bannerHeight} />
+      <BannerAdView onHeightChange={setBannerHeight} />
     </View>
   );
 };

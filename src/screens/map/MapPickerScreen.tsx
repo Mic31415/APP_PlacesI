@@ -27,6 +27,7 @@ import { HomeStackParamList } from "../../types/navigation";
 import AppConfig from "../../config";
 import { getResponsiveValue, moderateScale } from "../../utils/responsive";
 import { haptics } from "../../utils/haptics";
+import { InterstitialAdService } from "../../services/InterstitialAdService";
 
 // Initialize Geocoder if not already initialized
 Geocoder.init(AppConfig.GOOGLE_PLACES_API_KEY);
@@ -239,7 +240,9 @@ export const MapPickerScreen: React.FC = () => {
     }
   };
 
-  const handleConfirm = () => {
+  const handleConfirm = async () => {
+    await InterstitialAdService.showEveryThirdAction();
+
     haptics.success();
     onSelectLocation({
       latitude: centerCoordinate.latitude,

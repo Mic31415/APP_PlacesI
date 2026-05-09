@@ -37,6 +37,7 @@ import { getResponsiveValue, moderateScale } from "../../utils/responsive";
 import { Button } from "../../components/common";
 import { haptics } from "../../utils/haptics";
 import { BannerAdView } from "../../components/ads/BannerAdView";
+import { InterstitialAdService } from "../../services/InterstitialAdService";
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -287,6 +288,8 @@ export const CreatePinScreen: React.FC = () => {
     }
 
     try {
+      await InterstitialAdService.showEveryThirdAction();
+
       if (pin) {
         // Update existing pin
         await databaseService.updatePin(pin.id, {
