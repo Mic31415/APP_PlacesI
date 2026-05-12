@@ -781,7 +781,7 @@ export const MapViewScreen: React.FC = () => {
                   bottom:
                     pins.length === 0
                       ? 40
-                      : getResponsiveValue(100, 100, 108, 130),
+                      : getResponsiveValue(115, 115, 108, 130),
                   right: 16,
                   zIndex: 100,
                 },

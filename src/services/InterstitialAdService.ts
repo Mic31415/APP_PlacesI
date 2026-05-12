@@ -54,7 +54,7 @@ export const InterstitialAdService = {
     loadInterstitial: async () => {
         if (!canShowAds()) return null;
 
-        // if (__DEV__) return null;
+        if (__DEV__) return null;
 
         // Check for subscription first
         const isPremium = await PurchaseService.getValidEntitlements();
@@ -87,7 +87,7 @@ export const InterstitialAdService = {
     showInterstitial: async () => {
         if (!canShowAds()) return false;
 
-        // if (__DEV__) return true;
+        if (__DEV__) return true;
 
         const isPremium = await PurchaseService.getValidEntitlements();
         if (isPremium) return true;
