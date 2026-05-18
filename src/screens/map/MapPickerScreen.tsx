@@ -27,7 +27,7 @@ import { HomeStackParamList } from "../../types/navigation";
 import AppConfig from "../../config";
 import { getResponsiveValue, moderateScale } from "../../utils/responsive";
 import { haptics } from "../../utils/haptics";
-import { InterstitialAdService } from "../../services/InterstitialAdService";
+import { trackInterstitialAction } from "../../services/InterstitialAdService";
 
 // Initialize Geocoder if not already initialized
 Geocoder.init(AppConfig.GOOGLE_PLACES_API_KEY);
@@ -241,7 +241,7 @@ export const MapPickerScreen: React.FC = () => {
   };
 
   const handleConfirm = async () => {
-    await InterstitialAdService.showEveryThirdAction();
+    void trackInterstitialAction();
 
     haptics.success();
     onSelectLocation({

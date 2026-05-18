@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TouchableWithoutFeedback, Switch, Alert, Linking, Platform, Modal, ActivityIndicator, PermissionsAndroid } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
@@ -24,6 +24,8 @@ import Animated, {
     Easing
 } from 'react-native-reanimated';
 import DeviceInfo from 'react-native-device-info';
+import { AdsConsent, AdsConsentPrivacyOptionsRequirementStatus } from 'react-native-google-mobile-ads';
+import { refreshAdsConsent } from '../../helpers/adConsent';
 
 interface SettingsRowProps {
     icon: string;
@@ -101,6 +103,7 @@ export const SettingsScreen: React.FC = () => {
     const [isLoading, setIsLoading] = useState(false);
     const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
     const { isPremium, presentPaywall } = usePremium();
+    const [showPrivacyOptions, setShowPrivacyOptions] = useState(false);
 
     const { top, bottom } = useSafeAreaInsets();
 
@@ -159,6 +162,14 @@ export const SettingsScreen: React.FC = () => {
                 aboutTranslateY.value = withTiming(0, { duration, easing });
             }, stagger * 3);
         }, 100);
+    }, []);
+
+    useEffect(() => {
+        AdsConsent.getConsentInfo().then(info => {
+            setShowPrivacyOptions(
+                info.privacyOptionsRequirementStatus === AdsConsentPrivacyOptionsRequirementStatus.REQUIRED
+            );
+        }).catch(() => { });
     }, []);
 
     // Animated styles
@@ -260,6 +271,15 @@ export const SettingsScreen: React.FC = () => {
         haptics.selection();
         setAppTheme(selectedTheme);
         setIsThemeModalVisible(false);
+    };
+
+    const handlePrivacyOptions = async () => {
+        try {
+            await AdsConsent.showPrivacyOptionsForm();
+            await refreshAdsConsent();
+        } catch (e) {
+            console.log('Privacy options form error:', e);
+        }
     };
 
     const handlePremium = async () => {
@@ -537,6 +557,13 @@ export const SettingsScreen: React.FC = () => {
                             onPress={() => { }}
                         />
                         <SettingsRow icon="shield-check" title="Privacy Policy" onPress={() => Linking.openURL('https://upriseix.com/PrivacyPolicy.html')} />
+                        {showPrivacyOptions && (
+                            <SettingsRow
+                                icon="hand-back-left-off"
+                                title="Do Not Sell or Share My Data"
+                                onPress={handlePrivacyOptions}
+                            />
+                        )}
                         <SettingsRow icon="file-document" title="Terms of Service" onPress={() => Linking.openURL('https://upriseix.com/TC.html')} />
                     </SettingsSection>
                 </Animated.View>

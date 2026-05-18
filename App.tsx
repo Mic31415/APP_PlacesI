@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { LogBox } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -19,27 +19,35 @@ LogBox.ignoreAllLogs(true); // Ignore all log notifications
 function App() {
   const [isAppReady, setIsAppReady] = useState(false);
 
-  React.useEffect(() => {
+  useEffect(() => {
     const init = async () => {
       try {
-        // 1. Initialize Database
         await databaseService.initDatabase();
-
-        // 2. Initialize RevenueCat (MUST be before Ads to check premium status)
         await PurchaseService.init();
-
-        // 3. Run UMP Consent flow BEFORE MobileAds.initialize()
-        const { canRequestAds } = await initAdsConsent();
-
-        // 4. Initialize Google Mobile Ads SDK if allowed
-        if (canRequestAds) {
-          await mobileAds().initialize();
-        }
       } catch (e) {
         console.error('❌ [App] Initialization Failed:', e);
       } finally {
-        setIsAppReady(true);
         SplashScreen.hide();
+        setIsAppReady(true);
+      }
+
+      try {
+        if (__DEV__) {
+          await mobileAds().setRequestConfiguration({
+            testDeviceIdentifiers: ['EMULATOR'],
+          });
+        }
+
+        const { canRequestAds } = await initAdsConsent();
+
+        if (canRequestAds) {
+          await mobileAds().initialize();
+          console.log('✅ [ADMOB] Google Mobile Ads SDK initialized successfully');
+        } else {
+          console.log('⚠️ [ADMOB] Consent not obtained — skipping SDK init.');
+        }
+      } catch (error) {
+        console.error('❌ [ADMOB] Error initializing Google Mobile Ads SDK:', error);
       }
     };
 
@@ -69,4 +77,3 @@ function App() {
 }
 
 export default App;
-

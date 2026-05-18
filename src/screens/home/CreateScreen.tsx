@@ -20,11 +20,14 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useNavigation, useFocusEffect } from "@react-navigation/native";
 import Icon from "react-native-vector-icons/MaterialCommunityIcons";
 import { useTheme } from "../../theme/ThemeContext";
-import { BottomTabNavigationProp } from "@react-navigation/bottom-tabs";
+import {
+  BottomTabNavigationProp,
+  useBottomTabBarHeight,
+} from "@react-navigation/bottom-tabs";
 import { MainTabParamList } from "../../types/navigation";
 import { databaseService } from "../../services/DatabaseService";
 import { EmojiPickerModal } from "../../components/common/EmojiPickerModal";
-import { InterstitialAdService } from "../../services/InterstitialAdService";
+import { trackInterstitialAction } from "../../services/InterstitialAdService";
 // Removed GooglePlacesAutocomplete
 import { AppConfig } from "../../config";
 import { getResponsiveValue, moderateScale } from "../../utils/responsive";
@@ -56,6 +59,9 @@ export const CreateScreen: React.FC = () => {
   const { theme, colorScheme } = useTheme();
   const navigation = useNavigation<CreateScreenNavigationProp>();
   const insets = useSafeAreaInsets();
+  const tabBarHeight = useBottomTabBarHeight();
+  const [bannerHeight, setBannerHeight] = useState(0);
+  const [isKeyboardOpen, setIsKeyboardOpen] = useState(false);
 
   const [mapName, setMapName] = useState("");
   const [selectedEmoji, setSelectedEmoji] = useState("🗺️");
@@ -83,6 +89,7 @@ export const CreateScreen: React.FC = () => {
       Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide";
 
     const showSub = Keyboard.addListener(showEvent, (e) => {
+      setIsKeyboardOpen(true);
       const keyboardHeight = e.endCoordinates?.height || 0;
       const adjustedHeight = Math.max(0, keyboardHeight - insets.bottom);
       const tabBarOffset = 60;
@@ -97,6 +104,7 @@ export const CreateScreen: React.FC = () => {
     });
 
     const hideSub = Keyboard.addListener(hideEvent, (e) => {
+      setIsKeyboardOpen(false);
       RNAnimated.timing(bannerTranslateY, {
         toValue: 0,
         duration: Platform.OS === "ios" ? e.duration || 250 : 250,
@@ -114,6 +122,9 @@ export const CreateScreen: React.FC = () => {
   const bannerAnimatedStyle = {
     transform: [{ translateY: bannerTranslateY }],
   };
+
+  const bottomReservedSpace =
+    bannerHeight + tabBarHeight + getResponsiveValue(10, 10, 12, 16);
 
   const handleSearch = (text: string) => {
     setQuery(text);
@@ -332,8 +343,7 @@ export const CreateScreen: React.FC = () => {
         initialRegion: initialRegion,
       });
 
-      // Show interstitial ad after every 3 completed create actions.
-      await InterstitialAdService.showEveryThirdAction();
+      void trackInterstitialAction();
 
       haptics.success();
       setMapName("");
@@ -429,9 +439,13 @@ export const CreateScreen: React.FC = () => {
         style={{ flex: 1 }}
       >
         <ScrollView
-          contentContainerStyle={styles.content}
+          contentContainerStyle={[
+            styles.content,
+            { paddingBottom: isKeyboardOpen ? bottomReservedSpace : 24 },
+          ]}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
+          scrollIndicatorInsets={{ bottom: bottomReservedSpace }}
         >
           {/* Map Name */}
           <Animated.View style={mapNameAnimatedStyle}>
@@ -675,7 +689,7 @@ export const CreateScreen: React.FC = () => {
       </KeyboardAvoidingView>
 
       <RNAnimated.View style={[bannerAnimatedStyle]}>
-        <BannerAdView />
+        <BannerAdView onHeightChange={setBannerHeight} />
       </RNAnimated.View>
 
       {/* Emoji Modal */}
@@ -709,7 +723,9 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: 24,
-    paddingBottom: 104,
+  },
+  bannerContainer: {
+
   },
   label: {
     fontSize: moderateScale(14),

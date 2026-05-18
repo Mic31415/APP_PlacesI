@@ -17,33 +17,29 @@ import { canShowAds } from "../../helpers/adConsent";
 import { usePremium } from "../../context/PremiumContext";
 
 interface BannerAdProps {
-  size?: BannerAdSize;
   onAdLoaded?: (loaded: boolean, height: number) => void;
   onHeightChange?: (height: number) => void;
-  onPaid?: React.ComponentProps<typeof BannerAd>["onPaid"];
 }
 
 export const BannerAdView: React.FC<BannerAdProps> = ({
-  size = BannerAdSize.BANNER,
   onAdLoaded,
   onHeightChange,
-  onPaid,
 }) => {
   const bannerRef = useRef<any>(null);
-  const { isPremium } = usePremium();
+  const { isPremium, isLoading } = usePremium();
   const { width } = useWindowDimensions();
-  const [adLoaded, setAdLoaded] = useState(false);
+  const [isAdLoaded, setIsAdLoaded] = useState(false);
   const [adDimensions, setAdDimensions] = useState({ width: 0, height: 0 });
   const [isConsentObtained, setIsConsentObtained] = useState(canShowAds());
 
   const adaptiveWidth = Math.max(1, Math.round(width));
 
   const adUnitId = __DEV__
-    ? TestIds.BANNER
+    ? TestIds.ADAPTIVE_BANNER
     : Platform.select({
         ios: AppConfig.admob.bannerIOS,
         android: AppConfig.admob.bannerAndroid,
-      }) || TestIds.BANNER;
+      }) || TestIds.ADAPTIVE_BANNER;
 
   const bannerKey = useMemo(
     () => `banner-${Platform.OS}-${adaptiveWidth}`,
@@ -70,38 +66,29 @@ export const BannerAdView: React.FC<BannerAdProps> = ({
   }, []);
 
   useEffect(() => {
-    setAdLoaded(false);
+    setIsAdLoaded(false);
     setAdDimensions({ width: 0, height: 0 });
-    onAdLoaded?.(false, 0);
-    onHeightChange?.(0);
+    if (onHeightChange) onHeightChange(0);
   }, [bannerKey, onAdLoaded, onHeightChange]);
 
-  useEffect(() => {
-    if (isPremium || !isConsentObtained) {
-      setAdLoaded(false);
-      setAdDimensions({ width: 0, height: 0 });
-      onAdLoaded?.(false, 0);
-      onHeightChange?.(0);
-    }
-  }, [isConsentObtained, isPremium, onAdLoaded, onHeightChange]);
-
-  // Reload ad on iOS foreground to maximize revenue
   useForeground(() => {
     if (Platform.OS === "ios" && bannerRef.current?.load) {
       bannerRef.current.load();
     }
   });
-  // if (__DEV__) {
-  //   return;
-  // }
+
+  if (__DEV__) {
+    return null;
+  }
+
   return (
     <>
-      {!isPremium && isConsentObtained && (
+      {!isPremium && !isLoading && isConsentObtained && (
         <View
           style={[
             styles.container,
             {
-              height: adLoaded ? adDimensions.height || undefined : 0,
+              height: isAdLoaded ? adDimensions.height || undefined : 0,
               overflow: "hidden",
             },
           ]}
@@ -110,29 +97,24 @@ export const BannerAdView: React.FC<BannerAdProps> = ({
             key={bannerKey}
             ref={bannerRef}
             unitId={adUnitId}
-            size={size}
+            size={BannerAdSize.LARGE_ANCHORED_ADAPTIVE_BANNER}
             width={adaptiveWidth}
             onSizeChange={(dimensions) => {
               setAdDimensions(dimensions);
               onHeightChange?.(dimensions.height);
             }}
-            onAdLoaded={(dimensions) => {
-              const height = dimensions?.height || adDimensions.height || 60;
-
-              setAdLoaded(true);
-              setAdDimensions(dimensions || { width: adaptiveWidth, height });
-              onAdLoaded?.(true, height);
-              onHeightChange?.(height);
+            onAdLoaded={() => {
+              console.log("Banner ad loaded successfully");
+              setIsAdLoaded(true);
+              const height = adDimensions.height || 60;
+               if (onAdLoaded) onAdLoaded(true, height);
+               if (onHeightChange) onHeightChange(height);
             }}
             onAdFailedToLoad={(error) => {
               console.error("❌ [BannerAd] Ad failed to load:", error);
-              setAdLoaded(false);
-              setAdDimensions({ width: 0, height: 0 });
-              onAdLoaded?.(false, 0);
-              onHeightChange?.(0);
-            }}
-            onPaid={(event) => {
-              onPaid?.(event);
+              setIsAdLoaded(false);
+              if (onAdLoaded) onAdLoaded(false, 0);
+              if (onHeightChange) onHeightChange(0);
             }}
           />
         </View>

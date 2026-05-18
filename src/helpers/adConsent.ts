@@ -20,11 +20,13 @@ export const refreshAdsConsent = async () => {
         const previouslyAllowed = adsAllowed;
         adsAllowed = consentInfo.canRequestAds;
         DeviceEventEmitter.emit('adsConsentReady', adsAllowed);
+        console.log('🔄 Consent refreshed. canShowAds:', adsAllowed);
 
         // If consent was just granted this session and the SDK was never initialized,
         // initialize it now so ads work without requiring an app restart.
         if (adsAllowed && !previouslyAllowed) {
             await mobileAds().initialize();
+            console.log('✅ Mobile Ads SDK initialized after consent granted in Settings.');
         }
     } catch (e) {
         console.error('❌ Failed to refresh consent state:', e);
@@ -38,10 +40,23 @@ export const refreshAdsConsent = async () => {
  * Must be called BEFORE MobileAds.initialize() per library docs.
  */
 export const initAdsConsent = async () => {
+    if (__DEV__) {
+        console.log("🛠️ Dev mode: skipping UMP consent.");
+        adsAllowed = true;
+        DeviceEventEmitter.emit('adsConsentReady', true);
+        return { canRequestAds: true };
+    }
     try {
+        console.log("🔐 Starting UMP consent...");
+
         // gatherConsent = requestInfoUpdate + loadAndShowConsentFormIfRequired.
         // Handles both GDPR (opt-in) and US-state CCPA (opt-out) automatically.
         const consentInfo = await AdsConsent.gatherConsent();
+        console.log(
+            "✅ Consent complete. canRequestAds:", consentInfo.canRequestAds,
+            "| status:", consentInfo.status,
+            "| privacyOptionsRequired:", consentInfo.privacyOptionsRequirementStatus,
+        );
 
         // Request iOS ATT after UMP (Google's recommended order)
         if (Platform.OS === "ios") {
@@ -70,7 +85,7 @@ export const initAdsConsent = async () => {
  */
 const requestATTIfNeeded = async () => {
     if (Platform.OS !== "ios") {
-        return false;
+        return false; // Only for iOS, return false (not blocked)
     }
 
     try {
@@ -79,7 +94,7 @@ const requestATTIfNeeded = async () => {
         );
 
         if (permissionStatus === RESULTS.BLOCKED) {
-            return true;
+            return true; // Return true to indicate blocked
         }
 
         if (permissionStatus === RESULTS.GRANTED) {
@@ -87,24 +102,10 @@ const requestATTIfNeeded = async () => {
         }
 
         if (permissionStatus === RESULTS.DENIED) {
-            // Small delay to ensure the app is fully active and ready to show a modal
-            await new Promise(resolve => setTimeout(resolve, 500));
-
-            // Wrap request in a safety timeout so it can't hang the app forever
-            await Promise.race([
-                request(PERMISSIONS.IOS.APP_TRACKING_TRANSPARENCY),
-                new Promise((_, reject) => setTimeout(() => reject(new Error("ATT_TIMEOUT")), 5000))
-            ]).catch(err => {
-                // Ignore timeout/fail in silent mode
-            });
-
-            return false;
-        } else {
+            await request(PERMISSIONS.IOS.APP_TRACKING_TRANSPARENCY);
             return false;
         }
-
     } catch (error) {
-        console.error("❌ [ATT] Error checking/requesting permission:", error);
         return false;
     }
 };

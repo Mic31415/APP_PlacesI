@@ -37,7 +37,7 @@ import { getResponsiveValue, moderateScale } from "../../utils/responsive";
 import { Button } from "../../components/common";
 import { haptics } from "../../utils/haptics";
 import { BannerAdView } from "../../components/ads/BannerAdView";
-import { InterstitialAdService } from "../../services/InterstitialAdService";
+import { trackInterstitialAction } from "../../services/InterstitialAdService";
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -79,7 +79,8 @@ export const CreatePinScreen: React.FC = () => {
     longitude: number;
   } | null>(pin ? { latitude: pin.latitude, longitude: pin.longitude } : null);
   const [isLoadingLocation, setIsLoadingLocation] = useState(false);
-
+const [bannerHeight, setBannerHeight] = useState(0);
+  const [isKeyboardOpen, setIsKeyboardOpen] = useState(false);
   // Manual Autocomplete State
   const [predictions, setPredictions] = useState<PlacePrediction[]>([]);
   const searchDebounce = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -92,9 +93,9 @@ export const CreatePinScreen: React.FC = () => {
       Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide";
 
     const showSub = Keyboard.addListener(showEvent, (e) => {
+      setIsKeyboardOpen(true);
       const keyboardHeight = e.endCoordinates?.height || 0;
-      const adjustedHeight = Math.max(0, keyboardHeight - insets.bottom);
-      const bannerOffset = Math.max(0, adjustedHeight);
+      const bannerOffset = Math.max(0, keyboardHeight);
 
       RNAnimated.timing(bannerTranslateY, {
         toValue: -bannerOffset,
@@ -105,6 +106,7 @@ export const CreatePinScreen: React.FC = () => {
     });
 
     const hideSub = Keyboard.addListener(hideEvent, (e) => {
+      setIsKeyboardOpen(false);
       RNAnimated.timing(bannerTranslateY, {
         toValue: 0,
         duration: Platform.OS === "ios" ? e.duration || 250 : 250,
@@ -118,7 +120,11 @@ export const CreatePinScreen: React.FC = () => {
       hideSub.remove();
     };
   }, [bannerTranslateY, insets.bottom]);
-
+  const bottomReservedSpace =
+     getResponsiveValue(10, 10, 12, 16);
+  const scrollBottomPadding = isKeyboardOpen
+    ? bottomReservedSpace + getResponsiveValue(260, 280, 300, 320)
+    : bottomReservedSpace;
   const bannerAnimatedStyle = {
     transform: [{ translateY: bannerTranslateY }],
   };
@@ -288,8 +294,6 @@ export const CreatePinScreen: React.FC = () => {
     }
 
     try {
-      await InterstitialAdService.showEveryThirdAction();
-
       if (pin) {
         // Update existing pin
         await databaseService.updatePin(pin.id, {
@@ -318,6 +322,8 @@ export const CreatePinScreen: React.FC = () => {
           imageUri: imageUri || undefined,
         });
       }
+
+      void trackInterstitialAction();
       haptics.success();
       navigation.goBack();
     } catch (error) {
@@ -601,8 +607,12 @@ export const CreatePinScreen: React.FC = () => {
         style={{ flex: 1 }}
       >
         <ScrollView
-          contentContainerStyle={styles.content}
+          contentContainerStyle={[
+            styles.content,
+            { paddingBottom: scrollBottomPadding },
+          ]}
           keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
         >
           {/* Location (Simplified Search) */}
           <Animated.View
@@ -952,13 +962,13 @@ export const CreatePinScreen: React.FC = () => {
           styles.bannerContainer,
           {
             backgroundColor: theme.colors.background[colorScheme],
-            paddingBottom: insets.bottom,
+            paddingBottom: isKeyboardOpen ? 0: insets.bottom,
           },
           bannerAnimatedStyle,
         ]}
       >
-        <BannerAdView />
-      </RNAnimated.View>
+<BannerAdView onHeightChange={setBannerHeight} />  
+    </RNAnimated.View>
 
       {/* Emoji Modal */}
       <EmojiPickerModal

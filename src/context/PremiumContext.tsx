@@ -1,7 +1,6 @@
 import React, { createContext, useState, useEffect, useContext } from 'react';
 import { PurchaseService } from '../services/PurchaseService';
 import { PurchasesPackage } from 'react-native-purchases';
-import { InterstitialAdService } from '../services/InterstitialAdService';
 import RevenueCatUI, { PAYWALL_RESULT } from 'react-native-purchases-ui';
 
 interface PremiumContextType {
@@ -57,12 +56,6 @@ export const PremiumProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
         init();
     }, []);
-
-    // Sync with AdService
-    useEffect(() => {
-        InterstitialAdService.updatePremiumStatus(isPremium);
-    }, [isPremium]);
-
     const purchase = async (pack: PurchasesPackage) => {
         setIsLoading(true);
         try {

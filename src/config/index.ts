@@ -10,10 +10,6 @@ export const AppConfig = {
         bannerIOS: Secrets.ADMOB.IOS_BANNER_ID,
         interstitialAndroid: Secrets.ADMOB.ANDROID_INTERSTITIAL_ID,
         interstitialIOS: Secrets.ADMOB.IOS_INTERSTITIAL_ID,
-        rewardedAndroid: "ca-app-pub-3940256099942544/5224354917", // Test ID (Not used yet)
-        rewardedIOS: "ca-app-pub-3940256099942544/1712485313", // Test ID (Not used yet)
-        nativeAndroid: "ca-app-pub-3940256099942544/2247696110", // Test ID (Not used yet)
-        nativeIOS: "ca-app-pub-3940256099942544/3986624511", // Test ID (Not used yet)
     },
 
     GOOGLE_PLACES_API_KEY: Secrets.GOOGLE_PLACES_API_KEY,

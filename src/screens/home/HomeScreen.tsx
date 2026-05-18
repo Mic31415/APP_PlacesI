@@ -1,7 +1,10 @@
 import React, { useState, useCallback } from "react";
 import { View, StyleSheet, FlatList, Text, Alert } from "react-native";
 import { useNavigation, useFocusEffect } from "@react-navigation/native";
-import { BottomTabNavigationProp } from "@react-navigation/bottom-tabs";
+import {
+  BottomTabNavigationProp,
+  useBottomTabBarHeight,
+} from "@react-navigation/bottom-tabs";
 import { useTheme } from "../../theme/ThemeContext";
 import { ScreenHeader } from "../../components/common/ScreenHeader";
 import { databaseService, MapData } from "../../services/DatabaseService";
@@ -26,10 +29,15 @@ type HomeScreenNavigationProp = BottomTabNavigationProp<
 export const HomeScreen: React.FC = () => {
   const { theme, colorScheme } = useTheme();
   const navigation = useNavigation<HomeScreenNavigationProp>();
-  // Initialize with empty array
+  const tabBarHeight = useBottomTabBarHeight();
   const [maps, setMaps] = useState<MapData[]>([]);
   const [shouldAnimate, setShouldAnimate] = useState(false);
   const [bannerHeight, setBannerHeight] = useState(0);
+  const floatingGap = bannerHeight > 0 ? getResponsiveValue(20, 20, 22, 26) : 0;
+  const floatingButtonSize = getResponsiveValue(56, 80, 60, 80);
+  const fabBottomOffset = bannerHeight + floatingGap;
+  const listBottomPadding =
+    bannerHeight + tabBarHeight + floatingButtonSize + floatingGap;
 
   useFocusEffect(
     React.useCallback(() => {
@@ -141,7 +149,7 @@ export const HomeScreen: React.FC = () => {
         key={numColumns} // Force re-render on column change
         contentContainerStyle={{
           padding: theme.spacing.sm,
-          paddingBottom: 80,
+          paddingBottom: listBottomPadding,
           flexGrow: 1, // Allow container to fill space
           justifyContent: maps.length === 0 ? "center" : "flex-start", // Center only when empty
         }}
@@ -153,7 +161,10 @@ export const HomeScreen: React.FC = () => {
         }
       />
 
-      <FloatingButton onPress={handleCreateMap} bottomOffset={bannerHeight} />
+      <FloatingButton
+        onPress={handleCreateMap}
+        bottomOffset={fabBottomOffset}
+      />
       <BannerAdView onHeightChange={setBannerHeight} />
     </View>
   );

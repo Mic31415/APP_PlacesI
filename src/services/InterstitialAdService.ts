@@ -5,28 +5,27 @@ import { AppConfig } from '../config';
 import { canShowAds } from '../helpers/adConsent';
 import { PurchaseService } from './PurchaseService';
 
-let interstitial: InterstitialAd | null = null;
-let interstitialListeners: (() => void)[] = [];
+let interstitialAd: InterstitialAd | null = null;
+let interstitialAdListeners: (() => void)[] = [];
 const INTERSTITIAL_ACTION_COUNT_KEY = '@placesi_interstitial_action_count';
-const INTERSTITIAL_FREQUENCY = 3;
 
 const clearInterstitialListeners = () => {
-    interstitialListeners.forEach(removeListener => {
+    interstitialAdListeners.forEach(removeListener => {
         try {
             removeListener?.();
         } catch (error) {
             console.log('⚠️ Error removing interstitial listener:', error);
         }
     });
-    interstitialListeners = [];
+    interstitialAdListeners = [];
 };
 
 const disposeInterstitialAd = () => {
     clearInterstitialListeners();
-    interstitial = null;
+    interstitialAd = null;
 };
 
-const waitForLoad = (ad: InterstitialAd) => new Promise((resolve, reject) => {
+const waitForLoad = (ad: InterstitialAd) => new Promise<boolean>((resolve, reject) => {
     const offLoaded = ad.addAdEventListener(AdEventType.LOADED, () => {
         offLoaded();
         offError();
@@ -46,115 +45,130 @@ const getAdUnitId = () => {
     return Platform.OS === 'ios' ? AppConfig.admob.interstitialIOS : AppConfig.admob.interstitialAndroid;
 };
 
-export const InterstitialAdService = {
-    updatePremiumStatus: (status: boolean) => {
-        // Kept for compatibility with PremiumContext, but we check live status in load/show
-    },
+const loadInterstitialAd = async () => {
+    if (!canShowAds()) {
+        console.log('🚫 Ads not permitted (consent not obtained) — skipping interstitial load.');
+        return null;
+    }
 
-    loadInterstitial: async () => {
-        if (!canShowAds()) return null;
+    if (__DEV__) {
+        return null;
+    }
 
-        if (__DEV__) return null;
+    const isPremium = await PurchaseService.getValidEntitlements();
+    if (isPremium) {
+        console.log('👑 User has active subscription, skipping interstitial ad load.');
+        return null;
+    }
 
-        // Check for subscription first
-        const isPremium = await PurchaseService.getValidEntitlements();
-        if (isPremium) return null;
+    try {
+        const adUnitId = getAdUnitId();
+        console.log('📱 Loading interstitial ad with unit ID:', adUnitId);
 
-        try {
-            const adUnitId = getAdUnitId();
-            
-            clearInterstitialListeners();
-            interstitial = InterstitialAd.createForAdRequest(adUnitId || TestIds.INTERSTITIAL);
+        clearInterstitialListeners();
+        interstitialAd = InterstitialAd.createForAdRequest(adUnitId);
 
-            interstitialListeners = [
-                interstitial.addAdEventListener(AdEventType.LOADED, () => {
-                }),
-                interstitial.addAdEventListener(AdEventType.ERROR, (error) => {
-                }),
-                interstitial.addAdEventListener(AdEventType.PAID, (event) => {
-                }),
-            ];
+        interstitialAdListeners = [
+            interstitialAd.addAdEventListener(AdEventType.LOADED, () => {
+                console.log('✅ Interstitial ad loaded');
+            }),
+            interstitialAd.addAdEventListener(AdEventType.ERROR, (error) => {
+                console.log('❌ Interstitial ad error:', error);
+            }),
+        ];
 
-            interstitial.load();
-            return interstitial;
-        } catch (error) {
-            console.error('❌ [Interstitial] Error in load process:', error);
-            disposeInterstitialAd();
-            return null;
+        interstitialAd.load();
+        return interstitialAd;
+    } catch (error) {
+        console.error('❌ Error loading interstitial ad:', error);
+        disposeInterstitialAd();
+        return null;
+    }
+};
+
+export const showInterstitialAd = async () => {
+    if (!canShowAds()) {
+        console.log('🚫 Ads not permitted (consent not obtained) — skipping interstitial show.');
+        return false;
+    }
+
+    if (__DEV__) {
+        return true;
+    }
+
+    const isPremium = await PurchaseService.getValidEntitlements();
+    if (isPremium) {
+        console.log('👑 User has active subscription, skipping interstitial ad show.');
+        return true;
+    }
+
+    try {
+        if (!interstitialAd) {
+            console.log('⚠️ Interstitial ad not loaded, loading now...');
+            await loadInterstitialAd();
         }
-    },
 
-    showInterstitial: async () => {
-        if (!canShowAds()) return false;
+        if (!interstitialAd) {
+            console.log('❌ Failed to load interstitial ad');
+            return false;
+        }
 
-        if (__DEV__) return true;
-
-        const isPremium = await PurchaseService.getValidEntitlements();
-        if (isPremium) return true;
-
-        try {
-            if (!interstitial) {
-                await InterstitialAdService.loadInterstitial();
-            }
-
-            if (!interstitial) {
+        if (!interstitialAd.loaded) {
+            console.log('⚠️ Interstitial ad not ready, waiting for load...');
+            try {
+                await waitForLoad(interstitialAd);
+            } catch (e) {
+                console.log('❌ Interstitial ad still not ready');
                 return false;
             }
+        }
 
-            if (!interstitial.loaded) {
-                try {
-                    await waitForLoad(interstitial);
-                } catch (e) {
-                    return false;
+        console.log('📺 Showing interstitial ad');
+
+        return new Promise<boolean>((resolve) => {
+            const removeErrorListener = interstitialAd!.addAdEventListener(
+                AdEventType.ERROR,
+                (error) => {
+                    console.log('❌ Ad error:', error);
+                    removeErrorListener();
+                    removeClosedListener();
+                    disposeInterstitialAd();
+                    resolve(false);
                 }
-            }
+            );
 
-            return new Promise((resolve) => {
-                const removeErrorListener = interstitial!.addAdEventListener(
-                    AdEventType.ERROR,
-                    (error) => {
-                        removeErrorListener();
-                        removeClosedListener();
-                        disposeInterstitialAd();
-                        resolve(false);
-                    }
-                );
+            const removeClosedListener = interstitialAd!.addAdEventListener(
+                AdEventType.CLOSED,
+                () => {
+                    console.log('✅ Interstitial ad closed');
+                    removeErrorListener();
+                    removeClosedListener();
+                    disposeInterstitialAd();
+                    resolve(true);
+                }
+            );
 
-                const removeClosedListener = interstitial!.addAdEventListener(
-                    AdEventType.CLOSED,
-                    () => {
-                        removeErrorListener();
-                        removeClosedListener();
-                        disposeInterstitialAd();
-                        // Preload removed to match reference app
-                        resolve(true);
-                    }
-                );
+            interstitialAd!.show();
+        });
+    } catch (error) {
+        console.error('❌ Error showing interstitial ad:', error);
+        disposeInterstitialAd();
+        return false;
+    }
+};
 
-                interstitial!.show();
-            });
-        } catch (error) {
-            console.error('❌ [Interstitial] Error in show process:', error);
-            disposeInterstitialAd();
-            return false;
+export const trackInterstitialAction = async () => {
+    try {
+        const countStr = await AsyncStorage.getItem(INTERSTITIAL_ACTION_COUNT_KEY);
+        const count = countStr ? parseInt(countStr, 10) : 0;
+        const nextCount = count + 1;
+
+        await AsyncStorage.setItem(INTERSTITIAL_ACTION_COUNT_KEY, nextCount.toString());
+
+        if (nextCount % 3 === 0) {
+            void showInterstitialAd();
         }
-    },
-
-    showEveryThirdAction: async () => {
-        try {
-            const storedCount = await AsyncStorage.getItem(INTERSTITIAL_ACTION_COUNT_KEY);
-            const nextCount = (Number(storedCount) || 0) + 1;
-
-            if (nextCount < INTERSTITIAL_FREQUENCY) {
-                await AsyncStorage.setItem(INTERSTITIAL_ACTION_COUNT_KEY, String(nextCount));
-                return false;
-            }
-
-            await AsyncStorage.setItem(INTERSTITIAL_ACTION_COUNT_KEY, '0');
-            return InterstitialAdService.showInterstitial();
-        } catch (error) {
-            console.error('❌ [Interstitial] Error updating action count:', error);
-            return false;
-        }
-    },
+    } catch (error) {
+        console.error('❌ Failed to update interstitial action count:', error);
+    }
 };
