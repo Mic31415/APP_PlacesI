@@ -100,6 +100,8 @@ export const MapViewScreen: React.FC = () => {
     "newest",
   );
   const [minRating, setMinRating] = useState(0);
+  const [bannerHeight, setBannerHeight] = useState(0);
+  const [isKeyboardOpen, setIsKeyboardOpen] = useState(false);
   const bannerTranslateY = useRef(new RNAnimated.Value(0)).current;
 
   useEffect(() => {
@@ -109,6 +111,7 @@ export const MapViewScreen: React.FC = () => {
       Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide";
 
     const showSub = Keyboard.addListener(showEvent, (e) => {
+      setIsKeyboardOpen(true);
       const keyboardHeight = e.endCoordinates?.height || 0;
       const adjustedHeight = Math.max(0, keyboardHeight - insets.bottom);
       const bannerOffset = Math.max(0, adjustedHeight);
@@ -122,6 +125,7 @@ export const MapViewScreen: React.FC = () => {
     });
 
     const hideSub = Keyboard.addListener(hideEvent, (e) => {
+      setIsKeyboardOpen(false);
       RNAnimated.timing(bannerTranslateY, {
         toValue: 0,
         duration: Platform.OS === "ios" ? e.duration || 250 : 250,
@@ -773,25 +777,36 @@ export const MapViewScreen: React.FC = () => {
               />
             </Animated.View>
 
-            <Animated.View
-              style={[
-                fabAnimatedStyle,
-                {
-                  position: "absolute",
-                  bottom:
-                    pins.length === 0
-                      ? 40
-                      : getResponsiveValue(115, 115, 108, 130),
-                  right: 16,
-                  zIndex: 100,
-                },
-              ]}
-            >
-              <FloatingButton
-                onPress={handleAddPin}
-                icon="map-marker-plus-outline"
-              />
-            </Animated.View>
+            {/* Hide the Add Pin FAB while the keyboard is open so it doesn't
+                hover over the keyboard / search predictions area. */}
+            {!isKeyboardOpen && (
+              <Animated.View
+                style={[
+                  fabAnimatedStyle,
+                  {
+                    position: "absolute",
+                    bottom:
+                      pins.length === 0
+                        ? 40 + (bannerHeight > 0 ? 0 : insets.bottom)
+                        : 40 +
+                          getResponsiveValue(80, 80, 86, 104) +
+                          getResponsiveValue(16, 16, 20, 24),
+                    right: getResponsiveValue(16, 16, 20, 24),
+                    zIndex: 100,
+                  },
+                ]}
+              >
+                <FloatingButton
+                  onPress={handleAddPin}
+                  icon="map-marker-plus-outline"
+                  style={{
+                    position: "relative",
+                    marginBottom: 0,
+                    marginRight: 0,
+                  }}
+                />
+              </Animated.View>
+            )}
 
             {/* Horizontal Pin List */}
             <Animated.View
@@ -1245,12 +1260,12 @@ export const MapViewScreen: React.FC = () => {
           styles.bannerContainer,
           {
             backgroundColor: theme.colors.background[colorScheme],
-            paddingBottom: insets.bottom,
+            paddingBottom: bannerHeight > 0 ? insets.bottom : 0,
           },
           bannerAnimatedStyle,
         ]}
       >
-        <BannerAdView />
+        <BannerAdView onHeightChange={setBannerHeight} />
       </RNAnimated.View>
     </View>
   );
@@ -1268,7 +1283,6 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
   },
   bannerContainer: {
-    paddingTop: 8,
     paddingHorizontal: 0,
   },
   horizontalListContainer: {

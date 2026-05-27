@@ -994,13 +994,20 @@ export const CreatePinScreen: React.FC = () => {
           styles.bannerContainer,
           {
             backgroundColor: theme.colors.background[colorScheme],
-            paddingBottom: isKeyboardOpen ? 0: insets.bottom,
+            // When no banner is showing (Premium user, consent denied, ad
+            // failed, DEV build) collapse the whole container — both the
+            // safe-area padding AND the breathing-room top padding — so the
+            // form runs flush to the screen edge. Keyboard always collapses
+            // the area regardless.
+            paddingTop: bannerHeight > 0 ? 8 : 0,
+            paddingBottom:
+              isKeyboardOpen || bannerHeight === 0 ? 0 : insets.bottom,
           },
           bannerAnimatedStyle,
         ]}
       >
-<BannerAdView onHeightChange={setBannerHeight} />  
-    </RNAnimated.View>
+        <BannerAdView onHeightChange={setBannerHeight} />
+      </RNAnimated.View>
 
       {/* Emoji Modal */}
       <EmojiPickerModal
@@ -1035,13 +1042,12 @@ const styles = StyleSheet.create({
   },
   bannerContainer: { paddingTop: 8 },
   inputGroup: {
-    marginBottom: 24,
+    marginBottom: 16,
   },
   label: {
     fontSize: moderateScale(14),
     fontWeight: "500",
     marginBottom: 8,
-    marginTop: 16,
     fontFamily: "poppins_medium",
   },
   hint: {
