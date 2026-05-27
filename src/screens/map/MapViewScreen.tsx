@@ -80,10 +80,14 @@ export const MapViewScreen: React.FC = () => {
   const navigation = useNavigation<MapViewScreenNavigationProp>();
   const route = useRoute<MapViewScreenRouteProp>();
   const insets = useSafeAreaInsets();
-  const { mapId, mapName, emoji } = route.params || {};
+  const { mapId, mapName, emoji, focusPinId } = route.params || {};
 
   const mapRef = useRef<MapView>(null);
   const mapViewShotRef = useRef<ViewShot>(null);
+  // Set when an incoming focusPinId has just been consumed, so the
+  // onMapReady fit-to-all-coordinates pass doesn't zoom out away from
+  // the pin the user came to see. Cleared after one onMapReady fire.
+  const focusPinHandledRef = useRef(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [pins, setPins] = useState<PinData[]>([]);
 
@@ -235,7 +239,27 @@ export const MapViewScreen: React.FC = () => {
           if (map.name !== currentMapName) setCurrentMapName(map.name);
           if (map.emoji !== currentMapEmoji) setCurrentMapEmoji(map.emoji);
 
-          if (fetchedPins.length > 0) {
+          const focusTarget = focusPinId
+            ? fetchedPins.find((p) => p.id === focusPinId)
+            : null;
+
+          if (focusTarget) {
+            // Came in from Global Search — center tightly on the requested
+            // pin and open its detail sheet straight away.
+            focusPinHandledRef.current = true;
+            setInitialRegion({
+              latitude: focusTarget.latitude,
+              longitude: focusTarget.longitude,
+              latitudeDelta: 0.02,
+              longitudeDelta: 0.02,
+            });
+            setIsMapReady(true);
+            setSelectedPin(focusTarget);
+            setModalVisible(true);
+            // Consume the param so refocusing this screen later (e.g. after
+            // closing the detail sheet) doesn't replay the auto-open.
+            navigation.setParams({ focusPinId: undefined } as any);
+          } else if (fetchedPins.length > 0) {
             // Option A: Fit to Pins
             const firstPin = fetchedPins[0];
             setInitialRegion({
@@ -778,6 +802,13 @@ export const MapViewScreen: React.FC = () => {
               spiderLineColor={theme.colors.primary}
               radius={100}
               onMapReady={() => {
+                // If we just arrived via Global Search, the initial region
+                // is already centered on the target pin — don't zoom out to
+                // fit everything.
+                if (focusPinHandledRef.current) {
+                  focusPinHandledRef.current = false;
+                  return;
+                }
                 // Fit to coordinates if pins exist
                 if (filteredPins.length > 0) {
                   const coordinates = filteredPins.map((pin) => ({

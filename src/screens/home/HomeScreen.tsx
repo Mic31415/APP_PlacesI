@@ -1,10 +1,18 @@
 import React, { useState, useCallback } from "react";
-import { View, StyleSheet, FlatList, Text, Alert } from "react-native";
+import {
+  View,
+  StyleSheet,
+  FlatList,
+  Text,
+  Alert,
+  TouchableOpacity,
+} from "react-native";
 import { useNavigation, useFocusEffect } from "@react-navigation/native";
 import {
   BottomTabNavigationProp,
   useBottomTabBarHeight,
 } from "@react-navigation/bottom-tabs";
+import Icon from "react-native-vector-icons/MaterialCommunityIcons";
 import { useTheme } from "../../theme/ThemeContext";
 import { ScreenHeader } from "../../components/common/ScreenHeader";
 import { databaseService, MapData } from "../../services/DatabaseService";
@@ -14,6 +22,7 @@ import { FloatingButton } from "../../components/common/FloatingButton";
 import { getResponsiveValue } from "../../utils/responsive";
 import { MainTabParamList } from "../../types/navigation";
 import { BannerAdView } from "../../components/ads/BannerAdView";
+import { haptics } from "../../utils/haptics";
 
 // Mock Data removed
 // import { useFocusEffect } from '@react-navigation/native';
@@ -25,6 +34,8 @@ type HomeScreenNavigationProp = BottomTabNavigationProp<
   MainTabParamList,
   "Home"
 >;
+
+const SEARCH_ICON_SIZE = getResponsiveValue(24, 24, 26, 32);
 
 export const HomeScreen: React.FC = () => {
   const { theme, colorScheme } = useTheme();
@@ -72,6 +83,13 @@ export const HomeScreen: React.FC = () => {
   const handleCreateMap = () => {
     // Navigate to Create Tab
     navigation.navigate("Create");
+  };
+
+  const handleOpenSearch = () => {
+    haptics.selection();
+    // @ts-ignore — GlobalSearch lives on the Home stack; the tab nav prop
+    // doesn't infer it directly.
+    navigation.navigate("GlobalSearch");
   };
 
   const handleMapPress = (map: MapData) => {
@@ -129,6 +147,20 @@ export const HomeScreen: React.FC = () => {
           >
             My Maps
           </Text>
+        }
+        rightComponent={
+          <TouchableOpacity
+            onPress={handleOpenSearch}
+            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+            accessibilityRole="button"
+            accessibilityLabel="Search all pins"
+          >
+            <Icon
+              name="magnify"
+              size={SEARCH_ICON_SIZE}
+              color={theme.colors.text.primary[colorScheme]}
+            />
+          </TouchableOpacity>
         }
       />
 

@@ -29,6 +29,11 @@ export interface PinData {
     createdAt: number;
 }
 
+export interface GlobalSearchResult extends PinData {
+    mapName: string;
+    mapEmoji: string;
+}
+
 class DatabaseService {
     private db: SQLite.SQLiteDatabase | null = null;
 
@@ -223,6 +228,58 @@ class DatabaseService {
         } catch (error) {
             console.error('Failed to get pins:', error);
             throw error;
+        }
+    }
+
+    public async searchPinsGlobal(query: string, limit: number = 100): Promise<GlobalSearchResult[]> {
+        if (!this.db) await this.initDatabase();
+
+        const trimmed = query.trim();
+        if (!trimmed) return [];
+
+        const sanitized = trimmed.replace(/[%_]/g, (m) => `\\${m}`);
+        const like = `%${sanitized}%`;
+
+        try {
+            const [results] = await this.db!.executeSql(
+                `SELECT
+                    Pins.id, Pins.map_id, Pins.title, Pins.description,
+                    Pins.latitude, Pins.longitude, Pins.image_uri, Pins.rating,
+                    Pins.emoji, Pins.address, Pins.created_at,
+                    Maps.name AS map_name, Maps.emoji AS map_emoji
+                 FROM Pins
+                 JOIN Maps ON Pins.map_id = Maps.id
+                 WHERE Pins.title LIKE ? ESCAPE '\\'
+                    OR Pins.description LIKE ? ESCAPE '\\'
+                    OR Pins.address LIKE ? ESCAPE '\\'
+                 ORDER BY Pins.created_at DESC
+                 LIMIT ?`,
+                [like, like, like, limit]
+            );
+
+            const out: GlobalSearchResult[] = [];
+            for (let i = 0; i < results.rows.length; i++) {
+                const item = results.rows.item(i);
+                out.push({
+                    id: item.id,
+                    mapId: item.map_id,
+                    title: item.title,
+                    description: item.description,
+                    latitude: item.latitude,
+                    longitude: item.longitude,
+                    imageUri: item.image_uri,
+                    rating: item.rating,
+                    emoji: item.emoji || '📍',
+                    address: item.address || '',
+                    createdAt: item.created_at,
+                    mapName: item.map_name,
+                    mapEmoji: item.map_emoji,
+                });
+            }
+            return out;
+        } catch (error) {
+            console.error('Failed to search pins:', error);
+            return [];
         }
     }
 

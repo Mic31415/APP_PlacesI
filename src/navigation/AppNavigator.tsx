@@ -15,6 +15,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { CreatePinScreen } from '../screens/home/CreatePinScreen';
 import { MapPickerScreen } from '../screens/map/MapPickerScreen';
+import { GlobalSearchScreen } from '../screens/home/GlobalSearchScreen';
 import { isTablet } from '../utils/responsive';
 
 const Tab = createBottomTabNavigator<MainTabParamList>();
@@ -28,6 +29,7 @@ const HomeStackNavigator = () => {
             <HomeStack.Screen name="MapView" component={MapViewScreen} />
             <HomeStack.Screen name="CreatePin" component={CreatePinScreen} />
             <HomeStack.Screen name="MapPicker" component={MapPickerScreen} />
+            <HomeStack.Screen name="GlobalSearch" component={GlobalSearchScreen} />
         </HomeStack.Navigator>
     );
 };
@@ -83,7 +85,7 @@ const TabNavigator = () => {
                 component={HomeStackNavigator}
                 options={({ route }) => {
                     const routeName = getFocusedRouteNameFromRoute(route) ?? 'MapList';
-                    const hiddenRoutes = ['MapView', 'CreatePin', 'MapPicker'];
+                    const hiddenRoutes = ['MapView', 'CreatePin', 'MapPicker', 'GlobalSearch'];
                     const isHidden = hiddenRoutes.includes(routeName);
 
                     return {

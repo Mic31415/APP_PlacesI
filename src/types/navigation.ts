@@ -11,9 +11,10 @@ export type MainTabParamList = {
 
 export type HomeStackParamList = {
     MapList: undefined;
-    MapView: { mapId: string; mapName: string; emoji: string };
+    MapView: { mapId: string; mapName: string; emoji: string; focusPinId?: string };
     PinDetail: { pinId: string };
     CreatePin: { mapId: string; mapEmoji?: string; pin?: any };
+    GlobalSearch: undefined;
     MapPicker: {
         initialRegion?: {
             latitude: number;
