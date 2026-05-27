@@ -37,7 +37,7 @@ const slides: {
     id: "1",
     title: "Track your World, One Pin at a Time",
     description:
-      "Track your world, one memory at a time.keep a personal log of all the amazing places you visit.",
+      "Track your world, one memory at a time. Keep a personal log of all the amazing places you visit.",
     image: require("../../assets/Images/OnBoarding1.png"),
   },
   {

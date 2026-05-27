@@ -514,7 +514,7 @@ export const MapViewScreen: React.FC = () => {
     haptics.warning();
     Alert.alert(
       "Delete Map",
-      `Are you sure you want to delete "${currentMapName}"?\nAll ${pins.length} pins will serve no purpose and be removed.`,
+      `Are you sure you want to delete "${currentMapName}"?\nAll ${pins.length} pins on this map will also be deleted.`,
       [
         { text: "Cancel", style: "cancel" },
         {

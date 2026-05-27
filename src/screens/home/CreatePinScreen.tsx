@@ -79,7 +79,8 @@ export const CreatePinScreen: React.FC = () => {
     longitude: number;
   } | null>(pin ? { latitude: pin.latitude, longitude: pin.longitude } : null);
   const [isLoadingLocation, setIsLoadingLocation] = useState(false);
-const [bannerHeight, setBannerHeight] = useState(0);
+  const [isSaving, setIsSaving] = useState(false);
+  const [bannerHeight, setBannerHeight] = useState(0);
   const [isKeyboardOpen, setIsKeyboardOpen] = useState(false);
   // Manual Autocomplete State
   const [predictions, setPredictions] = useState<PlacePrediction[]>([]);
@@ -288,11 +289,33 @@ const [bannerHeight, setBannerHeight] = useState(0);
   };
 
   const handleSave = async () => {
+    if (isSaving) return; // Re-entry guard — blocks rapid double-taps
+
     if (!title.trim()) {
-      // Alert or toast
+      haptics.warning();
+      Alert.alert(
+        "Title required",
+        "Please enter a title for this pin.",
+        undefined,
+        { userInterfaceStyle: colorScheme === "dark" ? "dark" : "light" },
+      );
       return;
     }
 
+    // Require a location only when creating a new pin.
+    // Edits already have saved coordinates on the pin record.
+    if (!pin && !coordinates) {
+      haptics.warning();
+      Alert.alert(
+        "Location required",
+        'Tap "Use Current" or "Pick on Map" to set this pin\'s location.',
+        undefined,
+        { userInterfaceStyle: colorScheme === "dark" ? "dark" : "light" },
+      );
+      return;
+    }
+
+    setIsSaving(true);
     try {
       if (pin) {
         // Update existing pin
@@ -307,15 +330,13 @@ const [bannerHeight, setBannerHeight] = useState(0);
           imageUri: imageUri || undefined,
         });
       } else {
-        // Create new pin
+        // Create new pin — coordinates is guaranteed non-null by the guard above.
         await databaseService.addPin({
           mapId: mapId,
           title: title.trim(),
           description: description.trim(),
-          latitude: coordinates ? coordinates.latitude : 35.6895, // Use real coords or mock fallback
-          longitude: coordinates
-            ? coordinates.longitude
-            : 139.6917 + Math.random() * 0.01,
+          latitude: coordinates!.latitude,
+          longitude: coordinates!.longitude,
           rating: rating,
           emoji: selectedEmoji,
           address: location, // Save address
@@ -328,6 +349,15 @@ const [bannerHeight, setBannerHeight] = useState(0);
       navigation.goBack();
     } catch (error) {
       console.error("Failed to save pin:", error);
+      haptics.error();
+      Alert.alert(
+        "Save failed",
+        "We couldn't save this pin. Please try again.",
+        undefined,
+        { userInterfaceStyle: colorScheme === "dark" ? "dark" : "light" },
+      );
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -951,6 +981,8 @@ const [bannerHeight, setBannerHeight] = useState(0);
             <Button
               title={pin ? "Save Pin" : "Add Pin"}
               onPress={handleSave}
+              loading={isSaving}
+              disabled={isSaving}
               fullWidth
             />
           </Animated.View>

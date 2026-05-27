@@ -99,7 +99,6 @@ const SettingsSection: React.FC<{ title: string; children: React.ReactNode }> = 
 export const SettingsScreen: React.FC = () => {
     const { theme, colorScheme, themeType, setAppTheme } = useTheme();
     const [isThemeModalVisible, setIsThemeModalVisible] = useState(false);
-    const [notificationsEnabled, setNotificationsEnabled] = useState(true);
     const [isLoading, setIsLoading] = useState(false);
     const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
     const { isPremium, presentPaywall } = usePremium();
@@ -505,7 +504,7 @@ export const SettingsScreen: React.FC = () => {
                                 <View style={styles.rowLeft}>
                                     <Icon name="crown" size={36} color="#FFD700" style={styles.icon} />
                                     <View>
-                                        <Text style={[styles.premiumCardText, { color: '000000' }]}>
+                                        <Text style={[styles.premiumCardText, { color: '#000000' }]}>
                                             {isPremium ? "You are Premium" : "Go Premium"}
                                         </Text>
                                         <Text style={[styles.premiumCardCaption, { color: '#3C3C43' }]}>
@@ -536,13 +535,6 @@ export const SettingsScreen: React.FC = () => {
                             title="Theme"
                             value={getThemeLabel(themeType)} // Fixed usage
                             onPress={() => setIsThemeModalVisible(true)}
-                        />
-                        <SettingsRow
-                            icon="bell"
-                            title="Notifications"
-                            hasToggle
-                            isToggled={notificationsEnabled}
-                            onToggle={setNotificationsEnabled}
                         />
                     </SettingsSection>
                 </Animated.View>
