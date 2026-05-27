@@ -45,6 +45,8 @@ import { EmojiPickerModal } from "../../components/common/EmojiPickerModal";
 import { MapHeaderMenu } from "../../components/map/MapHeaderMenu";
 import Icon from "react-native-vector-icons/MaterialCommunityIcons";
 import { BannerAdView } from "../../components/ads/BannerAdView";
+import ViewShot, { captureRef } from "react-native-view-shot";
+import RNShare from "react-native-share";
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -81,6 +83,7 @@ export const MapViewScreen: React.FC = () => {
   const { mapId, mapName, emoji } = route.params || {};
 
   const mapRef = useRef<MapView>(null);
+  const mapViewShotRef = useRef<ViewShot>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [pins, setPins] = useState<PinData[]>([]);
 
@@ -474,42 +477,76 @@ export const MapViewScreen: React.FC = () => {
     [pins],
   );
 
-  const handleShareMap = async () => {
-    try {
-      const hasPins = pins.length > 0;
+  const buildMapTextMessage = (): string => {
+    let message = `🗺️ *${currentMapName}* ${currentMapEmoji}\n`;
+    message += `📍 ${pins.length} Places Pinned\n\n`;
 
-      // Build a human-readable message
-      let message = `🗺️ *${currentMapName}* ${currentMapEmoji}\n`;
-      message += `📍 ${pins.length} Places Pinned\n\n`;
-
-      if (hasPins) {
-        // Header for the list
-        message += `Here are the places I've saved:\n\n`;
+    if (pins.length > 0) {
+      message += `Here are the places I've saved:\n\n`;
 
         // Loop through pins and format them
-        pins.forEach((pin, index) => {
-          const ratingStar = pin.rating ? "⭐ " + pin.rating + "/5" : "";
-          message += `${index + 1}. ${pin.emoji || "📍"} *${pin.title}*\n`;
-          if (ratingStar) message += `   ${ratingStar}\n`;
-          if (pin.description) message += `   "${pin.description}"\n`;
+      pins.forEach((pin, index) => {
+        const ratingStar = pin.rating ? "⭐ " + pin.rating + "/5" : "";
+        message += `${index + 1}. ${pin.emoji || "📍"} *${pin.title}*\n`;
+        if (ratingStar) message += `   ${ratingStar}\n`;
+        if (pin.description) message += `   "${pin.description}"\n`;
           // Add Google Maps link if coords exist
-          if (pin.latitude && pin.longitude) {
-            message += `   🗺️ https://maps.google.com/?q=${pin.latitude},${pin.longitude}\n`;
-          }
+        if (pin.latitude && pin.longitude) {
+          message += `   🗺️ https://maps.google.com/?q=${pin.latitude},${pin.longitude}\n`;
+        }
           message += "\n"; // Add spacing between pins
-        });
-      } else {
-        message += "No pins added yet! Start exploring.\n";
+      });
+    } else {
+      message += "No pins added yet! Start exploring.\n";
+    }
+
+    message += `\nShared from *Places I...* App`;
+    return message;
+  };
+
+  const handleShareMap = async () => {
+    haptics.selection();
+
+    // Build the full pin-list message once so the image share and the text
+    // fallback share the exact same content. Receiving apps that support
+    // both image + caption (Messages, WhatsApp, Email, etc.) will show the
+    // map screenshot with the full pin list as the accompanying caption.
+    const fullMessage = buildMapTextMessage();
+
+    // 1) Try capturing the map and sharing it as an image + the full pin
+    //    list. This is the preferred path — recipients see the visual map
+    //    AND the same detailed message users were used to.
+    try {
+      const uri = await captureRef(mapViewShotRef, {
+        format: "png",
+        quality: 0.9,
+      });
+
+      await RNShare.open({
+        title: `My Map: ${currentMapName}`,
+        message: fullMessage,
+        url: uri,
+      });
+      return;
+    } catch (error: any) {
+      // The native share sheet throws when the user dismisses it. That's
+      // not a real failure — bail silently without falling back.
+      const msg = String(error?.message || "");
+      if (/user did not share|dismiss|cancel/i.test(msg)) {
+        return;
       }
+      console.warn("Map image share failed, falling back to text:", error);
+    }
 
-      message += `\nShared from *Places I...* App`;
-
+    // 2) Fall back to the original text-only share (full pin list) so the
+    //    user always gets *some* share path even if the snapshot fails.
+    try {
       await Share.share({
-        message: message,
+        message: fullMessage,
         title: `My Map: ${currentMapName}`,
       });
     } catch (error) {
-      console.error("Error sharing map:", error);
+      console.error("Text share fallback failed:", error);
       Alert.alert("Share Failed", "Could not share map.");
     }
   };
@@ -722,41 +759,51 @@ export const MapViewScreen: React.FC = () => {
             <ActivityIndicator size="large" color={theme.colors.primary} />
           </View>
         ) : (
-          <MapView
-            ref={mapRef as any}
-            provider={PROVIDER_DEFAULT}
-            style={styles.map}
-            initialRegion={initialRegion}
-            clusterColor={theme.colors.primary}
-            clusterTextColor="#ffffff"
-            spiderLineColor={theme.colors.primary}
-            radius={100}
-            onMapReady={() => {
-              // Fit to coordinates if pins exist
-              if (filteredPins.length > 0) {
-                const coordinates = filteredPins.map((pin) => ({
-                  latitude: pin.latitude,
-                  longitude: pin.longitude,
-                }));
-                (mapRef.current as any)?.fitToCoordinates(coordinates, {
-                  edgePadding: { top: 100, right: 50, bottom: 150, left: 50 },
-                  animated: true,
-                });
-              }
-            }}
+          // ViewShot wraps the map so the Share-as-Image flow can capture
+          // just the map + pins (the search bar, FAB, and horizontal card
+          // strip render as siblings outside this wrapper, so they're not
+          // included in the captured PNG).
+          <ViewShot
+            ref={mapViewShotRef}
+            style={StyleSheet.absoluteFillObject}
+            options={{ format: "png", quality: 0.9 }}
           >
-            {filteredPins.map((pin) => (
-              <CustomMarker
-                key={pin.id || `${pin.latitude}-${pin.longitude}`}
-                coordinate={{
-                  latitude: pin.latitude,
-                  longitude: pin.longitude,
-                }}
-                emoji={pin.emoji || "📍"}
-                onPress={() => handleMarkerPress(pin)}
-              />
-            ))}
-          </MapView>
+            <MapView
+              ref={mapRef as any}
+              provider={PROVIDER_DEFAULT}
+              style={styles.map}
+              initialRegion={initialRegion}
+              clusterColor={theme.colors.primary}
+              clusterTextColor="#ffffff"
+              spiderLineColor={theme.colors.primary}
+              radius={100}
+              onMapReady={() => {
+                // Fit to coordinates if pins exist
+                if (filteredPins.length > 0) {
+                  const coordinates = filteredPins.map((pin) => ({
+                    latitude: pin.latitude,
+                    longitude: pin.longitude,
+                  }));
+                  (mapRef.current as any)?.fitToCoordinates(coordinates, {
+                    edgePadding: { top: 100, right: 50, bottom: 150, left: 50 },
+                    animated: true,
+                  });
+                }
+              }}
+            >
+              {filteredPins.map((pin) => (
+                <CustomMarker
+                  key={pin.id || `${pin.latitude}-${pin.longitude}`}
+                  coordinate={{
+                    latitude: pin.latitude,
+                    longitude: pin.longitude,
+                  }}
+                  emoji={pin.emoji || "📍"}
+                  onPress={() => handleMarkerPress(pin)}
+                />
+              ))}
+            </MapView>
+          </ViewShot>
         )}
 
         {/* Overlays (SearchBar, etc) - Keep them visible or hide until map ready?
