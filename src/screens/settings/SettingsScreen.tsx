@@ -46,14 +46,20 @@ const SettingsRow: React.FC<SettingsRowProps> = ({
     const iconColor = color || (isDestructive ? theme.colors.error : theme.colors.text.primary[colorScheme]);
     const textColor = isDestructive ? theme.colors.error : theme.colors.text.primary[colorScheme];
 
+    // Suppress the tap haptic when the row has no real action wired up
+    // (e.g. the Version row). Without this guard, informational rows
+    // give physical feedback that hints at an action that never happens.
+    const isInteractive = !hasToggle && !!onPress;
+
     return (
         <TouchableOpacity
             onPress={() => {
+                if (!isInteractive) return;
                 haptics.selection();
                 onPress?.();
             }}
             disabled={hasToggle}
-            activeOpacity={0.7}
+            activeOpacity={isInteractive ? 0.7 : 1}
         >
             <View style={[styles.cardRow, { backgroundColor: theme.colors.surface[colorScheme] }]}>
                 <View style={styles.rowLeft}>
@@ -500,14 +506,14 @@ export const SettingsScreen: React.FC = () => {
                             }}
                             activeOpacity={0.7}
                         >
-                            <View style={[styles.premiumCard, { backgroundColor: '#c1cee1ff' }]}>
+                            <View style={[styles.premiumCard, { backgroundColor: theme.colors.premiumCard.background[colorScheme] }]}>
                                 <View style={styles.rowLeft}>
-                                    <Icon name="crown" size={36} color="#FFD700" style={styles.icon} />
+                                    <Icon name="crown" size={36} color={theme.colors.star} style={styles.icon} />
                                     <View>
-                                        <Text style={[styles.premiumCardText, { color: '#000000' }]}>
+                                        <Text style={[styles.premiumCardText, { color: theme.colors.premiumCard.text[colorScheme] }]}>
                                             {isPremium ? "You are Premium" : "Go Premium"}
                                         </Text>
-                                        <Text style={[styles.premiumCardCaption, { color: '#3C3C43' }]}>
+                                        <Text style={[styles.premiumCardCaption, { color: theme.colors.premiumCard.subtext[colorScheme] }]}>
                                             {isPremium ? "Manage Subscription" : "Remove ads"}
                                         </Text>
                                     </View>
@@ -565,7 +571,7 @@ export const SettingsScreen: React.FC = () => {
 
             {/* Loading Modal */}
             <Modal transparent visible={isLoading} animationType="fade">
-                <View style={styles.loadingModalOverlay}>
+                <View style={[styles.loadingModalOverlay, { backgroundColor: theme.colors.backdrop }]}>
                     <View style={[styles.loadingModalContent, { backgroundColor: theme.colors.card[colorScheme] }]}>
                         <ActivityIndicator size="large" color={theme.colors.primary} />
                         <Text style={[styles.loadingModalText, { color: theme.colors.text.primary[colorScheme] }]}>
@@ -578,7 +584,7 @@ export const SettingsScreen: React.FC = () => {
             {/* Theme Selector Modal */}
             <Modal transparent visible={isThemeModalVisible} animationType="none" onRequestClose={() => setIsThemeModalVisible(false)}>
                 <TouchableWithoutFeedback onPress={() => setIsThemeModalVisible(false)}>
-                    <Animated.View style={[styles.themeModalOverlay, themeBackdropAnimatedStyle]}>
+                    <Animated.View style={[styles.themeModalOverlay, { backgroundColor: theme.colors.backdrop }, themeBackdropAnimatedStyle]}>
                         <TouchableWithoutFeedback>
                             <Animated.View style={[styles.themeModalContent, {
                                 backgroundColor: theme.colors.card[colorScheme],
@@ -713,7 +719,7 @@ const styles = StyleSheet.create({
     },
     loadingModalOverlay: {
         flex: 1,
-        backgroundColor: 'rgba(0,0,0,0.5)',
+        // backgroundColor applied at use site via theme.colors.backdrop
         justifyContent: 'center',
         alignItems: 'center',
     },
@@ -730,7 +736,7 @@ const styles = StyleSheet.create({
     },
     themeModalOverlay: {
         flex: 1,
-        backgroundColor: 'rgba(0,0,0,0.5)',
+        // backgroundColor applied at use site via theme.colors.backdrop
         justifyContent: 'flex-end',
     },
     themeModalContent: {

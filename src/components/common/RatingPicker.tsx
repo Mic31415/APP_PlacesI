@@ -34,9 +34,9 @@ export const RatingPicker: React.FC<RatingPickerProps> = ({
             size={size}
             color={
               star <= value
-                ? "#FFD700"
+                ? theme.colors.star
                 : theme.colors.text.tertiary[colorScheme]
-            } // Gold for active
+            } // Unified star color across the app
           />
         </TouchableOpacity>
       ))}

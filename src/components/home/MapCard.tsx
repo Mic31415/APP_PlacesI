@@ -141,7 +141,7 @@ const styles = StyleSheet.create({
     width: getResponsiveValue(80, 80, 84, 100),
     height: getResponsiveValue(80, 80, 84, 100),
     borderRadius: 8,
-    backgroundColor: "rgba(0,0,0,0.08)",
+    // backgroundColor applied at use site via theme.colors.innerSurface
     justifyContent: "center",
     alignItems: "center",
     marginRight: 16,

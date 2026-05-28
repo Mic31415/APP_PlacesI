@@ -124,7 +124,8 @@ export const GlobalSearchScreen: React.FC = () => {
   const showHint = trimmedQuery.length === 0;
 
   const renderItem = ({ item }: { item: GlobalSearchResult }) => {
-    const address =  item.address?.trim() || "";
+    const address = item.address?.trim() || "";
+    const hasAddress = address.length > 0;
     return (
       <TouchableOpacity
         style={[
@@ -161,15 +162,17 @@ export const GlobalSearchScreen: React.FC = () => {
             {item.title}
           </Text>
 
-            <Text
-              numberOfLines={1}
-              style={[
-                styles.resultSubtitle,
-                { color: theme.colors.text.secondary[colorScheme] },
-              ]}
-            >
-              {address}
-            </Text>
+            {hasAddress && (
+              <Text
+                numberOfLines={1}
+                style={[
+                  styles.resultSubtitle,
+                  { color: theme.colors.text.secondary[colorScheme] },
+                ]}
+              >
+                {address}
+              </Text>
+            )}
 
           <View style={styles.metaRow}>
             <View
@@ -199,7 +202,7 @@ export const GlobalSearchScreen: React.FC = () => {
                     size={getResponsiveValue(13, 13, 14, 18)}
                     color={
                       n <= item.rating
-                        ? "#F2B84B"
+                        ? theme.colors.star
                         : theme.colors.text.tertiary[colorScheme]
                     }
                   />

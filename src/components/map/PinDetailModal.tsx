@@ -150,7 +150,7 @@ export const PinDetailModal: React.FC<PinDetailModalProps> = ({
           onClose();
         }}
       >
-        <Animated.View style={[styles.overlay, backdropAnimatedStyle]}>
+        <Animated.View style={[styles.overlay, { backgroundColor: theme.colors.backdrop }, backdropAnimatedStyle]}>
           <TouchableWithoutFeedback>
             <Animated.View
               style={[
@@ -247,7 +247,7 @@ export const PinDetailModal: React.FC<PinDetailModalProps> = ({
                           size={getResponsiveValue(18, 18, 20, 24)}
                           color={
                             star <= (pin.rating || 0)
-                              ? "#FFD700"
+                              ? theme.colors.star
                               : theme.colors.text.tertiary[colorScheme]
                           }
                         />
@@ -378,7 +378,7 @@ const styles = StyleSheet.create({
   overlay: {
     flex: 1,
     justifyContent: "flex-end",
-    backgroundColor: "rgba(0, 0, 0, 0.5)", // Semi-transparent backdrop
+    // backgroundColor is applied at the use site via theme.colors.backdrop
   },
   modalSheet: {
     width: "100%",

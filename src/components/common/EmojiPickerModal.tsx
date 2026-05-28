@@ -28,9 +28,9 @@ export const EmojiPickerModal: React.FC<EmojiPickerModalProps> = ({ visible, onC
             transparent={true}
             onRequestClose={onClose}
         >
-            <View style={[styles.modalOverlay, { backgroundColor: 'rgba(0,0,0,0.5)' }]}>
+            <View style={[styles.modalOverlay, { backgroundColor: theme.colors.backdrop }]}>
                 <View style={[styles.modalContent, { backgroundColor: theme.colors.card[colorScheme] }]}>
-                    <View style={styles.modalHeader}>
+                    <View style={[styles.modalHeader, { borderBottomColor: theme.colors.border[colorScheme] }]}>
                         <Text style={[styles.selectedEmojiText, { color: theme.colors.text.primary[colorScheme] }]}>Select Emoji</Text>
                         <TouchableOpacity onPress={() => { haptics.selection(); onClose(); }}>
                             <Icon name="close" size={24} color={theme.colors.text.secondary[colorScheme]} />
@@ -79,7 +79,7 @@ const styles = StyleSheet.create({
         borderTopRightRadius: 20,
         paddingBottom: 20,
         width: '100%',
-        backgroundColor: '#F5F5F5',
+        // backgroundColor applied at use site via theme.colors.card
     },
     modalHeader: {
         flexDirection: 'row',
@@ -87,7 +87,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         padding: 16,
         borderBottomWidth: 0.5,
-        borderBottomColor: 'rgba(0,0,0,0.1)',
+        // borderBottomColor applied at use site via theme.colors.border
         marginBottom: 16,
     },
     selectedEmojiText: {

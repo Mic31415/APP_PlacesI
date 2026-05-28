@@ -504,11 +504,18 @@ export const MapPickerScreen: React.FC = () => {
           style={[
             styles.confirmButton,
             { backgroundColor: theme.colors.primary },
+            isLoadingAddress && styles.confirmButtonDisabled,
           ]}
           onPress={handleConfirm}
           disabled={isLoadingAddress}
+          activeOpacity={isLoadingAddress ? 1 : 0.7}
+          accessibilityState={{ disabled: isLoadingAddress, busy: isLoadingAddress }}
         >
-          <Text style={styles.confirmButtonText}>Confirm Location</Text>
+          {isLoadingAddress ? (
+            <ActivityIndicator color="#FFFFFF" size="small" />
+          ) : (
+            <Text style={styles.confirmButtonText}>Confirm Location</Text>
+          )}
         </TouchableOpacity>
       </View>
     </View>
@@ -613,6 +620,9 @@ const styles = StyleSheet.create({
     borderRadius: getResponsiveValue(12, 12, 12, 14),
     justifyContent: "center",
     alignItems: "center",
+  },
+  confirmButtonDisabled: {
+    opacity: 0.55,
   },
   confirmButtonText: {
     color: "#FFFFFF",

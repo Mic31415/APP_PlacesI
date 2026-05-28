@@ -86,6 +86,13 @@ export const CreatePinScreen: React.FC = () => {
   const [predictions, setPredictions] = useState<PlacePrediction[]>([]);
   const searchDebounce = useRef<ReturnType<typeof setTimeout> | null>(null);
   const bannerTranslateY = useRef(new RNAnimated.Value(0)).current;
+  // Measured height of the (label + input row) above the predictions
+  // dropdown. Used to position the dropdown right below the input
+  // instead of the previous hand-tuned `top: 100` which mis-aligned on
+  // smaller phones and tablets. Defaults to 100 (the previous magic
+  // number) so the dropdown is sensible on the very first frame
+  // before onLayout fires.
+  const [locationFieldHeight, setLocationFieldHeight] = useState<number>(100);
 
   useEffect(() => {
     const showEvent =
@@ -657,6 +664,16 @@ export const CreatePinScreen: React.FC = () => {
               Location
             </Text>
             <View
+              onLayout={(e) => {
+                // Capture the (label + input row) block height so the
+                // predictions dropdown can be positioned right below it.
+                // The dropdown's parent Animated.View is the full
+                // Location group; this onLayout sits on the input row,
+                // so we offset the dropdown by labelHeight + thisHeight.
+                // We approximate by using the row offsetTop + height.
+                const { y, height } = e.nativeEvent.layout;
+                setLocationFieldHeight(y + height);
+              }}
               style={[
                 styles.inputContainer,
                 {
@@ -700,12 +717,14 @@ export const CreatePinScreen: React.FC = () => {
               )}
             </View>
 
-            {/* Predictions List - Absolute Positioning */}
+            {/* Predictions List - Absolute Positioning, anchored to the
+                measured bottom of the input row above so the dropdown
+                stays glued to the input on any device size. */}
             {predictions.length > 0 && (
               <View
                 style={{
                   position: "absolute",
-                  top: 100, // Adjust based on input height + label
+                  top: locationFieldHeight + 4,
                   left: 0,
                   right: 0,
                   backgroundColor: theme.colors.surface[colorScheme],
@@ -908,7 +927,10 @@ export const CreatePinScreen: React.FC = () => {
               <TouchableOpacity
                 style={[
                   styles.photoBtn,
-                  { backgroundColor: theme.colors.surface[colorScheme] },
+                  {
+                    backgroundColor: theme.colors.surface[colorScheme],
+                    borderColor: theme.colors.border[colorScheme],
+                  },
                 ]}
                 onPress={handleTakePhoto}
               >
@@ -930,7 +952,10 @@ export const CreatePinScreen: React.FC = () => {
               <TouchableOpacity
                 style={[
                   styles.photoBtn,
-                  { backgroundColor: theme.colors.surface[colorScheme] },
+                  {
+                    backgroundColor: theme.colors.surface[colorScheme],
+                    borderColor: theme.colors.border[colorScheme],
+                  },
                 ]}
                 onPress={handlePickPhoto}
               >
@@ -950,7 +975,7 @@ export const CreatePinScreen: React.FC = () => {
               </TouchableOpacity>
             </View>
             {imageUri && (
-              <View style={styles.imagePreview}>
+              <View style={[styles.imagePreview, { backgroundColor: theme.colors.surface[colorScheme] }]}>
                 <Image
                   source={{ uri: imageUri }}
                   style={{ width: "100%", height: "100%", borderRadius: 12 }}
@@ -1097,7 +1122,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     gap: 8,
     borderWidth: 1,
-    borderColor: "rgba(0,0,0,0.05)",
+    // borderColor applied at use site via theme.colors.border
     flexDirection: "row",
   },
   addressText: {
@@ -1111,7 +1136,7 @@ const styles = StyleSheet.create({
   },
   imagePreview: {
     height: 150,
-    backgroundColor: "#f0f0f0",
+    // backgroundColor applied at use site via theme.colors.surface
     borderRadius: 12,
     alignItems: "center",
     justifyContent: "center",

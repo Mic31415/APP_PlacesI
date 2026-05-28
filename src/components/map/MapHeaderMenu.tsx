@@ -169,7 +169,7 @@ export const MapHeaderMenu: React.FC<MapHeaderMenuProps> = ({
         onRequestClose={closeMenu}
       >
         <TouchableWithoutFeedback onPress={closeMenu}>
-          <Animated.View style={[styles.overlay, backdropAnimatedStyle]}>
+          <Animated.View style={[styles.overlay, { backgroundColor: theme.colors.backdrop }, backdropAnimatedStyle]}>
             <TouchableWithoutFeedback>
               <Animated.View
                 style={[
@@ -305,7 +305,7 @@ const styles = StyleSheet.create({
   },
   overlay: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.5)",
+    // backgroundColor is applied at the use site via theme.colors.backdrop
     justifyContent: "flex-end",
   },
   sheet: {

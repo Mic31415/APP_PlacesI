@@ -809,14 +809,32 @@ export const MapViewScreen: React.FC = () => {
                   focusPinHandledRef.current = false;
                   return;
                 }
-                // Fit to coordinates if pins exist
+                // Fit to coordinates if pins exist. Bottom padding must
+                // clear the horizontal pin card strip (height + its 40px
+                // bottom offset + a small gap) and the banner ad if the
+                // user is free-tier, otherwise the lowest pins end up
+                // hidden behind those overlays.
                 if (filteredPins.length > 0) {
+                  const cardStripHeight = getResponsiveValue(80, 80, 86, 104);
+                  const cardStripBottomOffset = 40;
+                  const cardStripGap = 24;
+                  const fitBottomPadding =
+                    cardStripHeight +
+                    cardStripBottomOffset +
+                    cardStripGap +
+                    bannerHeight;
+
                   const coordinates = filteredPins.map((pin) => ({
                     latitude: pin.latitude,
                     longitude: pin.longitude,
                   }));
                   (mapRef.current as any)?.fitToCoordinates(coordinates, {
-                    edgePadding: { top: 100, right: 50, bottom: 150, left: 50 },
+                    edgePadding: {
+                      top: 100,
+                      right: 50,
+                      bottom: fitBottomPadding,
+                      left: 50,
+                    },
                     animated: true,
                   });
                 }
@@ -927,11 +945,16 @@ export const MapViewScreen: React.FC = () => {
                       <Text
                         style={[
                           styles.pinCardCoordinates,
-                          { color: theme.colors.text.secondary[colorScheme] },
+                          {
+                            color: item.address
+                              ? theme.colors.text.secondary[colorScheme]
+                              : theme.colors.text.tertiary[colorScheme],
+                            fontStyle: item.address ? "normal" : "italic",
+                          },
                         ]}
                         numberOfLines={1}
                       >
-                        {item.address || "No address"}
+                        {item.address || "Address unavailable"}
                       </Text>
                     </View>
                   </TouchableOpacity>
@@ -962,7 +985,7 @@ export const MapViewScreen: React.FC = () => {
         }}
       >
         <Animated.View
-          style={[styles.bottomSheetOverlay, filterModalBackdropAnimatedStyle]}
+          style={[styles.bottomSheetOverlay, { backgroundColor: theme.colors.backdrop }, filterModalBackdropAnimatedStyle]}
         >
           <TouchableOpacity
             style={StyleSheet.absoluteFill}
@@ -985,7 +1008,7 @@ export const MapViewScreen: React.FC = () => {
             >
               {/* Handle */}
               <View style={styles.sheetHandleContainer}>
-                <View style={styles.sheetHandle} />
+                <View style={[styles.sheetHandle, { backgroundColor: theme.colors.handle[colorScheme] }]} />
               </View>
 
               {/* Header */}
@@ -1117,16 +1140,24 @@ export const MapViewScreen: React.FC = () => {
               </View>
 
               {/* Action Buttons */}
+              {(() => {
+                const isResetDisabled = sortBy === "newest" && minRating === 0;
+                return (
               <View style={[styles.buttonRow, { marginTop: 32 }]}>
                 <TouchableOpacity
                   onPress={() => {
+                    if (isResetDisabled) return;
                     haptics.selection();
                     setSortBy("newest");
                     setMinRating(0);
                   }}
+                  disabled={isResetDisabled}
+                  activeOpacity={isResetDisabled ? 1 : 0.7}
+                  accessibilityState={{ disabled: isResetDisabled }}
                   style={[
                     styles.actionButton,
                     { backgroundColor: theme.colors.surface[colorScheme] },
+                    isResetDisabled && { opacity: 0.5 },
                   ]}
                 >
                   <Text
@@ -1152,6 +1183,8 @@ export const MapViewScreen: React.FC = () => {
                   <Text style={styles.saveButtonText}>Apply</Text>
                 </TouchableOpacity>
               </View>
+                );
+              })()}
             </Animated.View>
           </KeyboardAvoidingView>
         </Animated.View>
@@ -1183,7 +1216,7 @@ export const MapViewScreen: React.FC = () => {
             >
               {/* Handle */}
               <View style={styles.sheetHandleContainer}>
-                <View style={styles.sheetHandle} />
+                <View style={[styles.sheetHandle, { backgroundColor: theme.colors.handle[colorScheme] }]} />
               </View>
 
               {/* Header */}
@@ -1264,7 +1297,7 @@ export const MapViewScreen: React.FC = () => {
                       width: 40,
                       height: 40,
                       borderRadius: 8,
-                      backgroundColor: "#E0F2FE",
+                      backgroundColor: theme.colors.innerSurface[colorScheme],
                       alignItems: "center",
                       justifyContent: "center",
                       marginRight: 12,
@@ -1416,7 +1449,7 @@ const styles = StyleSheet.create({
   // Bottom Sheet Styles
   bottomSheetOverlay: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.5)",
+    // backgroundColor applied at use site via theme.colors.backdrop
     justifyContent: "flex-end",
   },
   bottomSheetContent: {
@@ -1438,7 +1471,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 5,
     borderRadius: 3,
-    backgroundColor: "#E0E0E0",
+    // backgroundColor applied at use site via theme.colors.handle
   },
   sheetHeader: {
     flexDirection: "row",
@@ -1526,7 +1559,7 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: "rgba(0,0,0,0.1)",
+    // borderColor applied at use site via theme.colors.border (already overridden inline)
   },
   sortText: {
     fontSize: moderateScale(14),
