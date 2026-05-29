@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -15,6 +15,7 @@ import Share from "react-native-share";
 import Icon from "react-native-vector-icons/MaterialCommunityIcons";
 import { useTheme } from "../../theme/ThemeContext";
 import { getResponsiveValue, moderateScale } from "../../utils/responsive";
+import { resolvePinImage } from "../../utils/imageStorage";
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -50,6 +51,13 @@ export const PinDetailModal: React.FC<PinDetailModalProps> = ({
   const modalTranslateY = useSharedValue(500); // Start from bottom
 
   const viewShotRef = React.useRef(null);
+
+  // Fall back to the "No Image" placeholder if a pin's saved photo can no
+  // longer be loaded (e.g. a broken file path). Reset whenever the pin changes.
+  const [imageFailed, setImageFailed] = useState(false);
+  useEffect(() => {
+    setImageFailed(false);
+  }, [pin?.id, pin?.imageUri]);
 
   // Trigger smooth animations when visible changes
   useEffect(() => {
@@ -195,15 +203,16 @@ export const PinDetailModal: React.FC<PinDetailModalProps> = ({
                       { backgroundColor: theme.colors.surface[colorScheme] },
                     ]}
                   >
-                    {pin.imageUri ? (
+                    {pin.imageUri && !imageFailed ? (
                       <Image
-                        source={{ uri: pin.imageUri }}
+                        source={{ uri: resolvePinImage(pin.imageUri) }}
                         style={{
                           width: "100%",
                           height: "100%",
                           borderRadius: 12,
                         }}
                         resizeMode="cover"
+                        onError={() => setImageFailed(true)}
                       />
                     ) : (
                       <>

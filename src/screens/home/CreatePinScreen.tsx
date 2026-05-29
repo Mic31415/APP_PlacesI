@@ -34,6 +34,11 @@ import { databaseService } from "../../services/DatabaseService";
 import { EmojiPickerModal } from "../../components/common/EmojiPickerModal";
 import AppConfig from "../../config";
 import { getResponsiveValue, moderateScale } from "../../utils/responsive";
+import {
+  persistPinImage,
+  deletePinImage,
+  resolvePinImage,
+} from "../../utils/imageStorage";
 import { Button } from "../../components/common";
 import { haptics } from "../../utils/haptics";
 import { BannerAdView } from "../../components/ads/BannerAdView";
@@ -74,6 +79,12 @@ export const CreatePinScreen: React.FC = () => {
   const [imageUri, setImageUri] = useState<string | null>(
     pin?.imageUri || null,
   );
+  // Show a placeholder in the preview if the selected/existing photo can't be
+  // loaded (e.g. an old pin whose file is gone). Reset whenever the photo changes.
+  const [previewFailed, setPreviewFailed] = useState(false);
+  useEffect(() => {
+    setPreviewFailed(false);
+  }, [imageUri]);
   const [coordinates, setCoordinates] = useState<{
     latitude: number;
     longitude: number;
@@ -325,6 +336,13 @@ export const CreatePinScreen: React.FC = () => {
     setIsSaving(true);
     try {
       if (pin) {
+        // Copy a newly-picked photo into permanent storage. If the image is
+        // unchanged it already lives in our managed folder, so this is a no-op.
+        const isNewImage = !!imageUri && imageUri !== pin.imageUri;
+        const finalImageUri = isNewImage
+          ? await persistPinImage(imageUri!)
+          : imageUri; // existing managed path, or null if the user removed it
+
         // Update existing pin
         await databaseService.updatePin(pin.id, {
           title: title.trim(),
@@ -334,10 +352,20 @@ export const CreatePinScreen: React.FC = () => {
           rating: rating,
           emoji: selectedEmoji,
           address: location, // Save address
-          imageUri: imageUri || undefined,
-        });
+          // null clears the column (image removed); undefined leaves it untouched.
+          imageUri: finalImageUri ?? null,
+        } as any);
+
+        // The old file is now orphaned if the photo was replaced or removed.
+        if (pin.imageUri && pin.imageUri !== finalImageUri) {
+          await deletePinImage(pin.imageUri);
+        }
       } else {
         // Create new pin — coordinates is guaranteed non-null by the guard above.
+        const finalImageUri = imageUri
+          ? await persistPinImage(imageUri)
+          : undefined;
+
         await databaseService.addPin({
           mapId: mapId,
           title: title.trim(),
@@ -347,7 +375,7 @@ export const CreatePinScreen: React.FC = () => {
           rating: rating,
           emoji: selectedEmoji,
           address: location, // Save address
-          imageUri: imageUri || undefined,
+          imageUri: finalImageUri,
         });
       }
 
@@ -975,12 +1003,33 @@ export const CreatePinScreen: React.FC = () => {
               </TouchableOpacity>
             </View>
             {imageUri && (
-              <View style={[styles.imagePreview, { backgroundColor: theme.colors.surface[colorScheme] }]}>
-                <Image
-                  source={{ uri: imageUri }}
-                  style={{ width: "100%", height: "100%", borderRadius: 12 }}
-                  resizeMode="cover"
-                />
+              <View style={[styles.imagePreview, { backgroundColor: theme.colors.surface[colorScheme], alignItems: "center", justifyContent: "center" }]}>
+                {previewFailed ? (
+                  <>
+                    <Icon
+                      name="image-off"
+                      size={getResponsiveValue(40, 40, 44, 52)}
+                      color={theme.colors.text.tertiary[colorScheme]}
+                    />
+                    <Text
+                      style={{
+                        marginTop: 8,
+                        color: theme.colors.text.tertiary[colorScheme],
+                        fontFamily: "poppins_regular",
+                        fontSize: getResponsiveValue(13, 13, 14, 18),
+                      }}
+                    >
+                      Image unavailable
+                    </Text>
+                  </>
+                ) : (
+                  <Image
+                    source={{ uri: resolvePinImage(imageUri) }}
+                    style={{ width: "100%", height: "100%", borderRadius: 12 }}
+                    resizeMode="cover"
+                    onError={() => setPreviewFailed(true)}
+                  />
+                )}
                 <TouchableOpacity
                   style={{
                     position: "absolute",

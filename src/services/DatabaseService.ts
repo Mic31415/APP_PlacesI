@@ -1,6 +1,7 @@
 
 import SQLite from 'react-native-sqlite-storage';
 import RNFS from 'react-native-fs';
+import { deletePinImage, resolvePinImage, clearAllPinImages } from '../utils/imageStorage';
 
 // Enable Promise-based API
 SQLite.enablePromise(true);
@@ -172,7 +173,19 @@ class DatabaseService {
     public async deleteMap(id: string): Promise<void> {
         if (!this.db) await this.initDatabase();
         try {
+            // Collect the image files of every pin on this map before the rows
+            // cascade-delete, so we can remove the now-orphaned files afterwards.
+            const [res] = await this.db!.executeSql('SELECT image_uri FROM Pins WHERE map_id = ?', [id]);
+            const imageUris: (string | null)[] = [];
+            for (let i = 0; i < res.rows.length; i++) {
+                imageUris.push(res.rows.item(i).image_uri);
+            }
+
             await this.db!.executeSql('DELETE FROM Maps WHERE id = ?', [id]);
+
+            for (const uri of imageUris) {
+                await deletePinImage(uri);
+            }
         } catch (error) {
             console.error('Failed to delete map:', error);
             throw error;
@@ -252,9 +265,10 @@ class DatabaseService {
                  WHERE Pins.title LIKE ? ESCAPE '\\'
                     OR Pins.description LIKE ? ESCAPE '\\'
                     OR Pins.address LIKE ? ESCAPE '\\'
+                    OR Maps.name LIKE ? ESCAPE '\\'
                  ORDER BY Pins.created_at DESC
                  LIMIT ?`,
-                [like, like, like, limit]
+                [like, like, like, like, limit]
             );
 
             const out: GlobalSearchResult[] = [];
@@ -287,7 +301,13 @@ class DatabaseService {
         if (!this.db) await this.initDatabase();
 
         try {
+            // Read the image path first so we can delete the file once the row is gone.
+            const [res] = await this.db!.executeSql('SELECT image_uri FROM Pins WHERE id = ?', [id]);
+            const imageUri = res.rows.length ? res.rows.item(0).image_uri : null;
+
             await this.db!.executeSql('DELETE FROM Pins WHERE id = ?', [id]);
+
+            await deletePinImage(imageUri);
         } catch (error) {
             console.error('Failed to delete pin:', error);
             throw error;
@@ -340,13 +360,16 @@ class DatabaseService {
                 const pin = { ...pinResults.rows.item(i) }; // Clone object to modify
 
                 if (pin.image_uri) {
+                    // Resolve the stored value (relative or legacy absolute) to the
+                    // current on-disk location before reading the file.
+                    const fsPath = (resolvePinImage(pin.image_uri) || '').replace(/^file:\/\//, '');
                     try {
-                        const exists = await RNFS.exists(pin.image_uri);
+                        const exists = fsPath ? await RNFS.exists(fsPath) : false;
                         if (exists) {
-                            const base64 = await RNFS.readFile(pin.image_uri, 'base64');
+                            const base64 = await RNFS.readFile(fsPath, 'base64');
                             pin.image_base64 = base64;
                         } else {
-                            console.warn(`Export: Image file not found at ${pin.image_uri}`);
+                            console.warn(`Export: Image file not found at ${fsPath}`);
                         }
                     } catch (e) {
                         console.warn('Export: Failed to read image', e);
@@ -404,7 +427,9 @@ class DatabaseService {
                         const newPath = `${destDir}/${fileName}`;
 
                         await RNFS.writeFile(newPath, pin.image_base64, 'base64');
-                        imageUri = 'file://' + newPath;
+                        // Store the filename relative to the Documents dir (not the
+                        // absolute path) so it survives iOS sandbox UUID changes.
+                        imageUri = fileName;
                     } catch (e) {
                         console.warn('Import: Failed to save image', e);
                     }
@@ -443,6 +468,9 @@ class DatabaseService {
             // but explicit deletion is safer and clearer.
             await this.db!.executeSql('DELETE FROM Pins');
             await this.db!.executeSql('DELETE FROM Maps');
+
+            // Remove the now-orphaned image files too.
+            await clearAllPinImages();
         } catch (error) {
             console.error('Failed to clear all data:', error);
             throw error;

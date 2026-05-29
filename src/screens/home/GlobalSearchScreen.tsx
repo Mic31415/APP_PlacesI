@@ -26,6 +26,7 @@ import {
   moderateScale,
 } from "../../utils/responsive";
 import { haptics } from "../../utils/haptics";
+import { resolvePinImage } from "../../utils/imageStorage";
 
 type NavProp = NativeStackNavigationProp<HomeStackParamList, "GlobalSearch">;
 
@@ -43,6 +44,19 @@ export const GlobalSearchScreen: React.FC = () => {
   const [results, setResults] = useState<GlobalSearchResult[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [keyboardHeight, setKeyboardHeight] = useState(0);
+  // Pin image_uris are local file paths that can break (reinstall, device
+  // restore, OS clearing cached files). Track ids whose image failed to load
+  // so we can fall back to the emoji square instead of showing an empty box.
+  const [failedImages, setFailedImages] = useState<Set<string>>(new Set());
+
+  const handleImageError = (id: string) => {
+    setFailedImages((prev) => {
+      if (prev.has(id)) return prev;
+      const next = new Set(prev);
+      next.add(id);
+      return next;
+    });
+  };
 
   useEffect(() => {
     const t = setTimeout(() => {
@@ -126,6 +140,7 @@ export const GlobalSearchScreen: React.FC = () => {
   const renderItem = ({ item }: { item: GlobalSearchResult }) => {
     const address = item.address?.trim() || "";
     const hasAddress = address.length > 0;
+    const showImage = !!item.imageUri && !failedImages.has(item.id);
     return (
       <TouchableOpacity
         style={[
@@ -138,13 +153,20 @@ export const GlobalSearchScreen: React.FC = () => {
         activeOpacity={0.75}
         onPress={() => handleResultPress(item)}
       >
-        {item.imageUri ? (
-          <Image source={{ uri: item.imageUri }} style={styles.thumbImage} />
+        {showImage ? (
+          <Image
+            source={{ uri: resolvePinImage(item.imageUri) }}
+            style={styles.thumbImage}
+            onError={() => handleImageError(item.id)}
+          />
         ) : (
           <View
             style={[
               styles.thumbFallback,
-              { backgroundColor: theme.colors.background[colorScheme] },
+              // `background` equals `card` (#FFFFFF) in light mode, so it
+              // gave the emoji tile zero contrast against the card. A subtle
+              // brand-blue tint reads as a real thumbnail tile in both schemes.
+              { backgroundColor: theme.colors.primary + "1F" },
             ]}
           >
             <Text style={styles.thumbEmoji}>{item.emoji || "📍"}</Text>
@@ -178,7 +200,10 @@ export const GlobalSearchScreen: React.FC = () => {
             <View
               style={[
                 styles.mapChip,
-                { backgroundColor: theme.colors.background[colorScheme] },
+                // `background` equals the white card in light mode, which made
+                // the pill invisible there. `surface` is a recessed tone that
+                // reads as a pill against the card in both light and dark.
+                { backgroundColor: theme.colors.surface[colorScheme] },
               ]}
             >
               <Text style={styles.mapChipEmoji}>{item.mapEmoji || "🗺️"}</Text>
@@ -310,7 +335,7 @@ export const GlobalSearchScreen: React.FC = () => {
               { color: theme.colors.text.tertiary[colorScheme] },
             ]}
           >
-            Search across all your maps by pin title, description, or address.
+            Search across all your maps by pin title, description, address, or map name.
           </Text>
         </View>
       ) : showEmptyResults ? (
@@ -515,7 +540,9 @@ const styles = StyleSheet.create({
   },
   mapChip: {
     flexDirection: "row",
+    alignItems: "center",
     paddingVertical: 4,
+    paddingHorizontal: 10,
     borderRadius: 999,
     maxWidth: "70%",
   },
@@ -531,7 +558,6 @@ const styles = StyleSheet.create({
       16,
     ),
     fontFamily: "poppins_regular",
-    marginRight: 16,
   },
   starsRow: {
     flexDirection: "row",
