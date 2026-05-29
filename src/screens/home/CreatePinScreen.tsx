@@ -71,6 +71,9 @@ export const CreatePinScreen: React.FC = () => {
   const [description, setDescription] = useState(pin?.description || "");
   const [location, setLocation] = useState(""); // Display text (Name or Address)
   const [rating, setRating] = useState(pin?.rating || 0);
+  const [status, setStatus] = useState<"visited" | "wishlist">(
+    pin?.status || "visited",
+  );
   const [selectedEmoji, setSelectedEmoji] = useState(
     pin?.emoji || mapEmoji || "🗺️",
   );
@@ -242,6 +245,7 @@ export const CreatePinScreen: React.FC = () => {
       setTitle(pin.title);
       setDescription(pin.description);
       setRating(pin.rating);
+      setStatus(pin.status || "visited");
       setSelectedEmoji(pin.emoji || mapEmoji || "🗺️");
       setImageUri(pin.imageUri || null);
       setCoordinates({ latitude: pin.latitude, longitude: pin.longitude });
@@ -352,6 +356,7 @@ export const CreatePinScreen: React.FC = () => {
           rating: rating,
           emoji: selectedEmoji,
           address: location, // Save address
+          status: status,
           // null clears the column (image removed); undefined leaves it untouched.
           imageUri: finalImageUri ?? null,
         } as any);
@@ -375,6 +380,7 @@ export const CreatePinScreen: React.FC = () => {
           rating: rating,
           emoji: selectedEmoji,
           address: location, // Save address
+          status: status,
           imageUri: finalImageUri,
         });
       }
@@ -898,6 +904,69 @@ export const CreatePinScreen: React.FC = () => {
             <RatingPicker value={rating} onValueChange={setRating} />
           </Animated.View>
 
+          {/* Status: Been here / Want to go */}
+          <Animated.View style={[styles.inputGroup, ratingAnimatedStyle]}>
+            <Text
+              style={[
+                styles.label,
+                { color: theme.colors.text.secondary[colorScheme] },
+              ]}
+            >
+              Status
+            </Text>
+            <View style={styles.statusRow}>
+              {(
+                [
+                  { key: "visited", label: "Been here", icon: "check-circle" },
+                  { key: "wishlist", label: "Want to go", icon: "star-outline" },
+                ] as const
+              ).map((opt) => {
+                const active = status === opt.key;
+                return (
+                  <TouchableOpacity
+                    key={opt.key}
+                    activeOpacity={0.8}
+                    onPress={() => {
+                      haptics.selection();
+                      setStatus(opt.key);
+                    }}
+                    style={[
+                      styles.statusBtn,
+                      {
+                        backgroundColor: active
+                          ? theme.colors.primary
+                          : theme.colors.surface[colorScheme],
+                        borderColor: active
+                          ? theme.colors.primary
+                          : theme.colors.border[colorScheme],
+                      },
+                    ]}
+                  >
+                    <Icon
+                      name={opt.icon}
+                      size={getResponsiveValue(18, 18, 20, 24)}
+                      color={
+                        active ? "#fff" : theme.colors.text.secondary[colorScheme]
+                      }
+                    />
+                    <Text
+                      style={[
+                        styles.statusBtnText,
+                        {
+                          color: active
+                            ? "#fff"
+                            : theme.colors.text.secondary[colorScheme],
+                        },
+                      ]}
+                    >
+                      {opt.label}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </Animated.View>
+
           {/* Emoji Selector */}
           <Animated.View style={[styles.inputGroup, emojiAnimatedStyle]}>
             <Text
@@ -1129,6 +1198,24 @@ const styles = StyleSheet.create({
     fontWeight: "300",
     marginTop: 4,
     fontFamily: "poppins_light",
+  },
+  statusRow: {
+    flexDirection: "row",
+    gap: 12,
+  },
+  statusBtn: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+  },
+  statusBtnText: {
+    marginLeft: 8,
+    fontSize: moderateScale(14),
+    fontFamily: "poppins_medium",
   },
   inputContainer: {
     borderRadius: 12,

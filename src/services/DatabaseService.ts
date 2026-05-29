@@ -27,6 +27,7 @@ export interface PinData {
     rating: number;
     emoji?: string;
     address?: string; // New field
+    status?: 'visited' | 'wishlist'; // 'visited' = "Been here", 'wishlist' = "Want to go"
     createdAt: number;
 }
 
@@ -74,6 +75,7 @@ class DatabaseService {
                     rating INTEGER DEFAULT 0,
                     emoji TEXT,
                     address TEXT, -- New column
+                    status TEXT NOT NULL DEFAULT 'visited', -- 'visited' | 'wishlist'
                     created_at INTEGER NOT NULL,
                     FOREIGN KEY (map_id) REFERENCES Maps(id) ON DELETE CASCADE
                 );
@@ -94,6 +96,11 @@ class DatabaseService {
             } catch (e) { /* ignore */ }
             try {
                 await this.db.executeSql('ALTER TABLE Maps ADD COLUMN initial_region TEXT;');
+            } catch (e) { /* ignore */ }
+            try {
+                // 'visited' default means every existing pin becomes "Been here" —
+                // matches the app's prior journal semantics, no data migration needed.
+                await this.db.executeSql("ALTER TABLE Pins ADD COLUMN status TEXT NOT NULL DEFAULT 'visited';");
             } catch (e) { /* ignore */ }
 
         } catch (error) {
@@ -200,9 +207,9 @@ class DatabaseService {
 
         try {
             await this.db!.executeSql(
-                `INSERT INTO Pins (id, map_id, title, description, latitude, longitude, image_uri, rating, emoji, address, created_at) 
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-                [id, pin.mapId, pin.title, pin.description || '', pin.latitude, pin.longitude, pin.imageUri || null, pin.rating, pin.emoji || '📍', pin.address || '', createdAt]
+                `INSERT INTO Pins (id, map_id, title, description, latitude, longitude, image_uri, rating, emoji, address, status, created_at)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                [id, pin.mapId, pin.title, pin.description || '', pin.latitude, pin.longitude, pin.imageUri || null, pin.rating, pin.emoji || '📍', pin.address || '', pin.status || 'visited', createdAt]
             );
             return { ...pin, id, createdAt };
         } catch (error) {
@@ -234,6 +241,7 @@ class DatabaseService {
                     rating: item.rating,
                     emoji: item.emoji || '📍',
                     address: item.address || '', // Retrieve address
+                    status: item.status || 'visited',
                     createdAt: item.created_at,
                 });
             }
@@ -258,7 +266,7 @@ class DatabaseService {
                 `SELECT
                     Pins.id, Pins.map_id, Pins.title, Pins.description,
                     Pins.latitude, Pins.longitude, Pins.image_uri, Pins.rating,
-                    Pins.emoji, Pins.address, Pins.created_at,
+                    Pins.emoji, Pins.address, Pins.status, Pins.created_at,
                     Maps.name AS map_name, Maps.emoji AS map_emoji
                  FROM Pins
                  JOIN Maps ON Pins.map_id = Maps.id
@@ -285,6 +293,7 @@ class DatabaseService {
                     rating: item.rating,
                     emoji: item.emoji || '📍',
                     address: item.address || '',
+                    status: item.status || 'visited',
                     createdAt: item.created_at,
                     mapName: item.map_name,
                     mapEmoji: item.map_emoji,
@@ -327,6 +336,7 @@ class DatabaseService {
         if (updates.rating !== undefined) { fields.push('rating = ?'); values.push(updates.rating); }
         if (updates.emoji !== undefined) { fields.push('emoji = ?'); values.push(updates.emoji); }
         if (updates.address !== undefined) { fields.push('address = ?'); values.push(updates.address); }
+        if (updates.status !== undefined) { fields.push('status = ?'); values.push(updates.status); }
         if (updates.imageUri !== undefined) { fields.push('image_uri = ?'); values.push(updates.imageUri); }
 
         if (fields.length === 0) return;
@@ -436,9 +446,9 @@ class DatabaseService {
                 }
 
                 await this.db!.executeSql(
-                    `INSERT OR REPLACE INTO Pins 
-                    (id, map_id, title, description, latitude, longitude, image_uri, rating, emoji, address, created_at) 
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                    `INSERT OR REPLACE INTO Pins
+                    (id, map_id, title, description, latitude, longitude, image_uri, rating, emoji, address, status, created_at)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
                     [
                         pin.id,
                         pin.map_id,
@@ -450,6 +460,7 @@ class DatabaseService {
                         pin.rating,
                         pin.emoji,
                         pin.address || '',
+                        pin.status || 'visited', // older backups won't have status
                         pin.created_at
                     ]
                 );

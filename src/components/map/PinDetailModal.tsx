@@ -32,6 +32,7 @@ interface PinDetailModalProps {
   onDelete?: (id: string) => void;
   onEdit?: () => void;
   onShare?: () => void;
+  onToggleStatus?: (id: string, newStatus: "visited" | "wishlist") => void;
 }
 
 export const PinDetailModal: React.FC<PinDetailModalProps> = ({
@@ -41,6 +42,7 @@ export const PinDetailModal: React.FC<PinDetailModalProps> = ({
   onDelete,
   onEdit,
   onShare,
+  onToggleStatus,
 }) => {
   const { theme, colorScheme } = useTheme();
   const modalRadius = getResponsiveValue(24, 24, 24, 28);
@@ -264,6 +266,70 @@ export const PinDetailModal: React.FC<PinDetailModalProps> = ({
                     </View>
                   </View>
 
+                  {/* Status chip — tap to flip Been here / Want to go */}
+                  {(() => {
+                    const isWishlist = (pin.status || "visited") === "wishlist";
+                    return (
+                      <TouchableOpacity
+                        activeOpacity={onToggleStatus ? 0.7 : 1}
+                        disabled={!onToggleStatus}
+                        onPress={() => {
+                          if (!onToggleStatus) return;
+                          haptics.selection();
+                          onToggleStatus(
+                            pin.id,
+                            isWishlist ? "visited" : "wishlist",
+                          );
+                        }}
+                        style={[
+                          styles.statusChip,
+                          {
+                            backgroundColor: isWishlist
+                              ? theme.colors.primary + "20"
+                              : theme.colors.success + "20",
+                            borderColor: isWishlist
+                              ? theme.colors.primary
+                              : theme.colors.success,
+                          },
+                        ]}
+                      >
+                        <Icon
+                          name={isWishlist ? "star-outline" : "check-circle"}
+                          size={getResponsiveValue(15, 15, 16, 20)}
+                          color={
+                            isWishlist
+                              ? theme.colors.primary
+                              : theme.colors.success
+                          }
+                        />
+                        <Text
+                          style={[
+                            styles.statusChipText,
+                            {
+                              color: isWishlist
+                                ? theme.colors.primary
+                                : theme.colors.success,
+                            },
+                          ]}
+                        >
+                          {isWishlist ? "Want to go" : "Been here"}
+                        </Text>
+                        {onToggleStatus && (
+                          <Icon
+                            name="swap-horizontal"
+                            size={getResponsiveValue(14, 14, 15, 19)}
+                            color={
+                              isWishlist
+                                ? theme.colors.primary
+                                : theme.colors.success
+                            }
+                            style={{ marginLeft: 2, opacity: 0.7 }}
+                          />
+                        )}
+                      </TouchableOpacity>
+                    );
+                  })()}
+
                   {/* Description */}
                   {pin.description ? (
                     <Text
@@ -434,6 +500,26 @@ const styles = StyleSheet.create({
     marginTop: 4,
     fontFamily: "poppins_regular",
   },
+  statusChip: {
+    alignSelf: "flex-start",
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 5,
+    paddingHorizontal: 10,
+    borderRadius: 999,
+    borderWidth: 1,
+    marginTop: 10,
+    gap: 5,
+  },
+  statusChipText: {
+    fontSize: getResponsiveValue(
+      moderateScale(12),
+      moderateScale(12),
+      moderateScale(13),
+      17,
+    ),
+    fontFamily: "poppins_medium",
+  },
   description: {
     fontSize: getResponsiveValue(
       moderateScale(16),
@@ -443,6 +529,7 @@ const styles = StyleSheet.create({
     ),
     lineHeight: getResponsiveValue(24, 24, 24, 28),
     marginBottom: getResponsiveValue(24, 24, 24, 28),
+    marginTop: getResponsiveValue(12, 12, 12, 16),
   },
   infoRow: {
     flexDirection: "row",

@@ -107,6 +107,9 @@ export const MapViewScreen: React.FC = () => {
     "newest",
   );
   const [minRating, setMinRating] = useState(0);
+  const [statusFilter, setStatusFilter] = useState<
+    "all" | "visited" | "wishlist"
+  >("all");
   const [bannerHeight, setBannerHeight] = useState(0);
   const [isKeyboardOpen, setIsKeyboardOpen] = useState(false);
   const bannerTranslateY = useRef(new RNAnimated.Value(0)).current;
@@ -169,6 +172,13 @@ export const MapViewScreen: React.FC = () => {
       result = result.filter((pin) => (pin.rating || 0) >= minRating);
     }
 
+    // 2b. Filter by Status (Been here / Want to go)
+    if (statusFilter !== "all") {
+      result = result.filter(
+        (pin) => (pin.status || "visited") === statusFilter,
+      );
+    }
+
     // 3. Sort
     result = [...result].sort((a, b) => {
       switch (sortBy) {
@@ -190,7 +200,7 @@ export const MapViewScreen: React.FC = () => {
     });
 
     return result;
-  }, [pins, searchQuery, sortBy, minRating]);
+  }, [pins, searchQuery, sortBy, minRating, statusFilter]);
 
   // Animation values for smooth, soft animations
   const searchBarOpacity = useSharedValue(0);
@@ -499,6 +509,28 @@ export const MapViewScreen: React.FC = () => {
       }
     },
     [pins],
+  );
+
+  const handleToggleStatus = useCallback(
+    async (pinId: string, newStatus: "visited" | "wishlist") => {
+      try {
+        haptics.success();
+        await databaseService.updatePin(pinId, { status: newStatus });
+        // Update the list and the open detail sheet so the change is instant.
+        setPins((prev) =>
+          prev.map((p) => (p.id === pinId ? { ...p, status: newStatus } : p)),
+        );
+        setSelectedPin((prev) =>
+          prev && prev.id === pinId ? { ...prev, status: newStatus } : prev,
+        );
+      } catch (error) {
+        console.error("Failed to update pin status:", error);
+        Alert.alert("Error", "Failed to update status", undefined, {
+          userInterfaceStyle: colorScheme === "dark" ? "dark" : "light",
+        });
+      }
+    },
+    [colorScheme],
   );
 
   const buildMapTextMessage = (): string => {
@@ -842,12 +874,16 @@ export const MapViewScreen: React.FC = () => {
             >
               {filteredPins.map((pin) => (
                 <CustomMarker
-                  key={pin.id || `${pin.latitude}-${pin.longitude}`}
+                  // Status is part of the key so toggling Been here / Want to go
+                  // remounts the marker — react-native-maps does not reliably
+                  // redraw a custom marker's view when its props change in place.
+                  key={`${pin.id || `${pin.latitude}-${pin.longitude}`}-${pin.status || "visited"}`}
                   coordinate={{
                     latitude: pin.latitude,
                     longitude: pin.longitude,
                   }}
                   emoji={pin.emoji || "📍"}
+                  status={pin.status || "visited"}
                   onPress={() => handleMarkerPress(pin)}
                 />
               ))}
@@ -931,7 +967,20 @@ export const MapViewScreen: React.FC = () => {
                     onPress={() => handleMarkerPress(item)}
                     activeOpacity={0.98}
                   >
-                    <Text style={styles.cardEmoji}>{item.emoji || "📍"}</Text>
+                    {(item.status || "visited") === "wishlist" ? (
+                      <View
+                        style={[
+                          styles.cardEmojiRing,
+                          { borderColor: theme.colors.primary },
+                        ]}
+                      >
+                        <Text style={styles.cardEmojiInRing}>
+                          {item.emoji || "📍"}
+                        </Text>
+                      </View>
+                    ) : (
+                      <Text style={styles.cardEmoji}>{item.emoji || "📍"}</Text>
+                    )}
                     <View style={styles.cardContent}>
                       <Text
                         style={[
@@ -972,6 +1021,7 @@ export const MapViewScreen: React.FC = () => {
         onDelete={handleDeletePin}
         onEdit={() => handleEditPin(selectedPin)}
         onShare={() => handleSharePin(selectedPin)}
+        onToggleStatus={handleToggleStatus}
       />
 
       {/* Filter Modal */}
@@ -1139,9 +1189,76 @@ export const MapViewScreen: React.FC = () => {
                 </Text>
               </View>
 
+              {/* Status Filter */}
+              <Text
+                style={[
+                  styles.label,
+                  {
+                    color: theme.colors.text.primary[colorScheme],
+                    marginTop: 16,
+                  },
+                ]}
+              >
+                Status
+              </Text>
+              <View style={styles.sortContainer}>
+                {[
+                  { label: "All", value: "all", icon: "map-marker-multiple" },
+                  { label: "Been here", value: "visited", icon: "check-circle" },
+                  {
+                    label: "Want to go",
+                    value: "wishlist",
+                    icon: "star-outline",
+                  },
+                ].map((option) => (
+                  <TouchableOpacity
+                    key={option.value}
+                    style={[
+                      styles.sortOption,
+                      { borderColor: theme.colors.border[colorScheme] },
+                      statusFilter === option.value && {
+                        backgroundColor: theme.colors.primary + "20",
+                        borderColor: theme.colors.primary,
+                      },
+                    ]}
+                    onPress={() => {
+                      haptics.selection();
+                      setStatusFilter(option.value as any);
+                    }}
+                  >
+                    <Icon
+                      name={option.icon}
+                      size={20}
+                      color={
+                        statusFilter === option.value
+                          ? theme.colors.primary
+                          : theme.colors.text.secondary[colorScheme]
+                      }
+                      style={{ marginRight: 8 }}
+                    />
+                    <Text
+                      style={[
+                        styles.sortText,
+                        {
+                          color:
+                            statusFilter === option.value
+                              ? theme.colors.primary
+                              : theme.colors.text.secondary[colorScheme],
+                        },
+                      ]}
+                    >
+                      {option.label}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+
               {/* Action Buttons */}
               {(() => {
-                const isResetDisabled = sortBy === "newest" && minRating === 0;
+                const isResetDisabled =
+                  sortBy === "newest" &&
+                  minRating === 0 &&
+                  statusFilter === "all";
                 return (
               <View style={[styles.buttonRow, { marginTop: 32 }]}>
                 <TouchableOpacity
@@ -1150,6 +1267,7 @@ export const MapViewScreen: React.FC = () => {
                     haptics.selection();
                     setSortBy("newest");
                     setMinRating(0);
+                    setStatusFilter("all");
                   }}
                   disabled={isResetDisabled}
                   activeOpacity={isResetDisabled ? 1 : 0.7}
@@ -1431,6 +1549,23 @@ const styles = StyleSheet.create({
       66,
     ),
     marginRight: getResponsiveValue(12, 12, 12, 16),
+    textAlign: "center",
+  },
+  cardEmojiRing: {
+    width: getResponsiveValue(44, 44, 46, 66),
+    height: getResponsiveValue(44, 44, 46, 66),
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 2,
+    borderStyle: "dashed",
+    borderRadius: 999,
+    marginRight: getResponsiveValue(12, 12, 12, 16),
+  },
+  cardEmojiInRing: {
+    // No explicit lineHeight — a lineHeight == fontSize clips emoji glyphs at
+    // the bottom. Natural height + includeFontPadding:false keeps it centered.
+    fontSize: getResponsiveValue(26, 26, 28, 42),
+    includeFontPadding: false,
     textAlign: "center",
   },
   cardContent: {

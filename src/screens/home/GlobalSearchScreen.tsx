@@ -141,6 +141,7 @@ export const GlobalSearchScreen: React.FC = () => {
     const address = item.address?.trim() || "";
     const hasAddress = address.length > 0;
     const showImage = !!item.imageUri && !failedImages.has(item.id);
+    const isWishlist = (item.status || "visited") === "wishlist";
     return (
       <TouchableOpacity
         style={[
@@ -153,25 +154,41 @@ export const GlobalSearchScreen: React.FC = () => {
         activeOpacity={0.75}
         onPress={() => handleResultPress(item)}
       >
-        {showImage ? (
-          <Image
-            source={{ uri: resolvePinImage(item.imageUri) }}
-            style={styles.thumbImage}
-            onError={() => handleImageError(item.id)}
-          />
-        ) : (
-          <View
-            style={[
-              styles.thumbFallback,
-              // `background` equals `card` (#FFFFFF) in light mode, so it
-              // gave the emoji tile zero contrast against the card. A subtle
-              // brand-blue tint reads as a real thumbnail tile in both schemes.
-              { backgroundColor: theme.colors.primary + "1F" },
-            ]}
-          >
-            <Text style={styles.thumbEmoji}>{item.emoji || "📍"}</Text>
-          </View>
-        )}
+        {/* Wishlist gets a dashed ring on a WRAPPER View — Android renders
+            dashed borders as solid on <Image>, so the border must live on a View. */}
+        <View
+          style={[
+            styles.thumbWrap,
+            isWishlist && {
+              borderStyle: "dashed",
+              borderColor: theme.colors.primary,
+            },
+          ]}
+        >
+          {showImage ? (
+            <Image
+              source={{ uri: resolvePinImage(item.imageUri) }}
+              style={styles.thumbInner}
+              onError={() => handleImageError(item.id)}
+            />
+          ) : (
+            <View
+              style={[
+                styles.thumbInner,
+                // `background` equals `card` (#FFFFFF) in light mode, so it
+                // gave the emoji tile zero contrast against the card. A subtle
+                // brand-blue tint reads as a real thumbnail tile in both schemes.
+                {
+                  backgroundColor: theme.colors.primary + "1F",
+                  alignItems: "center",
+                  justifyContent: "center",
+                },
+              ]}
+            >
+              <Text style={styles.thumbEmoji}>{item.emoji || "📍"}</Text>
+            </View>
+          )}
+        </View>
 
         <View style={styles.resultBody}>
           <Text
@@ -490,19 +507,19 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     marginBottom: 10,
   },
-  thumbImage: {
-    width: THUMB_SIZE,
-    height: THUMB_SIZE,
-    borderRadius: 12,
+  // Wrapper carries the (transparent by default) dashed ring so every card is
+  // the same size whether or not it shows the wishlist ring.
+  thumbWrap: {
     marginRight: 12,
+    borderRadius: 14,
+    borderWidth: 2,
+    borderColor: "transparent",
+    padding: 2,
   },
-  thumbFallback: {
+  thumbInner: {
     width: THUMB_SIZE,
     height: THUMB_SIZE,
     borderRadius: 12,
-    marginRight: 12,
-    alignItems: "center",
-    justifyContent: "center",
   },
   thumbEmoji: {
     fontSize: getResponsiveValue(28, 28, 32, 42),
