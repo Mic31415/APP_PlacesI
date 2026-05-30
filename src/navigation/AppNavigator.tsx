@@ -9,6 +9,7 @@ import { MainTabParamList, RootStackParamList, HomeStackParamList } from '../typ
 import { HomeScreen } from '../screens/home/HomeScreen';
 import { CreateScreen } from '../screens/home/CreateScreen'; // Corrected import path
 import { SettingsScreen } from '../screens/settings/SettingsScreen';
+import { StatsScreen } from '../screens/stats/StatsScreen';
 import { OnboardingScreen } from '../screens/onboarding/OnboardingScreen';
 import { MapViewScreen } from '../screens/map/MapViewScreen';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -112,6 +113,16 @@ const TabNavigator = () => {
                     tabBarLabel: 'Create',
                     tabBarIcon: ({ color }) => (
                         <Icon name="plus-box" color={color} size={tabIconSize} style={tabIconStyle} />
+                    ),
+                }}
+            />
+            <Tab.Screen
+                name="Stats"
+                component={StatsScreen}
+                options={{
+                    tabBarLabel: 'Stats',
+                    tabBarIcon: ({ color }) => (
+                        <Icon name="chart-box" color={color} size={tabIconSize} style={tabIconStyle} />
                     ),
                 }}
             />

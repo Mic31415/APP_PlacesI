@@ -252,6 +252,40 @@ class DatabaseService {
         }
     }
 
+    // Every pin across every map — read-only, used by the Stats screen.
+    public async getAllPins(): Promise<PinData[]> {
+        if (!this.db) await this.initDatabase();
+
+        try {
+            const [results] = await this.db!.executeSql(
+                'SELECT * FROM Pins ORDER BY created_at DESC'
+            );
+
+            const pins: PinData[] = [];
+            for (let i = 0; i < results.rows.length; i++) {
+                const item = results.rows.item(i);
+                pins.push({
+                    id: item.id,
+                    mapId: item.map_id,
+                    title: item.title,
+                    description: item.description,
+                    latitude: item.latitude,
+                    longitude: item.longitude,
+                    imageUri: item.image_uri,
+                    rating: item.rating,
+                    emoji: item.emoji || '📍',
+                    address: item.address || '',
+                    status: item.status || 'visited',
+                    createdAt: item.created_at,
+                });
+            }
+            return pins;
+        } catch (error) {
+            console.error('Failed to get all pins:', error);
+            return [];
+        }
+    }
+
     public async searchPinsGlobal(query: string, limit: number = 100): Promise<GlobalSearchResult[]> {
         if (!this.db) await this.initDatabase();
 
