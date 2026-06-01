@@ -191,10 +191,32 @@ export const PinDetailModal: React.FC<PinDetailModalProps> = ({
           >
             <View style={StyleSheet.absoluteFill} />
           </TouchableWithoutFeedback>
+            {/* Close button floats just ABOVE the sheet's top-right, in the
+                dimmed backdrop. Slides in/out with the sheet (shares
+                modalAnimatedStyle) so they move as one. */}
+            <Animated.View style={[styles.closeAbove, modalAnimatedStyle]}>
+              <TouchableOpacity
+                onPress={() => {
+                  haptics.selection();
+                  onClose();
+                }}
+                style={styles.closeBtn}
+                hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+                accessibilityRole="button"
+                accessibilityLabel="Close"
+              >
+                <Icon
+                  name="close"
+                  size={getResponsiveValue(22, 22, 24, 28)}
+                  color="#fff"
+                />
+              </TouchableOpacity>
+            </Animated.View>
             <Animated.View
               style={[
                 styles.modalSheet,
                 {
+                  backgroundColor: theme.colors.card[colorScheme],
                   borderTopLeftRadius: modalRadius,
                   borderTopRightRadius: modalRadius,
                 },
@@ -203,18 +225,16 @@ export const PinDetailModal: React.FC<PinDetailModalProps> = ({
             >
               <ViewShot
                 ref={viewShotRef}
-                style={{ backgroundColor: theme.colors.card[colorScheme] }}
+                // flexShrink lets the scrollable card shrink to fit when the
+                // sheet hits its max height, so the action bar stays pinned.
+                style={{ backgroundColor: theme.colors.card[colorScheme], flexShrink: 1 }}
                 options={{ format: "png", quality: 0.9 }}
               >
-                <View
-                  style={[
-                    styles.content,
-                    {
-                      backgroundColor: theme.colors.card[colorScheme],
-                      borderTopLeftRadius: modalRadius,
-                      borderTopRightRadius: modalRadius,
-                    },
-                  ]}
+                <ScrollView
+                  showsVerticalScrollIndicator={false}
+                  nestedScrollEnabled
+                  style={{ flexShrink: 1 }}
+                  contentContainerStyle={styles.content}
                 >
                   {/* Drag Handle (Visual only for Modal) */}
                   <View
@@ -542,7 +562,7 @@ export const PinDetailModal: React.FC<PinDetailModalProps> = ({
                       Added: {new Date(pin.createdAt).toLocaleDateString()}
                     </Text>
                   </View>
-                </View>
+                </ScrollView>
               </ViewShot>
 
               {/* Action Buttons (Outside ViewShot to avoid capturing buttons) */}
@@ -626,12 +646,34 @@ const styles = StyleSheet.create({
     width: "100%",
     alignSelf: "center",
     overflow: "hidden",
+    // Never let the sheet fill the whole screen: leave a backdrop strip at the
+    // top to tap-to-close, and keep the drag handle + content on-screen. Tall
+    // pins scroll inside instead of overflowing.
+    maxHeight: "88%",
   },
   content: {
     padding: getResponsiveValue(24, 24, 24, 32),
     paddingTop: getResponsiveValue(12, 12, 12, 16),
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
+  },
+  closeAbove: {
+    // Right-aligned, sitting just above the sheet in the backdrop area.
+    alignSelf: "flex-end",
+    marginRight: getResponsiveValue(16, 16, 18, 24),
+    marginBottom: getResponsiveValue(12, 12, 14, 18),
+  },
+  closeBtn: {
+    width: getResponsiveValue(36, 36, 40, 48),
+    height: getResponsiveValue(36, 36, 40, 48),
+    borderRadius: 999,
+    alignItems: "center",
+    justifyContent: "center",
+    // Dark translucent circle so the white ✕ reads against any backdrop/photo.
+    backgroundColor: "rgba(0,0,0,0.55)",
+    elevation: 4,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
   },
   dragHandle: {
     width: getResponsiveValue(40, 40, 44, 52),
