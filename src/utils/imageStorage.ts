@@ -57,6 +57,20 @@ export const persistPinImage = async (sourceUri: string): Promise<string> => {
 };
 
 /**
+ * Persist a list of picked images into permanent storage, preserving order.
+ * Already-managed relative paths pass through untouched (no-op), so re-saving a
+ * pin whose gallery is unchanged copies nothing.
+ */
+export const persistPinImages = async (sourceUris: string[]): Promise<string[]> => {
+  const out: string[] = [];
+  for (const uri of sourceUris) {
+    if (!uri) continue;
+    out.push(await persistPinImage(uri));
+  }
+  return out;
+};
+
+/**
  * Turn a stored image value into an absolute `file://` uri usable by <Image>.
  *
  * Handles every shape we may encounter:

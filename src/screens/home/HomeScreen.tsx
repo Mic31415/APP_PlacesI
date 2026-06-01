@@ -17,6 +17,7 @@ import { useTheme } from "../../theme/ThemeContext";
 import { ScreenHeader } from "../../components/common/ScreenHeader";
 import { databaseService, MapData } from "../../services/DatabaseService";
 import { MapCard } from "../../components/home/MapCard";
+import { StarterTemplates } from "../../components/home/StarterTemplates";
 import { EmptyState } from "../../components/common/EmptyState";
 import { FloatingButton } from "../../components/common/FloatingButton";
 import { getResponsiveValue } from "../../utils/responsive";
@@ -50,22 +51,22 @@ export const HomeScreen: React.FC = () => {
   const listBottomPadding =
     bannerHeight + tabBarHeight + floatingButtonSize + floatingGap;
 
+  const loadMaps = useCallback(async () => {
+    try {
+      const fetchedMaps = await databaseService.getMaps();
+      setMaps(fetchedMaps);
+
+      // Trigger animations after data is loaded
+      setTimeout(() => {
+        setShouldAnimate(true);
+      }, 100);
+    } catch (error) {
+      console.error("Failed to load maps:", error);
+    }
+  }, []);
+
   useFocusEffect(
     React.useCallback(() => {
-      const loadMaps = async () => {
-        try {
-          const fetchedMaps = await databaseService.getMaps();
-          setMaps(fetchedMaps);
-
-          // Trigger animations after data is loaded
-          setTimeout(() => {
-            setShouldAnimate(true);
-          }, 100);
-        } catch (error) {
-          console.error("Failed to load maps:", error);
-        }
-      };
-
       // Reset animation state when screen comes into focus
       setShouldAnimate(false);
       loadMaps();
@@ -74,7 +75,7 @@ export const HomeScreen: React.FC = () => {
         // Reset on blur
         setShouldAnimate(false);
       };
-    }, []),
+    }, [loadMaps]),
   );
 
   // Responsive Layout: 1 column on mobile, 2 on tablet
@@ -90,6 +91,13 @@ export const HomeScreen: React.FC = () => {
     // @ts-ignore — GlobalSearch lives on the Home stack; the tab nav prop
     // doesn't infer it directly.
     navigation.navigate("GlobalSearch");
+  };
+
+  const handleOpenNearMe = () => {
+    haptics.selection();
+    // @ts-ignore — NearMe lives on the Home stack; the tab nav prop
+    // doesn't infer it directly.
+    navigation.navigate("NearMe");
   };
 
   const handleMapPress = (map: MapData) => {
@@ -149,18 +157,32 @@ export const HomeScreen: React.FC = () => {
           </Text>
         }
         rightComponent={
-          <TouchableOpacity
-            onPress={handleOpenSearch}
-            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-            accessibilityRole="button"
-            accessibilityLabel="Search all pins"
-          >
-            <Icon
-              name="magnify"
-              size={SEARCH_ICON_SIZE}
-              color={theme.colors.text.primary[colorScheme]}
-            />
-          </TouchableOpacity>
+          <View style={styles.headerActions}>
+            <TouchableOpacity
+              onPress={handleOpenNearMe}
+              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+              accessibilityRole="button"
+              accessibilityLabel="Places near me"
+            >
+              <Icon
+                name="near-me"
+                size={SEARCH_ICON_SIZE}
+                color={theme.colors.text.primary[colorScheme]}
+              />
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={handleOpenSearch}
+              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+              accessibilityRole="button"
+              accessibilityLabel="Search all pins"
+            >
+              <Icon
+                name="magnify"
+                size={SEARCH_ICON_SIZE}
+                color={theme.colors.text.primary[colorScheme]}
+              />
+            </TouchableOpacity>
+          </View>
         }
       />
 
@@ -186,10 +208,13 @@ export const HomeScreen: React.FC = () => {
           justifyContent: maps.length === 0 ? "center" : "flex-start", // Center only when empty
         }}
         ListEmptyComponent={
-          <EmptyState
-            title="No Maps Yet"
-            description="Create your first map to start pinning your favorite places!"
-          />
+          <View>
+            <EmptyState
+              title="No Maps Yet"
+              description="Create your first map to start pinning your favorite places!"
+            />
+            <StarterTemplates onCreated={loadMaps} />
+          </View>
         }
       />
 
@@ -209,5 +234,10 @@ const styles = StyleSheet.create({
   headerText: {
     fontWeight: "600",
     fontFamily: "poppins_bold",
+  },
+  headerActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: getResponsiveValue(16, 16, 18, 22),
   },
 });

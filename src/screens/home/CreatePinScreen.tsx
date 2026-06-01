@@ -30,12 +30,13 @@ import Icon from "react-native-vector-icons/MaterialCommunityIcons";
 import { useTheme } from "../../theme/ThemeContext";
 import { RatingPicker } from "../../components/common/RatingPicker";
 import { ScreenHeader } from "../../components/common/ScreenHeader";
-import { databaseService } from "../../services/DatabaseService";
+import { databaseService, PinData } from "../../services/DatabaseService";
 import { EmojiPickerModal } from "../../components/common/EmojiPickerModal";
+import { DatePickerModal } from "../../components/common/DatePickerModal";
 import AppConfig from "../../config";
 import { getResponsiveValue, moderateScale } from "../../utils/responsive";
 import {
-  persistPinImage,
+  persistPinImages,
   deletePinImage,
   resolvePinImage,
 } from "../../utils/imageStorage";
@@ -55,6 +56,12 @@ interface PlacePrediction {
   place_id: string;
 }
 
+// Cap photos per pin. Keeps backups (all images base64 in one JSON) and memory
+// bounded while still being generous enough for a real travel journal.
+const MAX_IMAGES = 5;
+// Resize-on-capture: cap the long edge so each stored photo stays small.
+const IMAGE_MAX_DIMENSION = 1080;
+
 export const CreatePinScreen: React.FC = () => {
   const { theme, colorScheme } = useTheme();
   const navigation = useNavigation();
@@ -64,7 +71,7 @@ export const CreatePinScreen: React.FC = () => {
   const { mapId, mapEmoji, pin } = route.params as {
     mapId: string;
     mapEmoji?: string;
-    pin?: any;
+    pin?: PinData;
   };
 
   const [title, setTitle] = useState(pin?.title || "");
@@ -78,16 +85,32 @@ export const CreatePinScreen: React.FC = () => {
     pin?.emoji || mapEmoji || "🗺️",
   );
   const [emojiModalVisible, setEmojiModalVisible] = useState(false);
-
-  const [imageUri, setImageUri] = useState<string | null>(
-    pin?.imageUri || null,
+  const [visitedAt, setVisitedAt] = useState<number | null>(
+    pin?.visitedAt ?? null,
   );
-  // Show a placeholder in the preview if the selected/existing photo can't be
-  // loaded (e.g. an old pin whose file is gone). Reset whenever the photo changes.
-  const [previewFailed, setPreviewFailed] = useState(false);
+  const [dateModalVisible, setDateModalVisible] = useState(false);
+  const [tags, setTags] = useState<string[]>(pin?.tags || []);
+  const [tagInput, setTagInput] = useState("");
+  const [tagSuggestions, setTagSuggestions] = useState<string[]>([]);
+
+  // Load previously-used tags once so the editor can suggest them.
   useEffect(() => {
-    setPreviewFailed(false);
-  }, [imageUri]);
+    databaseService
+      .getAllTags()
+      .then(setTagSuggestions)
+      .catch(() => setTagSuggestions([]));
+  }, []);
+
+  const [images, setImages] = useState<string[]>(
+    pin?.images && pin.images.length > 0
+      ? pin.images
+      : pin?.imageUri
+        ? [pin.imageUri]
+        : [],
+  );
+  // Track thumbnails whose file can't be loaded (e.g. an old pin whose file is
+  // gone) so we can show a placeholder for just that image.
+  const [failedThumbs, setFailedThumbs] = useState<string[]>([]);
   const [coordinates, setCoordinates] = useState<{
     latitude: number;
     longitude: number;
@@ -246,8 +269,16 @@ export const CreatePinScreen: React.FC = () => {
       setDescription(pin.description);
       setRating(pin.rating);
       setStatus(pin.status || "visited");
+      setVisitedAt(pin.visitedAt ?? null);
+      setTags(pin.tags || []);
       setSelectedEmoji(pin.emoji || mapEmoji || "🗺️");
-      setImageUri(pin.imageUri || null);
+      setImages(
+        pin.images && pin.images.length > 0
+          ? pin.images
+          : pin.imageUri
+            ? [pin.imageUri]
+            : [],
+      );
       setCoordinates({ latitude: pin.latitude, longitude: pin.longitude });
       setLocation(pin.address || "");
     }
@@ -339,15 +370,21 @@ export const CreatePinScreen: React.FC = () => {
 
     setIsSaving(true);
     try {
-      if (pin) {
-        // Copy a newly-picked photo into permanent storage. If the image is
-        // unchanged it already lives in our managed folder, so this is a no-op.
-        const isNewImage = !!imageUri && imageUri !== pin.imageUri;
-        const finalImageUri = isNewImage
-          ? await persistPinImage(imageUri!)
-          : imageUri; // existing managed path, or null if the user removed it
+      // Copy any newly-picked photos into permanent storage, preserving order.
+      // Unchanged images already live in our managed folder, so they're no-ops.
+      const finalUris = await persistPinImages(images);
 
-        // Update existing pin
+      // Include any tag still sitting in the input that wasn't committed.
+      const trimmedTag = tagInput.trim();
+      const finalTags =
+        trimmedTag &&
+        !tags.some((x) => x.toLowerCase() === trimmedTag.toLowerCase())
+          ? [...tags, trimmedTag]
+          : tags;
+
+      if (pin) {
+        // Update existing pin. The gallery (and its cover mirror) is owned by
+        // setPinImages, so imageUri is intentionally not passed here.
         await databaseService.updatePin(pin.id, {
           title: title.trim(),
           description: description.trim(),
@@ -357,21 +394,27 @@ export const CreatePinScreen: React.FC = () => {
           emoji: selectedEmoji,
           address: location, // Save address
           status: status,
-          // null clears the column (image removed); undefined leaves it untouched.
-          imageUri: finalImageUri ?? null,
+          visitedAt: visitedAt,
+          tags: finalTags,
         } as any);
 
-        // The old file is now orphaned if the photo was replaced or removed.
-        if (pin.imageUri && pin.imageUri !== finalImageUri) {
-          await deletePinImage(pin.imageUri);
+        await databaseService.setPinImages(pin.id, finalUris);
+
+        // Delete files for any photos the user removed from the gallery.
+        const oldUris =
+          pin.images && pin.images.length > 0
+            ? pin.images
+            : pin.imageUri
+              ? [pin.imageUri]
+              : [];
+        for (const uri of oldUris) {
+          if (!finalUris.includes(uri)) {
+            await deletePinImage(uri);
+          }
         }
       } else {
         // Create new pin — coordinates is guaranteed non-null by the guard above.
-        const finalImageUri = imageUri
-          ? await persistPinImage(imageUri)
-          : undefined;
-
-        await databaseService.addPin({
+        const newPin = await databaseService.addPin({
           mapId: mapId,
           title: title.trim(),
           description: description.trim(),
@@ -381,8 +424,12 @@ export const CreatePinScreen: React.FC = () => {
           emoji: selectedEmoji,
           address: location, // Save address
           status: status,
-          imageUri: finalImageUri,
+          visitedAt: visitedAt,
+          tags: finalTags,
+          imageUri: finalUris[0], // cover; setPinImages keeps it in sync
         });
+
+        await databaseService.setPinImages(newPin.id, finalUris);
       }
 
       void trackInterstitialAction();
@@ -407,8 +454,60 @@ export const CreatePinScreen: React.FC = () => {
     navigation.goBack();
   };
 
+  // Append newly-picked photos up to the per-pin cap, warning if some are dropped.
+  const addImages = (uris: string[]) => {
+    if (uris.length === 0) return;
+    setImages((prev) => {
+      const room = MAX_IMAGES - prev.length;
+      if (room <= 0) return prev;
+      if (uris.length > room) {
+        Alert.alert(
+          "Photo limit reached",
+          `You can add up to ${MAX_IMAGES} photos per pin.`,
+          undefined,
+          { userInterfaceStyle: colorScheme === "dark" ? "dark" : "light" },
+        );
+      }
+      return [...prev, ...uris.slice(0, room)];
+    });
+  };
+
+  const atPhotoLimit = images.length >= MAX_IMAGES;
+
+  // Visit-date bounds by status: "Been here" can only be today or earlier (you
+  // can't have visited the future); "Want to go" can only be today or later.
+  const now = new Date();
+  const todayStart = new Date(
+    now.getFullYear(),
+    now.getMonth(),
+    now.getDate(),
+  ).getTime();
+  const dateMinDate = status === "wishlist" ? todayStart : undefined;
+  const dateMaxDate = status === "visited" ? todayStart : undefined;
+
+  // When the user switches status, drop a visit date that's no longer valid for
+  // the new option (e.g. a future date when switching to "Been here").
+  const handleStatusChange = (next: "visited" | "wishlist") => {
+    haptics.selection();
+    setStatus(next);
+    if (visitedAt != null) {
+      const invalid =
+        next === "wishlist" ? visitedAt < todayStart : visitedAt > todayStart;
+      if (invalid) setVisitedAt(null);
+    }
+  };
+
   const handleTakePhoto = async () => {
     haptics.selection();
+    if (atPhotoLimit) {
+      Alert.alert(
+        "Photo limit reached",
+        `You can add up to ${MAX_IMAGES} photos per pin.`,
+        undefined,
+        { userInterfaceStyle: colorScheme === "dark" ? "dark" : "light" },
+      );
+      return;
+    }
     try {
       if (Platform.OS === "android") {
         const hasPermission = await PermissionsAndroid.request(
@@ -428,6 +527,8 @@ export const CreatePinScreen: React.FC = () => {
       const result = await launchCamera({
         mediaType: "photo",
         quality: 0.7,
+        maxWidth: IMAGE_MAX_DIMENSION,
+        maxHeight: IMAGE_MAX_DIMENSION,
         saveToPhotos: false, // Attempting false to avoid external storage permission issues for now
       });
 
@@ -440,7 +541,8 @@ export const CreatePinScreen: React.FC = () => {
           { userInterfaceStyle: colorScheme === "dark" ? "dark" : "light" },
         );
       } else if (result.assets && result.assets.length > 0) {
-        setImageUri(result.assets[0].uri || null);
+        const uri = result.assets[0].uri;
+        if (uri) addImages([uri]);
       }
     } catch (error) {
       Alert.alert(
@@ -454,14 +556,60 @@ export const CreatePinScreen: React.FC = () => {
 
   const handlePickPhoto = async () => {
     haptics.selection();
+    if (atPhotoLimit) {
+      Alert.alert(
+        "Photo limit reached",
+        `You can add up to ${MAX_IMAGES} photos per pin.`,
+        undefined,
+        { userInterfaceStyle: colorScheme === "dark" ? "dark" : "light" },
+      );
+      return;
+    }
     const result = await launchImageLibrary({
       mediaType: "photo",
       quality: 0.7,
-      selectionLimit: 1,
+      maxWidth: IMAGE_MAX_DIMENSION,
+      maxHeight: IMAGE_MAX_DIMENSION,
+      selectionLimit: MAX_IMAGES - images.length,
     });
 
     if (result.assets && result.assets.length > 0) {
-      setImageUri(result.assets[0].uri || null);
+      const uris = result.assets
+        .map((a) => a.uri)
+        .filter((u): u is string => !!u);
+      addImages(uris);
+    }
+  };
+
+  const handleRemoveImage = (uri: string) => {
+    haptics.selection();
+    setImages((prev) => prev.filter((u) => u !== uri));
+  };
+
+  // Add a tag (case-insensitive de-dupe), clearing the input.
+  const addTag = (raw: string) => {
+    const t = raw.trim();
+    if (!t) return;
+    setTags((prev) =>
+      prev.some((x) => x.toLowerCase() === t.toLowerCase()) ? prev : [...prev, t],
+    );
+    setTagInput("");
+  };
+
+  const removeTag = (t: string) => {
+    haptics.selection();
+    setTags((prev) => prev.filter((x) => x !== t));
+  };
+
+  const handleTagInputChange = (text: string) => {
+    // Commit a tag when the user types a comma.
+    if (text.includes(",")) {
+      const parts = text.split(",");
+      const last = parts.pop() ?? "";
+      parts.forEach((p) => addTag(p));
+      setTagInput(last);
+    } else {
+      setTagInput(text);
     }
   };
 
@@ -926,10 +1074,7 @@ export const CreatePinScreen: React.FC = () => {
                   <TouchableOpacity
                     key={opt.key}
                     activeOpacity={0.8}
-                    onPress={() => {
-                      haptics.selection();
-                      setStatus(opt.key);
-                    }}
+                    onPress={() => handleStatusChange(opt.key)}
                     style={[
                       styles.statusBtn,
                       {
@@ -965,6 +1110,214 @@ export const CreatePinScreen: React.FC = () => {
                 );
               })}
             </View>
+          </Animated.View>
+
+          {/* Visit date */}
+          <Animated.View style={[styles.inputGroup, ratingAnimatedStyle]}>
+            <Text
+              style={[
+                styles.label,
+                { color: theme.colors.text.secondary[colorScheme] },
+              ]}
+            >
+              Visit date
+            </Text>
+            <TouchableOpacity
+              activeOpacity={0.8}
+              onPress={() => {
+                haptics.selection();
+                setDateModalVisible(true);
+              }}
+              style={[
+                styles.inputContainer,
+                {
+                  backgroundColor: theme.colors.surface[colorScheme],
+                  flexDirection: "row",
+                  alignItems: "center",
+                },
+              ]}
+            >
+              <Icon
+                name="calendar"
+                size={22}
+                color={theme.colors.primary}
+                style={{ marginRight: 10 }}
+              />
+              <Text
+                style={[
+                  styles.input,
+                  {
+                    flex: 1,
+                    color: visitedAt
+                      ? theme.colors.text.primary[colorScheme]
+                      : theme.colors.text.tertiary[colorScheme],
+                  },
+                ]}
+              >
+                {visitedAt
+                  ? new Date(visitedAt).toLocaleDateString(undefined, {
+                      year: "numeric",
+                      month: "long",
+                      day: "numeric",
+                    })
+                  : "When did you visit? (optional)"}
+              </Text>
+              {visitedAt ? (
+                <TouchableOpacity
+                  onPress={() => {
+                    haptics.selection();
+                    setVisitedAt(null);
+                  }}
+                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                >
+                  <Icon
+                    name="close-circle"
+                    size={18}
+                    color={theme.colors.text.tertiary[colorScheme]}
+                  />
+                </TouchableOpacity>
+              ) : (
+                <Icon
+                  name="chevron-right"
+                  size={22}
+                  color={theme.colors.text.tertiary[colorScheme]}
+                />
+              )}
+            </TouchableOpacity>
+          </Animated.View>
+
+          {/* Tags */}
+          <Animated.View style={[styles.inputGroup, ratingAnimatedStyle]}>
+            <Text
+              style={[
+                styles.label,
+                { color: theme.colors.text.secondary[colorScheme] },
+              ]}
+            >
+              Tags
+            </Text>
+            <View
+              style={[
+                styles.inputContainer,
+                {
+                  backgroundColor: theme.colors.surface[colorScheme],
+                  flexDirection: "row",
+                  alignItems: "center",
+                },
+              ]}
+            >
+              <Icon
+                name="tag-outline"
+                size={20}
+                color={theme.colors.text.tertiary[colorScheme]}
+                style={{ marginRight: 10 }}
+              />
+              <TextInput
+                style={[
+                  styles.input,
+                  { flex: 1, color: theme.colors.text.primary[colorScheme] },
+                ]}
+                placeholder="Add a tag (e.g. ramen, $$)"
+                placeholderTextColor={theme.colors.text.tertiary[colorScheme]}
+                value={tagInput}
+                onChangeText={handleTagInputChange}
+                onSubmitEditing={() => addTag(tagInput)}
+                returnKeyType="done"
+                blurOnSubmit={false}
+                autoCapitalize="none"
+              />
+              {tagInput.trim().length > 0 && (
+                <TouchableOpacity
+                  onPress={() => addTag(tagInput)}
+                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                >
+                  <Icon name="plus-circle" size={20} color={theme.colors.primary} />
+                </TouchableOpacity>
+              )}
+            </View>
+
+            {/* Selected tags — single horizontal row */}
+            {tags.length > 0 && (
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                keyboardShouldPersistTaps="handled"
+                style={styles.tagRow}
+                contentContainerStyle={styles.tagRowContent}
+              >
+                {tags.map((t) => (
+                  <View
+                    key={t}
+                    style={[
+                      styles.tagChip,
+                      { backgroundColor: theme.colors.primary + "20" },
+                    ]}
+                  >
+                    <Text
+                      style={[styles.tagChipText, { color: theme.colors.primary }]}
+                    >
+                      {t}
+                    </Text>
+                    <TouchableOpacity
+                      onPress={() => removeTag(t)}
+                      hitSlop={{ top: 8, bottom: 8, left: 6, right: 6 }}
+                    >
+                      <Icon name="close" size={14} color={theme.colors.primary} />
+                    </TouchableOpacity>
+                  </View>
+                ))}
+              </ScrollView>
+            )}
+
+            {/* Suggestions from previously-used tags — single horizontal row */}
+            {tagSuggestions.filter(
+              (s) => !tags.some((t) => t.toLowerCase() === s.toLowerCase()),
+            ).length > 0 && (
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                keyboardShouldPersistTaps="handled"
+                style={styles.tagRow}
+                contentContainerStyle={styles.tagRowContent}
+              >
+                {tagSuggestions
+                  .filter(
+                    (s) => !tags.some((t) => t.toLowerCase() === s.toLowerCase()),
+                  )
+                  .slice(0, 12)
+                  .map((s) => (
+                    <TouchableOpacity
+                      key={s}
+                      onPress={() => {
+                        haptics.selection();
+                        addTag(s);
+                      }}
+                      style={[
+                        styles.tagChip,
+                        {
+                          backgroundColor: theme.colors.surface[colorScheme],
+                          borderWidth: 1,
+                          borderColor: theme.colors.border[colorScheme],
+                        },
+                      ]}
+                    >
+                      <Icon
+                        name="plus"
+                        size={12}
+                        color={theme.colors.text.tertiary[colorScheme]}
+                      />
+                      <Text
+                        style={[
+                          styles.tagChipText,
+                          { color: theme.colors.text.secondary[colorScheme] },
+                        ]}
+                      >
+                        {s}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+              </ScrollView>
+            )}
           </Animated.View>
 
           {/* Emoji Selector */}
@@ -1018,7 +1371,9 @@ export const CreatePinScreen: React.FC = () => {
                 { color: theme.colors.text.secondary[colorScheme] },
               ]}
             >
-              Photo (Optional)
+              {images.length > 0
+                ? `Photos (${images.length}/${MAX_IMAGES})`
+                : "Photos (Optional)"}
             </Text>
             <View style={styles.photoActions}>
               <TouchableOpacity
@@ -1071,51 +1426,65 @@ export const CreatePinScreen: React.FC = () => {
                 </Text>
               </TouchableOpacity>
             </View>
-            {imageUri && (
-              <View style={[styles.imagePreview, { backgroundColor: theme.colors.surface[colorScheme], alignItems: "center", justifyContent: "center" }]}>
-                {previewFailed ? (
-                  <>
-                    <Icon
-                      name="image-off"
-                      size={getResponsiveValue(40, 40, 44, 52)}
-                      color={theme.colors.text.tertiary[colorScheme]}
-                    />
-                    <Text
-                      style={{
-                        marginTop: 8,
-                        color: theme.colors.text.tertiary[colorScheme],
-                        fontFamily: "poppins_regular",
-                        fontSize: getResponsiveValue(13, 13, 14, 18),
-                      }}
+            {images.length > 0 && (
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.thumbStrip}
+                keyboardShouldPersistTaps="handled"
+              >
+                {images.map((uri, index) => {
+                  const failed = failedThumbs.includes(uri);
+                  return (
+                    <View
+                      key={uri}
+                      style={[
+                        styles.thumb,
+                        {
+                          backgroundColor: theme.colors.surface[colorScheme],
+                          borderColor: theme.colors.border[colorScheme],
+                        },
+                      ]}
                     >
-                      Image unavailable
-                    </Text>
-                  </>
-                ) : (
-                  <Image
-                    source={{ uri: resolvePinImage(imageUri) }}
-                    style={{ width: "100%", height: "100%", borderRadius: 12 }}
-                    resizeMode="cover"
-                    onError={() => setPreviewFailed(true)}
-                  />
-                )}
-                <TouchableOpacity
-                  style={{
-                    position: "absolute",
-                    top: 8,
-                    right: 8,
-                    backgroundColor: "rgba(0,0,0,0.5)",
-                    borderRadius: 12,
-                    padding: 4,
-                  }}
-                  onPress={() => {
-                    haptics.selection();
-                    setImageUri(null);
-                  }}
-                >
-                  <Icon name="close" size={20} color="#fff" />
-                </TouchableOpacity>
-              </View>
+                      {failed ? (
+                        <Icon
+                          name="image-off"
+                          size={getResponsiveValue(28, 28, 30, 36)}
+                          color={theme.colors.text.tertiary[colorScheme]}
+                        />
+                      ) : (
+                        <Image
+                          source={{ uri: resolvePinImage(uri) }}
+                          style={styles.thumbImage}
+                          resizeMode="cover"
+                          onError={() =>
+                            setFailedThumbs((prev) =>
+                              prev.includes(uri) ? prev : [...prev, uri],
+                            )
+                          }
+                        />
+                      )}
+                      {index === 0 && (
+                        <View
+                          style={[
+                            styles.coverBadge,
+                            { backgroundColor: theme.colors.primary },
+                          ]}
+                        >
+                          <Text style={styles.coverBadgeText}>Cover</Text>
+                        </View>
+                      )}
+                      <TouchableOpacity
+                        style={styles.thumbRemove}
+                        onPress={() => handleRemoveImage(uri)}
+                        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                      >
+                        <Icon name="close" size={16} color="#fff" />
+                      </TouchableOpacity>
+                    </View>
+                  );
+                })}
+              </ScrollView>
             )}
           </Animated.View>
 
@@ -1157,6 +1526,23 @@ export const CreatePinScreen: React.FC = () => {
         visible={emojiModalVisible}
         onClose={() => setEmojiModalVisible(false)}
         onSelectEmoji={setSelectedEmoji}
+      />
+
+      {/* Visit date picker */}
+      <DatePickerModal
+        visible={dateModalVisible}
+        value={visitedAt}
+        minDate={dateMinDate}
+        maxDate={dateMaxDate}
+        onClose={() => setDateModalVisible(false)}
+        onSelect={(ts) => {
+          setVisitedAt(ts);
+          setDateModalVisible(false);
+        }}
+        onClear={() => {
+          setVisitedAt(null);
+          setDateModalVisible(false);
+        }}
       />
     </View>
   );
@@ -1277,6 +1663,67 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     marginTop: 8,
+  },
+  tagRow: {
+    marginTop: 10,
+  },
+  tagRowContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingVertical: 2,
+    paddingRight: 4,
+  },
+  tagChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    borderRadius: 999,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+  },
+  tagChipText: {
+    fontSize: moderateScale(12),
+    fontFamily: "poppins_medium",
+  },
+  thumbStrip: {
+    gap: 12,
+    paddingVertical: 4,
+    paddingRight: 4,
+  },
+  thumb: {
+    width: getResponsiveValue(90, 90, 100, 130),
+    height: getResponsiveValue(90, 90, 100, 130),
+    borderRadius: 12,
+    borderWidth: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    overflow: "hidden",
+  },
+  thumbImage: {
+    width: "100%",
+    height: "100%",
+  },
+  coverBadge: {
+    position: "absolute",
+    bottom: 6,
+    left: 6,
+    borderRadius: 6,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+  },
+  coverBadgeText: {
+    color: "#fff",
+    fontSize: moderateScale(10),
+    fontFamily: "poppins_medium",
+  },
+  thumbRemove: {
+    position: "absolute",
+    top: 6,
+    right: 6,
+    backgroundColor: "rgba(0,0,0,0.55)",
+    borderRadius: 12,
+    padding: 3,
   },
   emojiSelector: {
     alignItems: "center",

@@ -17,6 +17,7 @@ import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { CreatePinScreen } from '../screens/home/CreatePinScreen';
 import { MapPickerScreen } from '../screens/map/MapPickerScreen';
 import { GlobalSearchScreen } from '../screens/home/GlobalSearchScreen';
+import { NearMeScreen } from '../screens/home/NearMeScreen';
 import { isTablet } from '../utils/responsive';
 
 const Tab = createBottomTabNavigator<MainTabParamList>();
@@ -31,6 +32,7 @@ const HomeStackNavigator = () => {
             <HomeStack.Screen name="CreatePin" component={CreatePinScreen} />
             <HomeStack.Screen name="MapPicker" component={MapPickerScreen} />
             <HomeStack.Screen name="GlobalSearch" component={GlobalSearchScreen} />
+            <HomeStack.Screen name="NearMe" component={NearMeScreen} />
         </HomeStack.Navigator>
     );
 };
@@ -86,7 +88,7 @@ const TabNavigator = () => {
                 component={HomeStackNavigator}
                 options={({ route }) => {
                     const routeName = getFocusedRouteNameFromRoute(route) ?? 'MapList';
-                    const hiddenRoutes = ['MapView', 'CreatePin', 'MapPicker', 'GlobalSearch'];
+                    const hiddenRoutes = ['MapView', 'CreatePin', 'MapPicker', 'GlobalSearch', 'NearMe'];
                     const isHidden = hiddenRoutes.includes(routeName);
 
                     return {

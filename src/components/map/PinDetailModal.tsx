@@ -9,6 +9,9 @@ import {
   Alert,
   Image,
   Platform,
+  ScrollView,
+  NativeSyntheticEvent,
+  NativeScrollEvent,
 } from "react-native";
 import ViewShot, { captureRef } from "react-native-view-shot";
 import Share from "react-native-share";
@@ -16,6 +19,7 @@ import Icon from "react-native-vector-icons/MaterialCommunityIcons";
 import { useTheme } from "../../theme/ThemeContext";
 import { getResponsiveValue, moderateScale } from "../../utils/responsive";
 import { resolvePinImage } from "../../utils/imageStorage";
+import { PinData } from "../../services/DatabaseService";
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -27,7 +31,7 @@ import { haptics } from "../../utils/haptics";
 
 interface PinDetailModalProps {
   visible: boolean;
-  pin: any; // Type this properly later
+  pin: PinData | null;
   onClose: () => void;
   onDelete?: (id: string) => void;
   onEdit?: () => void;
@@ -54,12 +58,15 @@ export const PinDetailModal: React.FC<PinDetailModalProps> = ({
 
   const viewShotRef = React.useRef(null);
 
-  // Fall back to the "No Image" placeholder if a pin's saved photo can no
-  // longer be loaded (e.g. a broken file path). Reset whenever the pin changes.
-  const [imageFailed, setImageFailed] = useState(false);
+  // Per-photo "broken file" fallback + swipeable gallery state. Reset whenever
+  // the pin changes.
+  const [failedUris, setFailedUris] = useState<string[]>([]);
+  const [galleryWidth, setGalleryWidth] = useState(0);
+  const [activeIndex, setActiveIndex] = useState(0);
   useEffect(() => {
-    setImageFailed(false);
-  }, [pin?.id, pin?.imageUri]);
+    setFailedUris([]);
+    setActiveIndex(0);
+  }, [pin?.id]);
 
   // Trigger smooth animations when visible changes
   useEffect(() => {
@@ -98,6 +105,22 @@ export const PinDetailModal: React.FC<PinDetailModalProps> = ({
 
   // Early return after all hooks
   if (!pin) return null;
+
+  // Cover-first gallery; fall back to the legacy single cover for safety.
+  const galleryImages: string[] =
+    pin.images && pin.images.length > 0
+      ? pin.images
+      : pin.imageUri
+        ? [pin.imageUri]
+        : [];
+
+  const handleGalleryScroll = (
+    e: NativeSyntheticEvent<NativeScrollEvent>,
+  ) => {
+    if (galleryWidth <= 0) return;
+    const index = Math.round(e.nativeEvent.contentOffset.x / galleryWidth);
+    if (index !== activeIndex) setActiveIndex(index);
+  };
 
   const handleDelete = () => {
     haptics.warning();
@@ -154,14 +177,20 @@ export const PinDetailModal: React.FC<PinDetailModalProps> = ({
         onClose();
       }}
     >
-      <TouchableWithoutFeedback
-        onPress={() => {
-          haptics.selection();
-          onClose();
-        }}
-      >
-        <Animated.View style={[styles.overlay, { backgroundColor: theme.colors.backdrop }, backdropAnimatedStyle]}>
-          <TouchableWithoutFeedback>
+      <Animated.View style={[styles.overlay, { backgroundColor: theme.colors.backdrop }, backdropAnimatedStyle]}>
+          {/* Backdrop sits BEHIND the sheet as a sibling (not a parent wrapper)
+              so tapping outside closes the modal, while the sheet's own gestures
+              — like the photo carousel swipe — are never stolen by a wrapping
+              touchable. A wrapping TouchableWithoutFeedback was eating the
+              horizontal pan (fully on iOS, intermittently on Android). */}
+          <TouchableWithoutFeedback
+            onPress={() => {
+              haptics.selection();
+              onClose();
+            }}
+          >
+            <View style={StyleSheet.absoluteFill} />
+          </TouchableWithoutFeedback>
             <Animated.View
               style={[
                 styles.modalSheet,
@@ -198,24 +227,118 @@ export const PinDetailModal: React.FC<PinDetailModalProps> = ({
                     ]}
                   />
 
-                  {/* Image Placeholder or Actual Image */}
+                  {/* Image gallery (swipeable) or placeholder */}
                   <View
                     style={[
                       styles.imageContainer,
                       { backgroundColor: theme.colors.surface[colorScheme] },
                     ]}
+                    onLayout={(e) =>
+                      setGalleryWidth(e.nativeEvent.layout.width)
+                    }
                   >
-                    {pin.imageUri && !imageFailed ? (
-                      <Image
-                        source={{ uri: resolvePinImage(pin.imageUri) }}
-                        style={{
-                          width: "100%",
-                          height: "100%",
-                          borderRadius: 12,
-                        }}
-                        resizeMode="cover"
-                        onError={() => setImageFailed(true)}
-                      />
+                    {galleryImages.length > 0 ? (
+                      <>
+                        {/* Only mount the pager once the width is known so every
+                            page has the correct width from the first frame —
+                            otherwise paging is unreliable (0-width init). */}
+                        {galleryWidth > 0 && (
+                          <ScrollView
+                            key={pin.id}
+                            horizontal
+                            pagingEnabled
+                            showsHorizontalScrollIndicator={false}
+                            onMomentumScrollEnd={handleGalleryScroll}
+                            scrollEnabled={galleryImages.length > 1}
+                            decelerationRate="fast"
+                            style={StyleSheet.absoluteFill}
+                          >
+                            {galleryImages.map((uri, i) => {
+                              const failed = failedUris.includes(uri);
+                              return (
+                                <View
+                                  key={`${uri}_${i}`}
+                                  style={{
+                                    width: galleryWidth,
+                                    height: "100%",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                  }}
+                                >
+                                  {failed ? (
+                                    <>
+                                      <Icon
+                                        name="image-off"
+                                        size={getResponsiveValue(48, 48, 52, 58)}
+                                        color={
+                                          theme.colors.text.tertiary[colorScheme]
+                                        }
+                                      />
+                                      <Text
+                                        style={[
+                                          styles.noImageText,
+                                          {
+                                            color:
+                                              theme.colors.text.tertiary[
+                                                colorScheme
+                                              ],
+                                          },
+                                        ]}
+                                      >
+                                        Image unavailable
+                                      </Text>
+                                    </>
+                                  ) : (
+                                    <Image
+                                      source={{ uri: resolvePinImage(uri) }}
+                                      style={{
+                                        width: "100%",
+                                        height: "100%",
+                                        borderRadius: 12,
+                                      }}
+                                      resizeMode="cover"
+                                      onError={() =>
+                                        setFailedUris((prev) =>
+                                          prev.includes(uri)
+                                            ? prev
+                                            : [...prev, uri],
+                                        )
+                                      }
+                                    />
+                                  )}
+                                </View>
+                              );
+                            })}
+                          </ScrollView>
+                        )}
+                        {galleryImages.length > 1 && (
+                          <>
+                            {/* Page counter */}
+                            <View style={styles.galleryCounter}>
+                              <Text style={styles.galleryCounterText}>
+                                {activeIndex + 1} / {galleryImages.length}
+                              </Text>
+                            </View>
+                            {/* Page dots */}
+                            <View style={styles.galleryDots}>
+                              {galleryImages.map((_, i) => (
+                                <View
+                                  key={i}
+                                  style={[
+                                    styles.galleryDot,
+                                    {
+                                      backgroundColor:
+                                        i === activeIndex
+                                          ? "#fff"
+                                          : "rgba(255,255,255,0.5)",
+                                    },
+                                  ]}
+                                />
+                              ))}
+                            </View>
+                          </>
+                        )}
+                      </>
                     ) : (
                       <>
                         <Icon
@@ -342,6 +465,30 @@ export const PinDetailModal: React.FC<PinDetailModalProps> = ({
                     </Text>
                   ) : null}
 
+                  {/* Tags */}
+                  {pin.tags && pin.tags.length > 0 ? (
+                    <View style={styles.tagRow}>
+                      {pin.tags.map((t) => (
+                        <View
+                          key={t}
+                          style={[
+                            styles.tagChip,
+                            { backgroundColor: theme.colors.primary + "20" },
+                          ]}
+                        >
+                          <Text
+                            style={[
+                              styles.tagChipText,
+                              { color: theme.colors.primary },
+                            ]}
+                          >
+                            {t}
+                          </Text>
+                        </View>
+                      ))}
+                    </View>
+                  ) : null}
+
                   {/* Info Rows */}
                   <View style={styles.coordinatesContainer}>
                     <Icon
@@ -358,6 +505,28 @@ export const PinDetailModal: React.FC<PinDetailModalProps> = ({
                       {pin.address || "No address available"}
                     </Text>
                   </View>
+                  {pin.visitedAt ? (
+                    <View style={styles.infoRow}>
+                      <Icon
+                        name="calendar-check"
+                        size={getResponsiveValue(20, 20, 22, 28)}
+                        color={theme.colors.text.tertiary[colorScheme]}
+                      />
+                      <Text
+                        style={[
+                          styles.infoText,
+                          { color: theme.colors.text.secondary[colorScheme] },
+                        ]}
+                      >
+                        Visited:{" "}
+                        {new Date(pin.visitedAt).toLocaleDateString(undefined, {
+                          year: "numeric",
+                          month: "long",
+                          day: "numeric",
+                        })}
+                      </Text>
+                    </View>
+                  ) : null}
                   <View style={styles.infoRow}>
                     <Icon
                       name="calendar"
@@ -442,9 +611,7 @@ export const PinDetailModal: React.FC<PinDetailModalProps> = ({
                 </TouchableOpacity>
               </View>
             </Animated.View>
-          </TouchableWithoutFeedback>
-        </Animated.View>
-      </TouchableWithoutFeedback>
+      </Animated.View>
     </Modal>
   );
 };
@@ -480,6 +647,33 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     marginBottom: getResponsiveValue(20, 20, 20, 24),
+    overflow: "hidden",
+  },
+  galleryCounter: {
+    position: "absolute",
+    top: 8,
+    right: 8,
+    backgroundColor: "rgba(0,0,0,0.55)",
+    borderRadius: 12,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+  },
+  galleryCounterText: {
+    color: "#fff",
+    fontSize: moderateScale(12),
+    fontFamily: "poppins_medium",
+  },
+  galleryDots: {
+    position: "absolute",
+    bottom: 8,
+    alignSelf: "center",
+    flexDirection: "row",
+    gap: 6,
+  },
+  galleryDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
   },
   headerRow: {
     flexDirection: "row",
@@ -499,6 +693,22 @@ const styles = StyleSheet.create({
     ),
     marginTop: 4,
     fontFamily: "poppins_regular",
+  },
+  tagRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+    marginTop: getResponsiveValue(12, 12, 12, 16),
+    marginBottom: getResponsiveValue(20, 20, 20, 24),
+  },
+  tagChip: {
+    borderRadius: 999,
+    paddingVertical: 5,
+    paddingHorizontal: 12,
+  },
+  tagChipText: {
+    fontSize: moderateScale(12),
+    fontFamily: "poppins_medium",
   },
   statusChip: {
     alignSelf: "flex-start",

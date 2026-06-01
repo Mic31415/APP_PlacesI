@@ -22,6 +22,7 @@ import {
   Platform,
   PermissionsAndroid,
   ActivityIndicator,
+  Image,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Geolocation from "@react-native-community/geolocation";
@@ -57,6 +58,7 @@ import Animated, {
 
 // ... imports
 import { databaseService, PinData } from "../../services/DatabaseService";
+import { resolvePinImage } from "../../utils/imageStorage";
 import { getResponsiveValue, moderateScale } from "../../utils/responsive";
 import { RatingPicker } from "../../components/common/RatingPicker";
 import { haptics } from "../../utils/haptics";
@@ -110,6 +112,10 @@ export const MapViewScreen: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState<
     "all" | "visited" | "wishlist"
   >("all");
+  // Map vs. list presentation of the same filtered pins.
+  const [viewMode, setViewMode] = useState<"map" | "list">("map");
+  // Tags selected in the filter sheet; a pin matches if it has any of them.
+  const [tagFilter, setTagFilter] = useState<string[]>([]);
   const [bannerHeight, setBannerHeight] = useState(0);
   const [isKeyboardOpen, setIsKeyboardOpen] = useState(false);
   const bannerTranslateY = useRef(new RNAnimated.Value(0)).current;
@@ -179,6 +185,13 @@ export const MapViewScreen: React.FC = () => {
       );
     }
 
+    // 2c. Filter by Tags (pin matches if it has any selected tag)
+    if (tagFilter.length > 0) {
+      result = result.filter((pin) =>
+        (pin.tags || []).some((t) => tagFilter.includes(t)),
+      );
+    }
+
     // 3. Sort
     result = [...result].sort((a, b) => {
       switch (sortBy) {
@@ -200,7 +213,14 @@ export const MapViewScreen: React.FC = () => {
     });
 
     return result;
-  }, [pins, searchQuery, sortBy, minRating, statusFilter]);
+  }, [pins, searchQuery, sortBy, minRating, statusFilter, tagFilter]);
+
+  // Unique tags across this map's pins, for the filter sheet.
+  const availableTags = useMemo(() => {
+    const set = new Set<string>();
+    for (const pin of pins) for (const t of pin.tags || []) set.add(t);
+    return Array.from(set).sort((a, b) => a.localeCompare(b));
+  }, [pins]);
 
   // Animation values for smooth, soft animations
   const searchBarOpacity = useSharedValue(0);
@@ -457,13 +477,15 @@ export const MapViewScreen: React.FC = () => {
     navigation.navigate("CreatePin", { mapId, mapEmoji: emoji });
   };
 
-  const handleEditPin = (pin: any) => {
+  const handleEditPin = (pin: PinData | null) => {
+    if (!pin) return;
     haptics.selection();
     setModalVisible(false); // Close modal first
     navigation.navigate("CreatePin", { mapId, mapEmoji: emoji, pin });
   };
 
-  const handleSharePin = async (pin: any) => {
+  const handleSharePin = async (pin: PinData | null) => {
+    if (!pin) return;
     haptics.selection();
     try {
       let message = `${pin.emoji || "📍"} *${pin.title}*\n`;
@@ -483,7 +505,7 @@ export const MapViewScreen: React.FC = () => {
     }
   };
 
-  const handleMarkerPress = useCallback((pin: any) => {
+  const handleMarkerPress = useCallback((pin: PinData) => {
     haptics.selection();
     setSelectedPin(pin);
     setModalVisible(true);
@@ -637,13 +659,32 @@ export const MapViewScreen: React.FC = () => {
 
   const renderHeaderRight = useCallback(
     () => (
-      <MapHeaderMenu
-        onEdit={() => handleEditMap()}
-        onShare={handleShareMap}
-        onDelete={handleDeleteMap}
-      />
+      <View style={styles.headerRightRow}>
+        <TouchableOpacity
+          onPress={() => {
+            haptics.selection();
+            setViewMode((m) => (m === "map" ? "list" : "map"));
+          }}
+          style={styles.headerIconButton}
+          accessibilityRole="button"
+          accessibilityLabel={
+            viewMode === "map" ? "Switch to list view" : "Switch to map view"
+          }
+        >
+          <Icon
+            name={viewMode === "map" ? "format-list-bulleted" : "map-outline"}
+            size={getResponsiveValue(24, 24, 26, 32)}
+            color={theme.colors.text.primary[colorScheme]}
+          />
+        </TouchableOpacity>
+        <MapHeaderMenu
+          onEdit={() => handleEditMap()}
+          onShare={handleShareMap}
+          onDelete={handleDeleteMap}
+        />
+      </View>
     ),
-    [handleEditMap, currentMapName, currentMapEmoji, pins],
+    [handleEditMap, currentMapName, currentMapEmoji, pins, viewMode, colorScheme],
   );
 
   // Animated styles for smooth, soft animations
@@ -897,6 +938,181 @@ export const MapViewScreen: React.FC = () => {
                  */}
         {isMapReady && (
           <>
+            {/* List view overlay — same filtered/sorted pins, vertical list */}
+            {viewMode === "list" && (
+              <View
+                style={[
+                  styles.listOverlay,
+                  { backgroundColor: theme.colors.background[colorScheme] },
+                ]}
+              >
+                <FlatList
+                  data={filteredPins}
+                  keyExtractor={(item) => item.id}
+                  showsVerticalScrollIndicator={false}
+                  keyboardShouldPersistTaps="handled"
+                  contentContainerStyle={{
+                    paddingTop: getResponsiveValue(70, 70, 76, 92),
+                    paddingBottom: bannerHeight + insets.bottom + 24,
+                    paddingHorizontal: 16,
+                    flexGrow: 1,
+                  }}
+                  ListEmptyComponent={
+                    <View style={styles.listEmpty}>
+                      <Icon
+                        name="map-marker-off-outline"
+                        size={getResponsiveValue(48, 48, 52, 64)}
+                        color={theme.colors.text.tertiary[colorScheme]}
+                      />
+                      <Text
+                        style={[
+                          styles.listEmptyText,
+                          { color: theme.colors.text.secondary[colorScheme] },
+                        ]}
+                      >
+                        {pins.length === 0
+                          ? "No pins yet. Tap + to add your first place."
+                          : "No pins match your search or filters."}
+                      </Text>
+                    </View>
+                  }
+                  renderItem={({ item }) => {
+                    const isWishlist = (item.status || "visited") === "wishlist";
+                    const cover = item.images && item.images.length > 0
+                      ? item.images[0]
+                      : item.imageUri;
+                    return (
+                      <TouchableOpacity
+                        style={[
+                          styles.listRow,
+                          {
+                            backgroundColor: theme.colors.card[colorScheme],
+                            borderColor: theme.colors.border[colorScheme],
+                          },
+                        ]}
+                        activeOpacity={0.9}
+                        onPress={() => handleMarkerPress(item)}
+                      >
+                        {/* Thumbnail or emoji */}
+                        {cover ? (
+                          <Image
+                            source={{ uri: resolvePinImage(cover) }}
+                            style={styles.listThumb}
+                            resizeMode="cover"
+                          />
+                        ) : (
+                          <View
+                            style={[
+                              styles.listThumb,
+                              {
+                                backgroundColor:
+                                  theme.colors.surface[colorScheme],
+                                alignItems: "center",
+                                justifyContent: "center",
+                              },
+                            ]}
+                          >
+                            <Text style={styles.listThumbEmoji}>
+                              {item.emoji || "📍"}
+                            </Text>
+                          </View>
+                        )}
+
+                        {/* Texts */}
+                        <View style={styles.listRowContent}>
+                          <Text
+                            style={[
+                              styles.listRowTitle,
+                              { color: theme.colors.text.primary[colorScheme] },
+                            ]}
+                            numberOfLines={1}
+                          >
+                            {item.title}
+                          </Text>
+                          <Text
+                            style={[
+                              styles.listRowAddress,
+                              {
+                                color: item.address
+                                  ? theme.colors.text.secondary[colorScheme]
+                                  : theme.colors.text.tertiary[colorScheme],
+                                fontStyle: item.address ? "normal" : "italic",
+                              },
+                            ]}
+                            numberOfLines={1}
+                          >
+                            {item.address || "Address unavailable"}
+                          </Text>
+                          <View style={styles.listRowMeta}>
+                            {/* Rating */}
+                            {(item.rating || 0) > 0 && (
+                              <View style={styles.listRowStars}>
+                                <Icon
+                                  name="star"
+                                  size={13}
+                                  color={theme.colors.star}
+                                />
+                                <Text
+                                  style={[
+                                    styles.listRowMetaText,
+                                    {
+                                      color:
+                                        theme.colors.text.secondary[colorScheme],
+                                    },
+                                  ]}
+                                >
+                                  {item.rating}
+                                </Text>
+                              </View>
+                            )}
+                            {/* Status */}
+                            <Icon
+                              name={isWishlist ? "star-outline" : "check-circle"}
+                              size={13}
+                              color={
+                                isWishlist
+                                  ? theme.colors.primary
+                                  : theme.colors.success
+                              }
+                            />
+                            <Text
+                              style={[
+                                styles.listRowMetaText,
+                                {
+                                  color:
+                                    theme.colors.text.secondary[colorScheme],
+                                },
+                              ]}
+                            >
+                              {isWishlist ? "Want to go" : "Been here"}
+                            </Text>
+                            {/* Visit date */}
+                            {item.visitedAt ? (
+                              <Text
+                                style={[
+                                  styles.listRowMetaText,
+                                  {
+                                    color:
+                                      theme.colors.text.tertiary[colorScheme],
+                                  },
+                                ]}
+                              >
+                                ·{" "}
+                                {new Date(item.visitedAt).toLocaleDateString(
+                                  undefined,
+                                  { year: "numeric", month: "short", day: "numeric" },
+                                )}
+                              </Text>
+                            ) : null}
+                          </View>
+                        </View>
+                      </TouchableOpacity>
+                    );
+                  }}
+                />
+              </View>
+            )}
+
             <Animated.View style={searchBarAnimatedStyle}>
               <MapSearchBar
                 value={searchQuery}
@@ -940,7 +1156,8 @@ export const MapViewScreen: React.FC = () => {
               </Animated.View>
             )}
 
-            {/* Horizontal Pin List */}
+            {/* Horizontal Pin List (map mode only) */}
+            {viewMode === "map" && (
             <Animated.View
               style={[
                 styles.horizontalListContainer,
@@ -1010,6 +1227,7 @@ export const MapViewScreen: React.FC = () => {
                 )}
               />
             </Animated.View>
+            )}
           </>
         )}
       </View>
@@ -1253,12 +1471,72 @@ export const MapViewScreen: React.FC = () => {
                 ))}
               </View>
 
+              {/* Tag Filter */}
+              {availableTags.length > 0 && (
+                <>
+                  <Text
+                    style={[
+                      styles.label,
+                      {
+                        color: theme.colors.text.primary[colorScheme],
+                        marginTop: 16,
+                      },
+                    ]}
+                  >
+                    Tags
+                  </Text>
+                  <View style={styles.tagFilterWrap}>
+                    {availableTags.map((tag) => {
+                      const active = tagFilter.includes(tag);
+                      return (
+                        <TouchableOpacity
+                          key={tag}
+                          onPress={() => {
+                            haptics.selection();
+                            setTagFilter((prev) =>
+                              active
+                                ? prev.filter((t) => t !== tag)
+                                : [...prev, tag],
+                            );
+                          }}
+                          style={[
+                            styles.tagFilterChip,
+                            {
+                              backgroundColor: active
+                                ? theme.colors.primary + "20"
+                                : theme.colors.surface[colorScheme],
+                              borderColor: active
+                                ? theme.colors.primary
+                                : theme.colors.border[colorScheme],
+                            },
+                          ]}
+                        >
+                          <Text
+                            style={[
+                              styles.tagFilterChipText,
+                              {
+                                color: active
+                                  ? theme.colors.primary
+                                  : theme.colors.text.secondary[colorScheme],
+                              },
+                            ]}
+                          >
+                            {tag}
+                          </Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+                </>
+              )}
+
               {/* Action Buttons */}
               {(() => {
                 const isResetDisabled =
                   sortBy === "newest" &&
                   minRating === 0 &&
-                  statusFilter === "all";
+                  statusFilter === "all" &&
+                  tagFilter.length === 0;
                 return (
               <View style={[styles.buttonRow, { marginTop: 32 }]}>
                 <TouchableOpacity
@@ -1268,6 +1546,7 @@ export const MapViewScreen: React.FC = () => {
                     setSortBy("newest");
                     setMinRating(0);
                     setStatusFilter("all");
+                    setTagFilter([]);
                   }}
                   disabled={isResetDisabled}
                   activeOpacity={isResetDisabled ? 1 : 0.7}
@@ -1580,6 +1859,91 @@ const styles = StyleSheet.create({
     height: getResponsiveValue(40, 40, 44, 56),
     justifyContent: "center",
     alignItems: "flex-start",
+  },
+  headerRightRow: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  tagFilterWrap: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+    marginTop: 8,
+  },
+  tagFilterChip: {
+    borderRadius: 999,
+    borderWidth: 1,
+    paddingVertical: 7,
+    paddingHorizontal: 14,
+  },
+  tagFilterChipText: {
+    fontSize: moderateScale(13),
+    fontFamily: "poppins_medium",
+  },
+  // List view
+  listOverlay: {
+    // No explicit zIndex: document order already stacks this above the map and
+    // below the later-rendered search bar + FAB. An explicit zIndex here would
+    // paint the opaque overlay OVER the search bar, hiding it and leaving the
+    // list's reserved top padding as an empty gap.
+    ...StyleSheet.absoluteFillObject,
+  },
+  listEmpty: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 32,
+    gap: 12,
+  },
+  listEmptyText: {
+    textAlign: "center",
+    fontSize: moderateScale(14),
+    fontFamily: "poppins_regular",
+  },
+  listRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    borderRadius: 16,
+    borderWidth: 1,
+    padding: 10,
+    marginBottom: 12,
+    gap: 12,
+  },
+  listThumb: {
+    width: getResponsiveValue(56, 56, 62, 80),
+    height: getResponsiveValue(56, 56, 62, 80),
+    borderRadius: 12,
+  },
+  listThumbEmoji: {
+    fontSize: moderateScale(26),
+  },
+  listRowContent: {
+    flex: 1,
+    gap: 3,
+  },
+  listRowTitle: {
+    fontSize: moderateScale(15),
+    fontFamily: "poppins_medium",
+  },
+  listRowAddress: {
+    fontSize: moderateScale(12),
+    fontFamily: "poppins_regular",
+  },
+  listRowMeta: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    marginTop: 2,
+    flexWrap: "wrap",
+  },
+  listRowStars: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 2,
+  },
+  listRowMetaText: {
+    fontSize: moderateScale(11),
+    fontFamily: "poppins_regular",
   },
   // Bottom Sheet Styles
   bottomSheetOverlay: {
