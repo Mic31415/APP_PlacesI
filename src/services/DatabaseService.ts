@@ -57,6 +57,36 @@ export interface GlobalSearchResult extends PinData {
     mapEmoji: string;
 }
 
+export interface TripData {
+    id: string;
+    name: string;
+    emoji: string;
+    startDate: number; // start-of-day timestamp
+    endDate: number;   // start-of-day timestamp (inclusive)
+    notes?: string;
+    createdAt: number;
+    stopCount?: number; // derived
+}
+
+// A single place on a trip's itinerary. Self-contained — title/coords/address
+// are snapshotted so the stop never depends on a Pin existing. day_index of -1
+// means the stop is in the "Unscheduled / Ideas" bucket.
+export interface TripStopData {
+    id: string;
+    tripId: string;
+    dayIndex: number;
+    sortOrder: number;
+    title: string;
+    latitude?: number | null;
+    longitude?: number | null;
+    address?: string | null;
+    emoji?: string | null;
+    timeMinutes?: number | null; // minutes from midnight, nullable
+    note?: string | null;
+    pinId?: string | null; // soft reference to source pin, if added from one
+    createdAt: number;
+}
+
 class DatabaseService {
     private db: SQLite.SQLiteDatabase | null = null;
 
@@ -163,6 +193,44 @@ class DatabaseService {
                        AND id NOT IN (SELECT pin_id FROM PinImages);`
                 );
             } catch (e) { /* ignore */ }
+
+            // A Trip is a named, dated journey. Its TripStops are self-contained
+            // place snapshots (not foreign keys into Pins) so trips stay fully
+            // decoupled from the maps/pins lifecycle — deleting a pin or map can
+            // never corrupt a trip, and trips don't show up in the Maps list or
+            // Travel Stats. pin_id is a soft reference only.
+            const createTripsTable = `
+                CREATE TABLE IF NOT EXISTS Trips (
+                    id TEXT PRIMARY KEY,
+                    name TEXT NOT NULL,
+                    emoji TEXT NOT NULL DEFAULT '🧳',
+                    start_date INTEGER NOT NULL,
+                    end_date INTEGER NOT NULL,
+                    notes TEXT,
+                    created_at INTEGER NOT NULL
+                );
+            `;
+            const createTripStopsTable = `
+                CREATE TABLE IF NOT EXISTS TripStops (
+                    id TEXT PRIMARY KEY,
+                    trip_id TEXT NOT NULL,
+                    day_index INTEGER NOT NULL DEFAULT 0, -- -1 = "Unscheduled / Ideas"
+                    sort_order INTEGER NOT NULL DEFAULT 0,
+                    title TEXT NOT NULL,
+                    latitude REAL,
+                    longitude REAL,
+                    address TEXT,
+                    emoji TEXT,
+                    time_minutes INTEGER, -- minutes from midnight; NULL = no set time
+                    note TEXT,
+                    pin_id TEXT, -- soft ref to the source pin, no FK
+                    created_at INTEGER NOT NULL,
+                    FOREIGN KEY (trip_id) REFERENCES Trips(id) ON DELETE CASCADE
+                );
+            `;
+            await this.db.executeSql(createTripsTable);
+            await this.db.executeSql(createTripStopsTable);
+            await this.db.executeSql('CREATE INDEX IF NOT EXISTS idx_tripstops_trip_id ON TripStops(trip_id);');
 
         } catch (error) {
             console.error('Database init failed:', error);
@@ -581,6 +649,252 @@ class DatabaseService {
         }
     }
 
+    // --- Trips ---------------------------------------------------------------
+
+    private mapTripRow(item: any): TripData {
+        return {
+            id: item.id,
+            name: item.name,
+            emoji: item.emoji,
+            startDate: item.start_date,
+            endDate: item.end_date,
+            notes: item.notes ?? undefined,
+            createdAt: item.created_at,
+        };
+    }
+
+    private mapTripStopRow(item: any): TripStopData {
+        return {
+            id: item.id,
+            tripId: item.trip_id,
+            dayIndex: item.day_index,
+            sortOrder: item.sort_order,
+            title: item.title,
+            latitude: item.latitude ?? null,
+            longitude: item.longitude ?? null,
+            address: item.address ?? null,
+            emoji: item.emoji ?? null,
+            timeMinutes: item.time_minutes ?? null,
+            note: item.note ?? null,
+            pinId: item.pin_id ?? null,
+            createdAt: item.created_at,
+        };
+    }
+
+    public async createTrip(trip: Omit<TripData, 'id' | 'createdAt' | 'stopCount'>): Promise<TripData> {
+        if (!this.db) await this.initDatabase();
+        const id = this.generateUUID();
+        const createdAt = Date.now();
+        try {
+            await this.db!.executeSql(
+                'INSERT INTO Trips (id, name, emoji, start_date, end_date, notes, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)',
+                [id, trip.name, trip.emoji || '🧳', trip.startDate, trip.endDate, trip.notes || null, createdAt]
+            );
+            return { ...trip, id, createdAt, stopCount: 0 };
+        } catch (error) {
+            console.error('Failed to create trip:', error);
+            throw error;
+        }
+    }
+
+    public async getTrips(): Promise<TripData[]> {
+        if (!this.db) await this.initDatabase();
+        try {
+            const [results] = await this.db!.executeSql('SELECT * FROM Trips ORDER BY start_date DESC, created_at DESC');
+            const trips: TripData[] = [];
+            for (let i = 0; i < results.rows.length; i++) {
+                const item = results.rows.item(i);
+                const [countRes] = await this.db!.executeSql('SELECT COUNT(*) as count FROM TripStops WHERE trip_id = ?', [item.id]);
+                trips.push({ ...this.mapTripRow(item), stopCount: countRes.rows.item(0).count });
+            }
+            return trips;
+        } catch (error) {
+            console.error('Failed to get trips:', error);
+            throw error;
+        }
+    }
+
+    public async getTrip(id: string): Promise<TripData | null> {
+        if (!this.db) await this.initDatabase();
+        try {
+            const [results] = await this.db!.executeSql('SELECT * FROM Trips WHERE id = ?', [id]);
+            if (results.rows.length === 0) return null;
+            const [countRes] = await this.db!.executeSql('SELECT COUNT(*) as count FROM TripStops WHERE trip_id = ?', [id]);
+            return { ...this.mapTripRow(results.rows.item(0)), stopCount: countRes.rows.item(0).count };
+        } catch (error) {
+            console.error('Failed to get trip:', error);
+            throw error;
+        }
+    }
+
+    public async updateTrip(id: string, updates: Partial<Omit<TripData, 'id' | 'createdAt' | 'stopCount'>>): Promise<void> {
+        if (!this.db) await this.initDatabase();
+        const fields: string[] = [];
+        const values: any[] = [];
+        if (updates.name !== undefined) { fields.push('name = ?'); values.push(updates.name); }
+        if (updates.emoji !== undefined) { fields.push('emoji = ?'); values.push(updates.emoji); }
+        if (updates.startDate !== undefined) { fields.push('start_date = ?'); values.push(updates.startDate); }
+        if (updates.endDate !== undefined) { fields.push('end_date = ?'); values.push(updates.endDate); }
+        if (updates.notes !== undefined) { fields.push('notes = ?'); values.push(updates.notes || null); }
+        if (fields.length === 0) return;
+        try {
+            await this.db!.executeSql(`UPDATE Trips SET ${fields.join(', ')} WHERE id = ?`, [...values, id]);
+        } catch (error) {
+            console.error('Failed to update trip:', error);
+            throw error;
+        }
+    }
+
+    public async deleteTrip(id: string): Promise<void> {
+        if (!this.db) await this.initDatabase();
+        try {
+            // Explicit deletes (don't rely on ON DELETE CASCADE being enabled).
+            await this.db!.executeSql('DELETE FROM TripStops WHERE trip_id = ?', [id]);
+            await this.db!.executeSql('DELETE FROM Trips WHERE id = ?', [id]);
+        } catch (error) {
+            console.error('Failed to delete trip:', error);
+            throw error;
+        }
+    }
+
+    public async getTripStops(tripId: string): Promise<TripStopData[]> {
+        if (!this.db) await this.initDatabase();
+        try {
+            // Day order first; within a day, timed stops (sorted by time) come
+            // before untimed ones, then by explicit sort order, then insertion.
+            const [results] = await this.db!.executeSql(
+                `SELECT * FROM TripStops WHERE trip_id = ?
+                 ORDER BY day_index ASC,
+                          CASE WHEN time_minutes IS NULL THEN 1 ELSE 0 END ASC,
+                          time_minutes ASC,
+                          sort_order ASC,
+                          created_at ASC`,
+                [tripId]
+            );
+            const stops: TripStopData[] = [];
+            for (let i = 0; i < results.rows.length; i++) {
+                stops.push(this.mapTripStopRow(results.rows.item(i)));
+            }
+            return stops;
+        } catch (error) {
+            console.error('Failed to get trip stops:', error);
+            throw error;
+        }
+    }
+
+    public async addTripStop(stop: Omit<TripStopData, 'id' | 'createdAt' | 'sortOrder'> & { sortOrder?: number }): Promise<TripStopData> {
+        if (!this.db) await this.initDatabase();
+        const id = this.generateUUID();
+        const createdAt = Date.now();
+        try {
+            // Append to the end of its day unless an explicit order is given.
+            let sortOrder = stop.sortOrder;
+            if (sortOrder === undefined) {
+                const [maxRes] = await this.db!.executeSql(
+                    'SELECT COALESCE(MAX(sort_order), -1) + 1 AS next FROM TripStops WHERE trip_id = ? AND day_index = ?',
+                    [stop.tripId, stop.dayIndex]
+                );
+                sortOrder = maxRes.rows.item(0).next;
+            }
+            await this.db!.executeSql(
+                `INSERT INTO TripStops (id, trip_id, day_index, sort_order, title, latitude, longitude, address, emoji, time_minutes, note, pin_id, created_at)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                [id, stop.tripId, stop.dayIndex, sortOrder, stop.title, stop.latitude ?? null, stop.longitude ?? null,
+                 stop.address ?? null, stop.emoji ?? null, stop.timeMinutes ?? null, stop.note ?? null, stop.pinId ?? null, createdAt]
+            );
+            return { ...stop, id, sortOrder, createdAt } as TripStopData;
+        } catch (error) {
+            console.error('Failed to add trip stop:', error);
+            throw error;
+        }
+    }
+
+    public async addTripStopsFromPins(tripId: string, dayIndex: number, pins: PinData[]): Promise<void> {
+        for (const pin of pins) {
+            await this.addTripStop({
+                tripId,
+                dayIndex,
+                title: pin.title,
+                latitude: pin.latitude,
+                longitude: pin.longitude,
+                address: pin.address ?? null,
+                emoji: pin.emoji ?? '📍',
+                pinId: pin.id,
+                timeMinutes: null,
+                note: null,
+            });
+        }
+    }
+
+    public async updateTripStop(id: string, updates: Partial<Omit<TripStopData, 'id' | 'tripId' | 'createdAt'>>): Promise<void> {
+        if (!this.db) await this.initDatabase();
+        const fields: string[] = [];
+        const values: any[] = [];
+        if (updates.dayIndex !== undefined) { fields.push('day_index = ?'); values.push(updates.dayIndex); }
+        if (updates.sortOrder !== undefined) { fields.push('sort_order = ?'); values.push(updates.sortOrder); }
+        if (updates.title !== undefined) { fields.push('title = ?'); values.push(updates.title); }
+        if (updates.latitude !== undefined) { fields.push('latitude = ?'); values.push(updates.latitude ?? null); }
+        if (updates.longitude !== undefined) { fields.push('longitude = ?'); values.push(updates.longitude ?? null); }
+        if (updates.address !== undefined) { fields.push('address = ?'); values.push(updates.address ?? null); }
+        if (updates.emoji !== undefined) { fields.push('emoji = ?'); values.push(updates.emoji ?? null); }
+        if (updates.timeMinutes !== undefined) { fields.push('time_minutes = ?'); values.push(updates.timeMinutes ?? null); }
+        if (updates.note !== undefined) { fields.push('note = ?'); values.push(updates.note ?? null); }
+        if (updates.pinId !== undefined) { fields.push('pin_id = ?'); values.push(updates.pinId ?? null); }
+        if (fields.length === 0) return;
+        try {
+            await this.db!.executeSql(`UPDATE TripStops SET ${fields.join(', ')} WHERE id = ?`, [...values, id]);
+        } catch (error) {
+            console.error('Failed to update trip stop:', error);
+            throw error;
+        }
+    }
+
+    public async deleteTripStop(id: string): Promise<void> {
+        if (!this.db) await this.initDatabase();
+        try {
+            await this.db!.executeSql('DELETE FROM TripStops WHERE id = ?', [id]);
+        } catch (error) {
+            console.error('Failed to delete trip stop:', error);
+            throw error;
+        }
+    }
+
+    // Move a stop to another day, appending to the end of that day.
+    public async moveTripStop(id: string, dayIndex: number): Promise<void> {
+        if (!this.db) await this.initDatabase();
+        try {
+            const [tripRes] = await this.db!.executeSql('SELECT trip_id FROM TripStops WHERE id = ?', [id]);
+            if (tripRes.rows.length === 0) return;
+            const tripId = tripRes.rows.item(0).trip_id;
+            const [maxRes] = await this.db!.executeSql(
+                'SELECT COALESCE(MAX(sort_order), -1) + 1 AS next FROM TripStops WHERE trip_id = ? AND day_index = ?',
+                [tripId, dayIndex]
+            );
+            await this.db!.executeSql(
+                'UPDATE TripStops SET day_index = ?, sort_order = ? WHERE id = ?',
+                [dayIndex, maxRes.rows.item(0).next, id]
+            );
+        } catch (error) {
+            console.error('Failed to move trip stop:', error);
+            throw error;
+        }
+    }
+
+    // When a trip's date range shrinks, sweep any stop whose day no longer
+    // exists into the Unscheduled bucket (-1) so nothing is silently lost.
+    public async reflowStopsToValidDays(tripId: string, dayCount: number): Promise<void> {
+        if (!this.db) await this.initDatabase();
+        try {
+            await this.db!.executeSql(
+                'UPDATE TripStops SET day_index = -1 WHERE trip_id = ? AND day_index >= ?',
+                [tripId, dayCount]
+            );
+        } catch (error) {
+            console.error('Failed to reflow trip stops:', error);
+            throw error;
+        }
+    }
+
     // --- Export/Import ---
     public async getAllData(): Promise<{ version: number, timestamp: number, maps: any[], pins: any[] }> {
         if (!this.db) await this.initDatabase();
@@ -759,6 +1073,8 @@ class DatabaseService {
             await this.db!.executeSql('DELETE FROM PinImages');
             await this.db!.executeSql('DELETE FROM Pins');
             await this.db!.executeSql('DELETE FROM Maps');
+            await this.db!.executeSql('DELETE FROM TripStops');
+            await this.db!.executeSql('DELETE FROM Trips');
 
             // Remove the now-orphaned image files too.
             await clearAllPinImages();

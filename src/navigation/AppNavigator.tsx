@@ -18,6 +18,10 @@ import { CreatePinScreen } from '../screens/home/CreatePinScreen';
 import { MapPickerScreen } from '../screens/map/MapPickerScreen';
 import { GlobalSearchScreen } from '../screens/home/GlobalSearchScreen';
 import { NearMeScreen } from '../screens/home/NearMeScreen';
+import { CreateTripScreen } from '../screens/trips/CreateTripScreen';
+import { TripItineraryScreen } from '../screens/trips/TripItineraryScreen';
+import { AddTripStopScreen } from '../screens/trips/AddTripStopScreen';
+import { CreateTripStopScreen } from '../screens/trips/CreateTripStopScreen';
 import { isTablet } from '../utils/responsive';
 
 const Tab = createBottomTabNavigator<MainTabParamList>();
@@ -33,6 +37,10 @@ const HomeStackNavigator = () => {
             <HomeStack.Screen name="MapPicker" component={MapPickerScreen} />
             <HomeStack.Screen name="GlobalSearch" component={GlobalSearchScreen} />
             <HomeStack.Screen name="NearMe" component={NearMeScreen} />
+            <HomeStack.Screen name="CreateTrip" component={CreateTripScreen} />
+            <HomeStack.Screen name="TripItinerary" component={TripItineraryScreen} />
+            <HomeStack.Screen name="AddTripStop" component={AddTripStopScreen} />
+            <HomeStack.Screen name="CreateTripStop" component={CreateTripStopScreen} />
         </HomeStack.Navigator>
     );
 };
@@ -88,7 +96,7 @@ const TabNavigator = () => {
                 component={HomeStackNavigator}
                 options={({ route }) => {
                     const routeName = getFocusedRouteNameFromRoute(route) ?? 'MapList';
-                    const hiddenRoutes = ['MapView', 'CreatePin', 'MapPicker', 'GlobalSearch', 'NearMe'];
+                    const hiddenRoutes = ['MapView', 'CreatePin', 'MapPicker', 'GlobalSearch', 'NearMe', 'CreateTrip', 'TripItinerary', 'AddTripStop', 'CreateTripStop'];
                     const isHidden = hiddenRoutes.includes(routeName);
 
                     return {

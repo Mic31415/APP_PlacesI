@@ -1,4 +1,4 @@
-import type { PinData } from "../services/DatabaseService";
+import type { PinData, TripData, TripStopData } from "../services/DatabaseService";
 
 export type RootStackParamList = {
     Main: undefined;
@@ -19,6 +19,10 @@ export type HomeStackParamList = {
     CreatePin: { mapId: string; mapEmoji?: string; pin?: PinData };
     GlobalSearch: undefined;
     NearMe: undefined;
+    CreateTrip: { trip?: TripData } | undefined;
+    TripItinerary: { tripId: string };
+    AddTripStop: { tripId: string; dayIndex: number };
+    CreateTripStop: { tripId: string; dayIndex: number; stop?: TripStopData };
     MapPicker: {
         initialRegion?: {
             latitude: number;

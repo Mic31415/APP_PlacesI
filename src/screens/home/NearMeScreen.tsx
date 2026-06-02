@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useState, useCallback, useRef } from "react";
 import {
   View,
   Text,
@@ -10,7 +10,7 @@ import {
   Platform,
   PermissionsAndroid,
 } from "react-native";
-import { useNavigation } from "@react-navigation/native";
+import { useNavigation, useFocusEffect } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Geolocation from "@react-native-community/geolocation";
@@ -95,6 +95,38 @@ export const NearMeScreen: React.FC = () => {
     }
   };
 
+  // Remember the last fix so we can recompute on focus without re-prompting
+  // for location or flashing the loading state.
+  const coordsRef = useRef<{ latitude: number; longitude: number } | null>(null);
+
+  // Recompute the nearby list from the DB against a known location. Shared by
+  // the initial load and the on-focus refresh, so a status change made in the
+  // pin detail (e.g. "Want to go" → "Been here") is reflected when you return.
+  const computeNearby = async (latitude: number, longitude: number) => {
+    const [pins, maps] = await Promise.all([
+      databaseService.getAllPins(),
+      databaseService.getMaps(),
+    ]);
+    const mapLookup = new Map<string, MapData>();
+    maps.forEach((m) => mapLookup.set(m.id, m));
+
+    const within: NearbyPin[] = [];
+    for (const pin of pins) {
+      const km = distanceKm(latitude, longitude, pin.latitude, pin.longitude);
+      if (km <= RADIUS_KM) {
+        const m = mapLookup.get(pin.mapId);
+        within.push({
+          pin,
+          km,
+          mapName: m?.name || "Map",
+          mapEmoji: m?.emoji || "🗺️",
+        });
+      }
+    }
+    within.sort((a, b) => a.km - b.km);
+    setNearby(within);
+  };
+
   const load = async () => {
     setStatus("loading");
     const hasPermission = await requestLocationPermission();
@@ -107,28 +139,8 @@ export const NearMeScreen: React.FC = () => {
       async (position) => {
         try {
           const { latitude, longitude } = position.coords;
-          const [pins, maps] = await Promise.all([
-            databaseService.getAllPins(),
-            databaseService.getMaps(),
-          ]);
-          const mapLookup = new Map<string, MapData>();
-          maps.forEach((m) => mapLookup.set(m.id, m));
-
-          const within: NearbyPin[] = [];
-          for (const pin of pins) {
-            const km = distanceKm(latitude, longitude, pin.latitude, pin.longitude);
-            if (km <= RADIUS_KM) {
-              const m = mapLookup.get(pin.mapId);
-              within.push({
-                pin,
-                km,
-                mapName: m?.name || "Map",
-                mapEmoji: m?.emoji || "🗺️",
-              });
-            }
-          }
-          within.sort((a, b) => a.km - b.km);
-          setNearby(within);
+          coordsRef.current = { latitude, longitude };
+          await computeNearby(latitude, longitude);
           setStatus("ready");
         } catch (e) {
           console.error("Near me load failed", e);
@@ -143,10 +155,28 @@ export const NearMeScreen: React.FC = () => {
     );
   };
 
-  useEffect(() => {
-    load();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  // Silent refresh against the cached location — no spinner, no re-prompt — so
+  // edits made elsewhere (status, deletions, new pins) show up on return.
+  const refresh = async () => {
+    const coords = coordsRef.current;
+    if (!coords) return;
+    try {
+      await computeNearby(coords.latitude, coords.longitude);
+    } catch (e) {
+      console.error("Near me refresh failed", e);
+    }
+  };
+
+  useFocusEffect(
+    useCallback(() => {
+      if (coordsRef.current) {
+        refresh();
+      } else {
+        load();
+      }
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []),
+  );
 
   const handleBack = () => {
     haptics.selection();
