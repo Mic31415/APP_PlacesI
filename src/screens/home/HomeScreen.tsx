@@ -210,8 +210,9 @@ export const HomeScreen: React.FC = () => {
         ListEmptyComponent={
           <View>
             <EmptyState
-              title="No Maps Yet"
-              description="Create your first map to start pinning your favorite places!"
+              icon="map-marker-plus"
+              title="Start your first map"
+              description="Pick a starter below, or tap + to create your own."
             />
             <StarterTemplates onCreated={loadMaps} />
           </View>

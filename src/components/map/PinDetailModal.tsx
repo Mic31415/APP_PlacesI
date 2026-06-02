@@ -487,7 +487,12 @@ export const PinDetailModal: React.FC<PinDetailModalProps> = ({
 
                   {/* Tags */}
                   {pin.tags && pin.tags.length > 0 ? (
-                    <View style={styles.tagRow}>
+                    <View
+                      style={[
+                        styles.tagRow,
+                        pin.description ? { marginTop: 8 } : null,
+                      ]}
+                    >
                       {pin.tags.map((t) => (
                         <View
                           key={t}
@@ -740,8 +745,8 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     flexWrap: "wrap",
     gap: 8,
-    marginTop: getResponsiveValue(12, 12, 12, 16),
-    marginBottom: getResponsiveValue(20, 20, 20, 24),
+    marginTop: getResponsiveValue(16, 16, 16, 18),
+    marginBottom: 0,
   },
   tagChip: {
     borderRadius: 999,
@@ -760,7 +765,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     borderRadius: 999,
     borderWidth: 1,
-    marginTop: 10,
+    marginTop: getResponsiveValue(16, 16, 16, 18),
     gap: 5,
   },
   statusChipText: {
@@ -780,13 +785,13 @@ const styles = StyleSheet.create({
       20,
     ),
     lineHeight: getResponsiveValue(24, 24, 24, 28),
-    marginBottom: getResponsiveValue(24, 24, 24, 28),
-    marginTop: getResponsiveValue(12, 12, 12, 16),
+    marginBottom: 0,
+    marginTop: getResponsiveValue(16, 16, 16, 18),
   },
   infoRow: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: getResponsiveValue(12, 12, 12, 14),
+    marginTop: getResponsiveValue(12, 12, 12, 14),
     gap: getResponsiveValue(12, 12, 12, 14),
   },
   infoText: {
@@ -801,7 +806,7 @@ const styles = StyleSheet.create({
   coordinatesContainer: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: getResponsiveValue(8, 8, 8, 10),
+    marginTop: getResponsiveValue(16, 16, 16, 18),
     gap: getResponsiveValue(8, 8, 8, 10),
   },
   coordinates: {
