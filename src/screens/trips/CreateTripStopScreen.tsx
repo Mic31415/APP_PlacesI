@@ -52,7 +52,16 @@ export const CreateTripStopScreen: React.FC = () => {
   const [note, setNote] = useState(stop?.note ?? "");
   const [dayIndex, setDayIndex] = useState<number>(stop?.dayIndex ?? initialDay);
 
-  const [query, setQuery] = useState("");
+  // Seed the search field with the saved location when editing an existing
+  // stop (e.g. one added from "Choose from my places"), so the location shows
+  // instead of looking empty.
+  const [query, setQuery] = useState(stop?.address ?? "");
+  // A long seeded value otherwise scrolls the input to its end (showing
+  // "…ncisco, USA" with the place name cut off). Pin the caret to the start so
+  // it reads from the beginning; release it once the user taps in to edit.
+  const [searchSelection, setSearchSelection] = useState<
+    { start: number; end: number } | undefined
+  >(stop?.address ? { start: 0, end: 0 } : undefined);
   const [predictions, setPredictions] = useState<Prediction[]>([]);
   const debounce = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -205,7 +214,12 @@ export const CreateTripStopScreen: React.FC = () => {
                 placeholder='Search a place (e.g. "Eiffel Tower")'
                 placeholderTextColor={theme.colors.text.tertiary[colorScheme]}
                 value={query}
-                onChangeText={handleSearch}
+                selection={searchSelection}
+                onFocus={() => setSearchSelection(undefined)}
+                onChangeText={(t) => {
+                  setSearchSelection(undefined);
+                  handleSearch(t);
+                }}
                 autoCorrect={false}
               />
               {query.length > 0 && (

@@ -665,7 +665,7 @@ export const MapViewScreen: React.FC = () => {
             haptics.selection();
             setViewMode((m) => (m === "map" ? "list" : "map"));
           }}
-          style={styles.headerIconButton}
+          style={styles.headerToggleButton}
           accessibilityRole="button"
           accessibilityLabel={
             viewMode === "map" ? "Switch to list view" : "Switch to map view"
@@ -820,30 +820,30 @@ export const MapViewScreen: React.FC = () => {
     <View style={styles.container}>
       <ScreenHeader
         leftComponent={
-          <TouchableOpacity
-            onPress={() => {
-              haptics.selection();
-              navigation.goBack();
-            }}
-            style={styles.headerIconButton}
-          >
-            <Icon
-              name="chevron-left"
-              size={getResponsiveValue(32, 32, 34, 40)}
-              color={theme.colors.text.primary[colorScheme]}
-            />
-          </TouchableOpacity>
-        }
-        centerComponent={
-          <Text
-            style={[
-              styles.headerText,
-              { color: theme.colors.text.primary[colorScheme] },
-            ]}
-            numberOfLines={1}
-          >
-            {currentMapEmoji || "🗺️"} {currentMapName || "Map"}
-          </Text>
+          <View style={styles.headerLeftRow}>
+            <TouchableOpacity
+              onPress={() => {
+                haptics.selection();
+                navigation.goBack();
+              }}
+              style={styles.headerIconButton}
+            >
+              <Icon
+                name="chevron-left"
+                size={getResponsiveValue(32, 32, 34, 40)}
+                color={theme.colors.text.primary[colorScheme]}
+              />
+            </TouchableOpacity>
+            <Text
+              style={[
+                styles.headerText,
+                { color: theme.colors.text.primary[colorScheme] },
+              ]}
+              numberOfLines={1}
+            >
+              {currentMapEmoji || "🗺️"} {currentMapName || "Map"}
+            </Text>
+          </View>
         }
         rightComponent={renderHeaderRight()}
       />
@@ -1853,12 +1853,35 @@ const styles = StyleSheet.create({
   headerText: {
     fontWeight: "600",
     fontFamily: "poppins_bold",
+    flexShrink: 1,
+    fontSize: getResponsiveValue(
+      moderateScale(20),
+      moderateScale(20),
+      moderateScale(20),
+      30,
+    ),
+    lineHeight: getResponsiveValue(
+      moderateScale(26),
+      moderateScale(26),
+      moderateScale(26),
+      38,
+    ),
+  },
+  headerLeftRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    flexShrink: 1,
   },
   headerIconButton: {
     width: getResponsiveValue(40, 40, 44, 56),
     height: getResponsiveValue(40, 40, 44, 56),
     justifyContent: "center",
     alignItems: "flex-start",
+  },
+  headerToggleButton: {
+    height: getResponsiveValue(40, 40, 44, 56),
+    justifyContent: "center",
+    alignItems: "flex-end",
   },
   headerRightRow: {
     flexDirection: "row",
