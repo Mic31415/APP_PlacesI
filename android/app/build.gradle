@@ -82,8 +82,8 @@ android {
         applicationId "com.placesi.traveljourney"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 4
-        versionName "1.0.4"
+        versionCode 5
+        versionName "1.0.5"
 
         Properties properties = new Properties()
         if (rootProject.file("local.properties").exists()) {
